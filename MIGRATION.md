@@ -35,6 +35,24 @@ Fokus: Menambahkan dukungan iOS.
 
 ---
 
+## Checklist Eksekusi Phase 0 (Selesai)
+- [x] Rename 
+ootProject.name menjadi "Nekuva".
+- [x] Konversi `settings.gradle` ke `settings.gradle.kts`.
+- [x] Konversi `build.gradle` root ke `build.gradle.kts`.
+- [x] Buat dan konfigurasi `gradle/libs.versions.toml`.
+- [x] Buat keystore release/debug baru (tanpa brand "doki").
+- [x] Buat modul `composeApp` dan source set: `commonMain`, `androidMain`, `desktopMain`, `commonTest`.
+- [x] Setup namespace dan applicationId: `org.nekosukuriputo.nekuva`.
+- [x] Buat entrypoint Android (Activity) dan Desktop (`main()`) dengan Compose M3 Placeholder ("Nekuva KMP � Phase 0 OK").
+- [x] Inisialisasi dasar Koin, Ktor, Room, dan Coil 3 di `commonMain`.
+- [x] Tambahkan dependensi `com.github.NekoSukuriputo:nekuva-exts:1.0.1`.
+- [x] Implementasikan `MangaLoaderContext` konkret (dengan platform actuals via `expect`/`actual`).
+- [x] Lakukan smoke test pemanggilan parser (print text raw) di placeholder UI.
+
+
+---
+
 ## Pemetaan Teknologi & Dependensi (Android -> KMP)
 Sesuai aturan GEMINI.md §3:
 
@@ -53,20 +71,48 @@ Sesuai aturan GEMINI.md §3:
 
 ---
 
-## Checklist Eksekusi Phase 0
-- [ ] Rename `rootProject.name` menjadi "Nekuva".
-- [ ] Konversi `settings.gradle` ke `settings.gradle.kts`.
-- [ ] Konversi `build.gradle` root ke `build.gradle.kts`.
-- [ ] Buat dan konfigurasi `gradle/libs.versions.toml`.
-- [ ] Buat keystore release/debug baru (tanpa brand "doki").
-- [ ] Buat modul `composeApp` dan source set: `commonMain`, `androidMain`, `desktopMain`, `commonTest`.
-- [ ] Setup namespace dan applicationId: `org.nekosukuriputo.nekuva`.
-- [ ] Buat entrypoint Android (Activity) dan Desktop (`main()`) dengan Compose M3 Placeholder ("Nekuva KMP — Phase 0 OK").
-- [ ] Inisialisasi dasar Koin, Ktor, Room, dan Coil 3 di `commonMain`.
-- [ ] Tambahkan dependensi `com.github.NekoSukuriputo:nekuva-exts:1.0.1`.
-- [ ] Implementasikan `MangaLoaderContext` konkret (dengan platform actuals via `expect`/`actual`).
-- [ ] Lakukan smoke test pemanggilan parser (print text raw) di placeholder UI.
+## Checklist Eksekusi LENGKAP Phase 1 (Per Area)
 
+Fokus Phase 1 adalah Android + Desktop parity. Jangan mulai area fitur sebelum 6 sub-sesi core selesai.
+
+### Core Sub-sessions
+- [x] **Sub-sesi 1: core/model** (Manga, MangaSource, SortOrder, dll.)
+- [x] **Sub-sesi 2: core/prefs** (AppSettings, AppSettingsObserver, dll. ke multiplatform-settings)
+- [ ] **Sub-sesi 3: core/db** (Fresh V1 Room KMP, jangan redesign skema, buang migrasi lama)
+- [ ] **Sub-sesi 4: core/util & core/io & core/fs & core/os** (Konversi utilitas ke `expect`/`actual`)
+- [ ] **Sub-sesi 5: core/network & core/image & core/parser & core/github & core/exceptions** (OkHttp tetap untuk layer parser)
+- [ ] **Sub-sesi 6: core/ui** (Rewrite base UI ke Compose)
+
+### Area Fitur
+- [ ] **7. local** (Local storage)
+- [ ] **8. explore**
+- [ ] **9. list** (Catalog browse)
+- [ ] **10. remotelist**
+- [ ] **11. details**
+- [ ] **12. reader**
+- [ ] **13. image**
+- [ ] **14. search**
+- [ ] **15. filter**
+- [ ] **16. favourites**
+- [ ] **17. history**
+- [ ] **18. bookmarks**
+- [ ] **19. download**
+- [ ] **20. tracker**
+- [ ] **21. scrobbling**
+- [ ] **22. sync**
+- [ ] **23. settings**
+- [ ] **24. main** (Shell / Navigation)
+- [ ] **25. alternatives**
+- [ ] **26. browser**
+- [ ] **27. picker**
+- [ ] **28. widget**
+- [ ] **29. backups**
+- [ ] **30. stats**
+- [ ] **31. suggestions**
+
+### Keputusan Source Set Non-Main (legacy/debug/release)
+- **legacy** (pp/src/legacy): HAPUS SEPENUHNYA. Kita tidak mempertahankan flavor 'legacy' di environment KMP/CMP baru.
+- **debug & release** (pp/src/debug & pp/src/release): Akan digabungkan ke ndroidMain atau commonMain. Perbedaan logic debug/release akan menggunakan `BuildConfig.DEBUG` (misalnya untuk inisialisasi tool debug) atau ``expect`/`actual`` alih-alih menggunakan source set terpisah yang rumit, kecuali jika Gradle KMP Android variant sangat membutuhkannya.
 ## Inventaris dan Klasifikasi Direktori core
 
 | File | Classification | Notes |
@@ -408,3 +454,6 @@ Sesuai aturan GEMINI.md §3:
 | D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\ProgressResponseBody.kt | commonMain murni |  |
 | D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\RealtimeEtaEstimator.kt | commonMain murni |  |
 | D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\zip\ZipOutput.kt | commonMain murni |  |
+
+
+
