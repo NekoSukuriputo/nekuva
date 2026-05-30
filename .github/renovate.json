@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "dependencyDashboard": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["(^|/)libs\\.versions\\.toml$"],
+      "matchStrings": [
+        "exts\\s*=\\s*\"(?<currentDigest>[a-f0-9]+)\""
+      ],
+      "datasourceTemplate": "git-refs",
+      "depNameTemplate": "https://github.com/DokiTeam/doki-exts",
+      "currentValueTemplate": "base",
+      "packageNameTemplate": "doki-exts"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["doki-exts"],
+      "groupName": "doki-exts",
+      "branchTopic": "doki-exts",
+      "commitMessagePrefix": "chore(deps): Update extensions / plugins for Doki",
+      "commitMessageTopic": "Replace doki-exts version with latest commit from base branch",
+      "automerge": true,
+      "automergeType": "branch",
+      "schedule": ["after 11pm every day"]
+    },
+    {
+      "matchPackagePatterns": [".*"],
+      "excludePackageNames": ["doki-exts"],
+      "enabled": false
+    }
+  ]
+}

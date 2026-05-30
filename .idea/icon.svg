@@ -1,0 +1,11 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="300" height="300">
+	<title>Doki</title>
+	<style>
+		tspan { white-space:pre } 
+		.t0 { font-size: 417px;fill: #000000;font-weight: 900;font-family: "NotoSansJP-Black", "Noto Sans JP" } 
+	</style>
+	<text id="漫" style="transform: matrix(1,0,0,1,512.421,665.982)" >
+		<tspan x="-208.3" y="0" class="t0">漫
+</tspan>
+	</text>
+</svg>
