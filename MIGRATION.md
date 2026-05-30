@@ -1,0 +1,410 @@
+# Nekuva KMP Migration Plan
+
+## Phase 0: Skeleton (Kerangka Multiplatform)
+Fokus: Bangun kerangka KMP/CMP tanpa memigrasikan fitur, memastikan aplikasi Android saat ini tetap bisa di-build.
+- Konversi Gradle ke Kotlin DSL (`settings.gradle.kts`, `build.gradle.kts`).
+- Siapkan `gradle/libs.versions.toml` dengan dependensi KMP (Kotlin Multiplatform, Compose Multiplatform, Room KMP, Koin, Ktor client, Coil 3).
+- Buat modul `composeApp` (target Android & Desktop).
+- Entrypoint: Android (`androidMain`) dan Desktop (`desktopMain`) menampilkan placeholder Compose Material 3 ("Nekuva KMP — Phase 0 OK").
+- Setup dependensi plumbing di `commonMain` (Koin, Ktor, Room KMP, Coil 3).
+- Sambungkan `nekuva-exts` dan buat implementasi `MangaLoaderContext` konkret per platform (WebView Android, Desktop JVM engine JS).
+- Setup keystore release baru (bukan milik doki).
+- **Kriteria Selesai Phase 0**: `./gradlew :composeApp:assembleDebug` hijau, Desktop run jalan, `nekuva-exts` tersambung. Tidak ada fitur lama yang terhapus dan TIDAK ADA KODE/FILE BARU dengan branding "doki".
+
+## Phase 1: Android + Desktop Parity (Re-implementasi Fitur)
+Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform satu per satu, mendukung Android dan Desktop (Windows/macOS).
+
+**Urutan Migrasi Fitur (GEMINI.md §5):**
+1. `core` (models, prefs, network, db)
+2. `local` storage
+3. `explore` / `list` (catalog browse)
+4. `details`
+5. `reader`
+6. `search` / `filter`
+7. `favourites` / `history` / `bookmarks`
+8. `download`
+9. `tracker` / `scrobbling` / `sync`
+10. `settings`
+11. `main` shell / navigation
+12. `widget` / `backups` / `stats` / `suggestions` (lowest priority)
+
+## Phase 2: iOS Target
+Fokus: Menambahkan dukungan iOS.
+- **Blocker**: Tergantung pada pembaruan di repo `nekuva-exts` (karena jsoup/OkHttp saat ini JVM-only).
+- Jangan mulai integrasi iOS yang memerlukan parser berjalan di device sampai dependensi `nekuva-exts` mendukung KMP sepenuhnya (terutama Darwin engine).
+
+---
+
+## Pemetaan Teknologi & Dependensi (Android -> KMP)
+Sesuai aturan GEMINI.md §3:
+
+| Current (Android) | KMP Target | Notes |
+|---|---|---|
+| XML Views + ViewBinding | **Compose Multiplatform** | Re-implementasi penuh per layar. |
+| Hilt | **Koin** | KMP-friendly DI; masukkan bertahap. |
+| Room (Android) | **Room KMP (2.7+)** | Pertahankan entitas, tambahkan KMP setup. SQLDelight hanya jika Room KMP bermasalah (wajib izin). |
+| OkHttp (di app) | **Ktor Client** | OkHttp engine di Android/Desktop(JVM), Darwin engine di iOS. |
+| Coil 3 | **Coil 3** | Sudah multiplatform, tetap gunakan. |
+| WorkManager | `expect`/`actual` scheduler | WorkManager di Android, coroutine/JVM scheduler di Desktop, BGTask di iOS (nanti). |
+| AndroidX Preference | **multiplatform-settings** atau **DataStore (KMP)** | Pilih satu dan konsisten (wajib izin sebelum kombinasi). |
+| Material Components (XML)| **Compose Material 3** | - |
+| Navigation (fragments) | **Compose Navigation** (atau Voyager/Decompose) | Propose satu, minta persetujuan sebelum diimplementasi luas. |
+| ACRA, biometric, dll | platform `actual` atau hapus | Wajib konfirmasi per fitur, jangan hapus diam-diam. |
+
+---
+
+## Checklist Eksekusi Phase 0
+- [ ] Rename `rootProject.name` menjadi "Nekuva".
+- [ ] Konversi `settings.gradle` ke `settings.gradle.kts`.
+- [ ] Konversi `build.gradle` root ke `build.gradle.kts`.
+- [ ] Buat dan konfigurasi `gradle/libs.versions.toml`.
+- [ ] Buat keystore release/debug baru (tanpa brand "doki").
+- [ ] Buat modul `composeApp` dan source set: `commonMain`, `androidMain`, `desktopMain`, `commonTest`.
+- [ ] Setup namespace dan applicationId: `org.nekosukuriputo.nekuva`.
+- [ ] Buat entrypoint Android (Activity) dan Desktop (`main()`) dengan Compose M3 Placeholder ("Nekuva KMP — Phase 0 OK").
+- [ ] Inisialisasi dasar Koin, Ktor, Room, dan Coil 3 di `commonMain`.
+- [ ] Tambahkan dependensi `com.github.NekoSukuriputo:nekuva-exts:1.0.1`.
+- [ ] Implementasikan `MangaLoaderContext` konkret (dengan platform actuals via `expect`/`actual`).
+- [ ] Lakukan smoke test pemanggilan parser (print text raw) di placeholder UI.
+
+## Inventaris dan Klasifikasi Direktori core
+
+| File | Classification | Notes |
+|---|---|---|
+| ﻿D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\AppModule.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\BaseApp.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ErrorReporterReceiver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\LocalizedAppContext.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\cache\ExpiringLruCache.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\cache\ExpiringValue.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\cache\MemoryContentCache.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\cache\SafeDeferred.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\DatabasePrePopulateCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\MangaDatabase.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\MangaQueryBuilder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\Tables.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\ChaptersDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\MangaDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\MangaSourcesDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\PreferencesDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\TagsDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\dao\TrackLogsDao.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\ChapterEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\EntityMapping.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\MangaEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\MangaPrefsEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\MangaSourceEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\MangaTagsEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\MangaWithTags.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\entity\TagEntity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration10To11.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration11To12.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration12To13.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration13To14.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration14To15.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration15To16.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration16To17.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration17To18.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration18To19.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration19To20.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration1To2.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration20To21.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration21To22.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration22To23.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration23To24.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration24To23.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration24To25.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration25To26.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration26To27.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration2To3.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration3To4.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration4To5.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration5To6.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration6To7.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration7To8.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration8To9.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\db\migrations\Migration9To10.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\BadBackupFormatException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\CaughtException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\CloudFlareBlockedException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\CloudFlareException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\CloudFlareProtectedException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\EmptyHistoryException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\EmptyMangaException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\IncompatiblePluginException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\InteractiveActionRequiredException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\NoDataReceivedException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\NonFileUriException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\ProxyConfigException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\SyncApiException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\UnsupportedFileException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\UnsupportedSourceException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\WrapperIOException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\WrongPasswordException.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\CaptchaHandler.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\DialogErrorObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\ErrorObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\ExceptionResolver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\SnackbarErrorObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\exceptions\resolve\ToastErrorObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\fs\FileSequence.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\github\AppUpdateRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\github\AppVersion.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\github\VersionId.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\AvifImageDecoder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\BitmapDecoderCompat.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\CbzFetcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\CoilImageView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\CoilMemoryCacheKey.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\MangaSourceHeaderInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\image\RegionBitmapDecoder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\io\NullOutputStream.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\FavouriteCategory.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\GenericSortOrder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\Manga.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\MangaHistory.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\MangaSource.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\MangaSourceInfo.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\MangaSourceSerializer.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\QuickFilter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\SortDirection.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\ZoomMode.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\MangaSourceParceler.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\ParcelableChapter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\ParcelableManga.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\ParcelableMangaListFilter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\ParcelableMangaPage.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\model\parcelable\ParcelableMangaTags.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\nav\AppRouter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\nav\AppRouterEntryPoint.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\nav\MangaIntent.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\nav\NavUtil.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\nav\ReaderIntent.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\CacheLimitInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\CloudFlareInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\CommonHeaders.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\CommonHeadersInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\DoHManager.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\DoHProvider.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\GZipInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\HttpClients.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\NetworkModule.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\RateLimitInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\SSLUtils.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\cookies\AndroidCookieJar.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\cookies\CookieWrapper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\cookies\MutableCookieJar.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\cookies\PreferencesCookieJar.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\imageproxy\BaseImageProxyInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\imageproxy\ImageProxyInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\imageproxy\RealImageProxyInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\imageproxy\WsrvNlProxyInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\imageproxy\ZeroMsProxyInterceptor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\proxy\ProxyProvider.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\CaptchaContinuationClient.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\ContinuationResumeWebViewClient.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\WebViewExecutor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\adblock\AdBlock.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\adblock\CSSRuleBuilder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\adblock\Rule.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\network\webview\adblock\RulesList.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\AppShortcutManager.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\AppValidator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\NetworkManageIntent.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\NetworkState.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\OpenDocumentTreeHelper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\RomCompat.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\os\VoiceInputContract.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\BitmapWrapper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\CachingMangaRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\EmptyMangaRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\MangaDataRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\MangaLinkResolver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\MangaLoaderContextImpl.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\MangaRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\MirrorSwitcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\ParserMangaRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\external\ExternalMangaRepository.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\external\ExternalMangaSource.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\external\ExternalPluginContentSource.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\external\ExternalPluginCursor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\favicon\FaviconFetcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\parser\favicon\FaviconUri.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\AppSettings.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\AppSettingsObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\AppWidgetConfig.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ColorScheme.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\DownloadFormat.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ListMode.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\NavItem.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\NetworkPolicy.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ProgressIndicatorMode.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ReaderAnimation.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ReaderBackground.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ReaderControl.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ReaderMode.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\ScreenshotsPolicy.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\SearchSuggestionType.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\SourceSettings.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\TrackerDownloadStrategy.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\prefs\TriStateOption.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\AlertDialogFragment.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseActivity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseActivityEntryPoint.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseAppWidgetProvider.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseFragment.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseFullscreenActivity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseListAdapter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BasePreferenceFragment.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\BaseViewModel.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\CoroutineIntentService.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\DefaultActivityLifecycleCallbacks.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\FragmentContainerActivity.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\ReorderableListAdapter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\dialog\AlertDialogs.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\dialog\BigButtonsAlertDialog.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\dialog\ErrorDetailsDialog.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\dialog\RememberCheckListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\dialog\RememberSelectionDialogListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\AnimatedFaviconDrawable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\AnimatedPlaceholderDrawable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\ChipIconTarget.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\CoilImageGetter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\FaviconDrawable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\FaviconView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\PaintDrawable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\TextDrawable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\TextViewTarget.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\ThumbnailTransformation.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\image\TrimTransformation.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\AdapterDelegateClickListenerAdapter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\BaseListSelectionCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\BoundsScrollListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\FitHeightGridLayoutManager.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\FitHeightLinearLayoutManager.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\ListSelectionController.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\OnListItemClickListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\OnTipCloseListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\PaginationScrollListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\RecyclerScrollKeeper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\SectionedSelectionController.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\decor\AbstractSelectionItemDecoration.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\decor\SpacingItemDecoration.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\fastscroll\BubbleAnimator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\fastscroll\FastScroller.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\fastscroll\FastScrollRecyclerView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\fastscroll\ScrollbarAnimator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\lifecycle\LifecycleAwareViewHolder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\lifecycle\PagerLifecycleDispatcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\list\lifecycle\RecyclerViewLifecycleDispatcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\model\DateTimeAgo.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\model\MangaOverride.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\model\SortOrder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\sheet\AdaptiveSheetBehavior.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\sheet\AdaptiveSheetCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\sheet\AdaptiveSheetHeaderBar.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\sheet\BaseAdaptiveSheet.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\sheet\BottomSheetCollapseCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ActionModeDelegate.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ActionModeListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ActivityRecreationHandle.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\CollapseActionViewCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\DefaultTextWatcher.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\FadingAppbarMediator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\MenuInvalidator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\OptionsMenuBadgeHelper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\PagerNestedScrollHelper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\PopupMenuMediator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\RecyclerViewOwner.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ReversibleAction.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ReversibleActionObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ReversibleHandle.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\ShrinkOnScrollBehavior.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\SpanSizeResolver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\util\SystemUiController.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\BadgeView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\CheckableImageButton.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\CheckableImageView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\ChipsView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\CubicSlider.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\DotsIndicator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\HideBottomNavigationOnScrollBehavior.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\IconsView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\ListItemTextView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\MultilineEllipsizeTextView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\NestedRecyclerView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\SegmentedBarView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\SelectableTextView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\ShapeView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\SlidingBottomNavigationView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\StackLayout.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\TipView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\TouchBlockLayout.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\TwoLinesItemView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\WindowInsetHolder.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\ui\widgets\ZoomControl.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\AcraCoroutineErrorHandler.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\AcraScreenLogger.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\AlphanumComparator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\CancellableSource.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\CloseableSequence.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\CompositeResult.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ContinuationResumeRunnable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\EditTextValidator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\Event.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\FileSize.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\IdlingDetector.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\KotatsuColors.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\LocaleComparator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\LocaleStringComparator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\LocaleUtils.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\MediatorStateFlow.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\MimeTypes.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\MultiMutex.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\RecyclerViewScrollCallback.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\RetainedLifecycleCoroutineScope.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ShareHelper.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\SynchronizedSieveCache.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\Throttler.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ViewBadge.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Android.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Bundle.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Coil.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Collections.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\ContentResolver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Coroutines.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Cursor.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Date.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\EventFlow.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\File.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Flow.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\FlowObserver.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Fragment.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Graphics.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Http.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Insets.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\IO.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\LocaleList.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\MimeType.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Other.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Preferences.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Primitive.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\RecyclerView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Resources.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\String.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\TextView.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Theme.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Throwable.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Toolbar.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\Uri.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\View.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\ViewModel.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\ext\WorkManager.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\iterator\MappingIterator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\ImageRequestIndicatorListener.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\IntPercentLabelFormatter.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\Progress.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\ProgressDeferred.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\ProgressResponseBody.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\util\progress\RealtimeEtaEstimator.kt | commonMain murni |  |
+| D:\project pribadi\nekuva-kmp\nekuva\app\src\main\kotlin\org\dokiteam\doki\core\zip\ZipOutput.kt | commonMain murni |  |
