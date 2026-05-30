@@ -50,6 +50,8 @@ kotlin {
                 
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.multiplatform.settings)
+                implementation(libs.multiplatform.settings.coroutines)
             }
         }
         val commonTest by getting {
