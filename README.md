@@ -1,36 +1,45 @@
 # Doki (Source code)
 
 > [!IMPORTANT]
-> We have officially moved to **Usagi (兎)**, you can find us [here](https://github.com/UsagiApp). Usagi offers more features and freedom than Doki.
-> Thanks to [Jerry](https://github.com/JeremyChoco) for continuing to develop it. Also thanks to [Draken](https://github.com/dragonx943) for creating Doki application.
+## Credits & Lineage
+
+Nekuva is a fork of [DokiTeam/Doki](https://github.com/DokiTeam/Doki), which is based on
+[KotatsuApp/Kotatsu](https://github.com/KotatsuApp/Kotatsu). Thanks to the Doki and Kotatsu
+teams and all upstream contributors.
+
+Nekuva is being refactored into a **Kotlin Multiplatform** app (Compose Multiplatform) to run
+on Android, Desktop (Windows/macOS), and iOS. Manga sources live in the separate
+[nekuva-exts](https://github.com/NekoSukuriputo/nekuva-exts) repository. Licensed under GPL-3.0.
 
 ### Please give the repo a :star:
 
-## Usage
-**If you are new to this repository, please go to [build-apps](https://github.com/DokiTeam/build-apps) repository first.**
-
 ## Contribute
-**👋 You can contribute new features / push bug fixes for existing features in the app to this repository, but please read [Doki contribution guidelines](CONTRIBUTING.md) first!**
+**👋 You can contribute new sources / push bug fixes for existing sources in this repository, but please read this document first: [CONTRIBUTING](https://github.com/KotatsuApp/kotatsu-parsers/blob/master/CONTRIBUTING.md).**
+<br>
 
-### Automation for Doki (Source code)
+<i>**👉 Make sure you change all package names and dependencies to match the library!**</i>
 
-https://github.com/DokiTeam/build-apps
+---------------------------------------
 
-### Extensions (Source code)
+### Automation for nekuva (Source code)
 
-https://github.com/DokiTeam/doki-exts
+https://github.com/nekuvaTeam/build-apps
+
+### nekuva (Source code)
+
+https://github.com/NekoSukuriputo/Nekuva
 
 ### Report app issues
 
-https://github.com/DokiTeam/Doki/issues/new/
+https://github.com/NekoSukuriputo/Nekuva/issues/new/
 
 ### Report build issues
 
-https://github.com/DokiTeam/build-apps/issues/new/
+https://github.com/nekuvaTeam/build-apps/issues/new/
 
 ### Report extension issues
 
-https://github.com/DokiTeam/doki-exts/issues/new/
+https://github.com/NekoSukuriputo/Nekuva-exts/issues/new/
 
 ****
 

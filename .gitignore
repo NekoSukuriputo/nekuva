@@ -28,3 +28,7 @@
 /.idea/deviceManager.xml
 /.kotlin/
 /.idea/AndroidProjectSystem.xml
+GEMINI.md
+hs_err*
+replay_*
+core_*
