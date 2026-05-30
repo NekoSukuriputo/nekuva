@@ -1,34 +1,31 @@
+# IDE
 *.iml
 .gradle
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/dictionaries
-/.idea/modules.xml
-/.idea/misc.xml
-/.idea/markdown.xml
-/.idea/discord.xml
-/.idea/compiler.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/ktlint-plugin.xml
-/.idea/assetWizardSettings.xml
-/.idea/kotlinScripting.xml
-/.idea/kotlinc.xml
-/.idea/deploymentTargetDropDown.xml
-/.idea/androidTestResultsUserPreferences.xml
-/.idea/deploymentTargetSelector.xml
-/.idea/render.experimental.xml
-/.idea/inspectionProfiles/
+/.idea/
 .DS_Store
-/build
-/captures
+
+# Build folders
+build/
+composeApp/build/
+iosApp/build/
+iosApp/Pods/
+iosApp/*.xcworkspace/xcuserdata/
+iosApp/*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Native
 .externalNativeBuild
 .cxx
-/.idea/deviceManager.xml
+
+# Kotlin / Fleet / Tooling
 /.kotlin/
-/.idea/AndroidProjectSystem.xml
-GEMINI.md
+.fleet/
+
+# JVM crashes
 hs_err*
 replay_*
 core_*
+
+# Misc
+/captures
+GEMINI.md
