@@ -1,8 +1,8 @@
-package org.dokiteam.doki.core.prefs
+package org.nekosukuriputo.nekuva.core.prefs
 
-import androidx.annotation.Keep
 
-@Keep
+
+
 enum class ReaderMode(val id: Int) {
 
 	STANDARD(1),

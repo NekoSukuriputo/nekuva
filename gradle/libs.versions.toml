@@ -39,6 +39,7 @@ moshi = "1.15.2"
 okhttp = "5.2.1"
 okio = "3.16.1"
 exts = "v1.0.1"
+multiplatformSettings = "1.2.0"
 preference = "1.2.1"
 recyclerview = "1.4.0"
 room = "2.7.2"
@@ -132,6 +133,8 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 nekuva-exts = { module = "com.github.NekoSukuriputo:nekuva-exts", version.ref = "exts" }
+multiplatform-settings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
+multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-settings-coroutines", version.ref = "multiplatformSettings" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "gradle" }

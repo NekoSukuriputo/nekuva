@@ -1,84 +1,65 @@
-package org.dokiteam.doki.core.prefs
+package org.nekosukuriputo.nekuva.core.prefs
 
-import android.content.Context
-import android.content.SharedPreferences
-import android.content.pm.ActivityInfo
-import android.net.ConnectivityManager
-import android.net.Uri
-import android.os.Build
-import android.provider.Settings
-import androidx.annotation.FloatRange
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.collection.ArraySet
-import androidx.core.content.edit
-import androidx.core.os.LocaleListCompat
-import androidx.documentfile.provider.DocumentFile
-import androidx.preference.PreferenceManager
-import dagger.hilt.android.qualifiers.ApplicationContext
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
-import org.dokiteam.doki.R
-import org.dokiteam.doki.core.model.ZoomMode
-import org.dokiteam.doki.core.network.DoHProvider
-import org.dokiteam.doki.core.util.ext.connectivityManager
-import org.dokiteam.doki.core.util.ext.getEnumValue
-import org.dokiteam.doki.core.util.ext.observeChanges
-import org.dokiteam.doki.core.util.ext.putAll
-import org.dokiteam.doki.core.util.ext.putEnumValue
-import org.dokiteam.doki.core.util.ext.takeIfReadable
-import org.dokiteam.doki.core.util.ext.toUriOrNull
-import org.dokiteam.doki.explore.data.SourcesSortOrder
-import org.dokiteam.doki.list.domain.ListSortOrder
-import org.dokiteam.doki.parsers.model.SortOrder
-import org.dokiteam.doki.parsers.util.find
-import org.dokiteam.doki.parsers.util.mapNotNullToSet
-import org.dokiteam.doki.parsers.util.mapToSet
-import org.dokiteam.doki.parsers.util.nullIfEmpty
-import org.dokiteam.doki.reader.domain.ReaderColorFilter
+
+import org.nekosukuriputo.nekuva.core.model.ZoomMode
+
+
+
+
+
+
+import org.nekosukuriputo.nekuva.explore.data.SourcesSortOrder
+import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
+import org.nekosukuriputo.nekuva.parsers.model.SortOrder
+
+import org.nekosukuriputo.nekuva.parsers.util.mapNotNullToSet
+import org.nekosukuriputo.nekuva.parsers.util.mapToSet
+import org.nekosukuriputo.nekuva.parsers.util.nullIfEmpty
+
 import java.io.File
 import java.net.Proxy
-import java.util.EnumSet
+import kotlin.collections.Set
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class AppSettings @Inject constructor(@ApplicationContext context: Context) {
+import com.russhwolf.settings.ObservableSettings
+import com.russhwolf.settings.set
 
-	private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-	private val connectivityManager = context.connectivityManager
-	private val mangaListBadgesDefault = ArraySet(context.resources.getStringArray(R.array.values_list_badges))
+class AppSettings(private val prefs: ObservableSettings) {
+
+	// TODO: connectivityManager
+	private val mangaListBadgesDefault = setOf("1", "2", "4")
 
 	var listMode: ListMode
-		get() = prefs.getEnumValue(KEY_LIST_MODE, ListMode.GRID)
-		set(value) = prefs.edit { putEnumValue(KEY_LIST_MODE, value) }
+		get() = prefs.getEnum(KEY_LIST_MODE, ListMode.GRID)
+		set(value) = prefs.putEnum(KEY_LIST_MODE, value)
 
 	val theme: Int
-		get() = prefs.getString(KEY_THEME, null)?.toIntOrNull()
-			?: AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+		get() = prefs.getStringOrNull(KEY_THEME)?.toIntOrNull()
+			?: -1
 
 	val colorScheme: ColorScheme
-		get() = prefs.getEnumValue(KEY_COLOR_THEME, ColorScheme.default)
+		get() = prefs.getEnum(KEY_COLOR_THEME, ColorScheme.default)
 
 	val isAmoledTheme: Boolean
 		get() = prefs.getBoolean(KEY_THEME_AMOLED, false)
 
 	var mainNavItems: List<NavItem>
 		get() {
-			val raw = prefs.getString(KEY_NAV_MAIN, null)?.split(',')
+			val raw = prefs.getStringOrNull(KEY_NAV_MAIN)?.split(',')
 			return if (raw.isNullOrEmpty()) {
-				listOf(NavItem.HISTORY, NavItem.FAVORITES, NavItem.EXPLORE, NavItem.FEED)
+				listOf(NavItem.HISTORY, NavItem.FAVORITES, NavItem.EXPLORE, NavItem.UPDATES)
 			} else {
-				raw.mapNotNull { x -> NavItem.entries.find(x) }.ifEmpty { listOf(NavItem.EXPLORE) }
+				raw.mapNotNull { x -> NavItem.entries.find { it.name == x } }.ifEmpty { listOf(NavItem.EXPLORE) }
 			}
 		}
 		set(value) {
-			prefs.edit {
-				putString(KEY_NAV_MAIN, value.joinToString(",") { it.name })
-			}
+			prefs.putString(KEY_NAV_MAIN, value.joinToString(",") { it.name })
 		}
 
 	val isNavLabelsVisible: Boolean
@@ -92,11 +73,11 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	var gridSize: Int
 		get() = prefs.getInt(KEY_GRID_SIZE, 100)
-		set(value) = prefs.edit { putInt(KEY_GRID_SIZE, value) }
+		set(value) = prefs.putInt(KEY_GRID_SIZE, value)
 
 	var gridSizePages: Int
 		get() = prefs.getInt(KEY_GRID_SIZE_PAGES, 100)
-		set(value) = prefs.edit { putInt(KEY_GRID_SIZE_PAGES, value) }
+		set(value) = prefs.putInt(KEY_GRID_SIZE_PAGES, value)
 
 	val isQuickFilterEnabled: Boolean
 		get() = prefs.getBoolean(KEY_QUICK_FILTER, true)
@@ -105,51 +86,49 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = !prefs.getBoolean(KEY_COLLAPSE_DESCRIPTION, true)
 
 	var historyListMode: ListMode
-		get() = prefs.getEnumValue(KEY_LIST_MODE_HISTORY, listMode)
-		set(value) = prefs.edit { putEnumValue(KEY_LIST_MODE_HISTORY, value) }
+		get() = prefs.getEnum(KEY_LIST_MODE_HISTORY, listMode)
+		set(value) = prefs.putEnum(KEY_LIST_MODE_HISTORY, value)
 
 	var suggestionsListMode: ListMode
-		get() = prefs.getEnumValue(KEY_LIST_MODE_SUGGESTIONS, listMode)
-		set(value) = prefs.edit { putEnumValue(KEY_LIST_MODE_SUGGESTIONS, value) }
+		get() = prefs.getEnum(KEY_LIST_MODE_SUGGESTIONS, listMode)
+		set(value) = prefs.putEnum(KEY_LIST_MODE_SUGGESTIONS, value)
 
 	var favoritesListMode: ListMode
-		get() = prefs.getEnumValue(KEY_LIST_MODE_FAVORITES, listMode)
-		set(value) = prefs.edit { putEnumValue(KEY_LIST_MODE_FAVORITES, value) }
+		get() = prefs.getEnum(KEY_LIST_MODE_FAVORITES, listMode)
+		set(value) = prefs.putEnum(KEY_LIST_MODE_FAVORITES, value)
 
 	val isTagsWarningsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TAGS_WARNINGS, true)
 
 	var isNsfwContentDisabled: Boolean
 		get() = prefs.getBoolean(KEY_DISABLE_NSFW, false)
-		set(value) = prefs.edit { putBoolean(KEY_DISABLE_NSFW, value) }
+		set(value) = prefs.putBoolean(KEY_DISABLE_NSFW, value)
 
-	var appLocales: LocaleListCompat
+	var appLocales: String
 		get() {
-			val raw = prefs.getString(KEY_APP_LOCALE, null)
-			return LocaleListCompat.forLanguageTags(raw)
+			val raw = prefs.getStringOrNull(KEY_APP_LOCALE)
+			return raw ?: ""
 		}
 		set(value) {
-			prefs.edit {
-				putString(KEY_APP_LOCALE, value.toLanguageTags())
-			}
+			prefs.putString(KEY_APP_LOCALE, value)
 		}
 
 	var isReaderDoubleOnLandscape: Boolean
 		get() = prefs.getBoolean(KEY_READER_DOUBLE_PAGES, false)
-		set(value) = prefs.edit { putBoolean(KEY_READER_DOUBLE_PAGES, value) }
+		set(value) = prefs.putBoolean(KEY_READER_DOUBLE_PAGES, value)
 
     var isReaderDoubleOnFoldable: Boolean
         get() = prefs.getBoolean(KEY_READER_DOUBLE_FOLDABLE, false)
-        set(value) = prefs.edit { putBoolean(KEY_READER_DOUBLE_FOLDABLE, value) }
+        set(value) = prefs.putBoolean(KEY_READER_DOUBLE_FOLDABLE, value)
 
-	@get:FloatRange(0.0, 1.0)
+	
 	var readerDoublePagesSensitivity: Float
 		get() = prefs.getFloat(KEY_READER_DOUBLE_PAGES_SENSITIVITY, 0.5f)
-		set(@FloatRange(0.0, 1.0) value) = prefs.edit { putFloat(KEY_READER_DOUBLE_PAGES_SENSITIVITY, value) }
+		set( value) = prefs.putFloat(KEY_READER_DOUBLE_PAGES_SENSITIVITY, value)
 
 	val readerScreenOrientation: Int
-		get() = prefs.getString(KEY_READER_ORIENTATION, null)?.toIntOrNull()
-			?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+		get() = prefs.getStringOrNull(KEY_READER_ORIENTATION)?.toIntOrNull()
+			?: -1
 
 	val isReaderVolumeButtonsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_VOLUME_BUTTONS, false)
@@ -170,8 +149,8 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_READER_OPTIMIZE, false)
 
 	val readerControls: Set<ReaderControl>
-		get() = prefs.getStringSet(KEY_READER_CONTROLS, null)?.mapNotNullTo(EnumSet.noneOf(ReaderControl::class.java)) {
-			ReaderControl.entries.find(it)
+		get() = prefs.getStringSet(KEY_READER_CONTROLS, emptySet()).mapNotNullTo(mutableSetOf<ReaderControl>()) {
+			ReaderControl.entries.find { r -> r.name == it }
 		} ?: ReaderControl.DEFAULT
 
 	val isOfflineCheckDisabled: Boolean
@@ -179,7 +158,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	var isAllFavouritesVisible: Boolean
 		get() = prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true)
-		set(value) = prefs.edit { putBoolean(KEY_ALL_FAVOURITES_VISIBLE, value) }
+		set(value) = prefs.putBoolean(KEY_ALL_FAVOURITES_VISIBLE, value)
 
 	val isTrackerEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TRACKER_ENABLED, true)
@@ -188,7 +167,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_TRACKER_WIFI_ONLY, false)
 
 	val trackerFrequencyFactor: Float
-		get() = prefs.getString(KEY_TRACKER_FREQUENCY, null)?.toFloatOrNull() ?: 1f
+		get() = prefs.getStringOrNull(KEY_TRACKER_FREQUENCY)?.toFloatOrNull() ?: 1f
 
 	val isTrackerNotificationsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TRACKER_NOTIFICATIONS, true)
@@ -197,12 +176,12 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_TRACKER_NO_NSFW, false)
 
 	val trackerDownloadStrategy: TrackerDownloadStrategy
-		get() = prefs.getEnumValue(KEY_TRACKER_DOWNLOAD, TrackerDownloadStrategy.DISABLED)
+		get() = prefs.getEnum(KEY_TRACKER_DOWNLOAD, TrackerDownloadStrategy.DISABLED)
 
-	var notificationSound: Uri
-		get() = prefs.getString(KEY_NOTIFICATIONS_SOUND, null)?.toUriOrNull()
-			?: Settings.System.DEFAULT_NOTIFICATION_URI
-		set(value) = prefs.edit { putString(KEY_NOTIFICATIONS_SOUND, value.toString()) }
+	var notificationSound: String
+		get() = prefs.getStringOrNull(KEY_NOTIFICATIONS_SOUND)
+			?: "content://settings/system/notification_sound"
+		set(value) = prefs.putString(KEY_NOTIFICATIONS_SOUND, value)
 
 	val notificationVibrate: Boolean
 		get() = prefs.getBoolean(KEY_NOTIFICATIONS_VIBRATE, false)
@@ -211,77 +190,75 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_NOTIFICATIONS_LIGHT, true)
 
 	val readerAnimation: ReaderAnimation
-		get() = prefs.getEnumValue(KEY_READER_ANIMATION, ReaderAnimation.DEFAULT)
+		get() = prefs.getEnum(KEY_READER_ANIMATION, ReaderAnimation.DEFAULT)
 
 	val readerBackground: ReaderBackground
-		get() = prefs.getEnumValue(KEY_READER_BACKGROUND, ReaderBackground.DEFAULT)
+		get() = prefs.getEnum(KEY_READER_BACKGROUND, ReaderBackground.DEFAULT)
 
 	val defaultReaderMode: ReaderMode
-		get() = prefs.getEnumValue(KEY_READER_MODE, ReaderMode.STANDARD)
+		get() = prefs.getEnum(KEY_READER_MODE, ReaderMode.STANDARD)
 
 	val isReaderModeDetectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_MODE_DETECT, true)
 
 	var isHistoryGroupingEnabled: Boolean
 		get() = prefs.getBoolean(KEY_HISTORY_GROUPING, true)
-		set(value) = prefs.edit { putBoolean(KEY_HISTORY_GROUPING, value) }
+		set(value) = prefs.putBoolean(KEY_HISTORY_GROUPING, value)
 
 	var isUpdatedGroupingEnabled: Boolean
 		get() = prefs.getBoolean(KEY_UPDATED_GROUPING, true)
-		set(value) = prefs.edit { putBoolean(KEY_UPDATED_GROUPING, value) }
+		set(value) = prefs.putBoolean(KEY_UPDATED_GROUPING, value)
 
 	var isFeedHeaderVisible: Boolean
 		get() = prefs.getBoolean(KEY_FEED_HEADER, true)
-		set(value) = prefs.edit { putBoolean(KEY_FEED_HEADER, value) }
+		set(value) = prefs.putBoolean(KEY_FEED_HEADER, value)
 
 	val progressIndicatorMode: ProgressIndicatorMode
-		get() = prefs.getEnumValue(KEY_PROGRESS_INDICATORS, ProgressIndicatorMode.PERCENT_READ)
+		get() = prefs.getEnum(KEY_PROGRESS_INDICATORS, ProgressIndicatorMode.PERCENT_READ)
 
 	var incognitoModeForNsfw: TriStateOption
-		get() = prefs.getEnumValue(KEY_INCOGNITO_NSFW, TriStateOption.ASK)
-		set(value) = prefs.edit { putEnumValue(KEY_INCOGNITO_NSFW, value) }
+		get() = prefs.getEnum(KEY_INCOGNITO_NSFW, TriStateOption.ASK)
+		set(value) = prefs.putEnum(KEY_INCOGNITO_NSFW, value)
 
 	var isIncognitoModeEnabled: Boolean
 		get() = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
-		set(value) = prefs.edit { putBoolean(KEY_INCOGNITO_MODE, value) }
+		set(value) = prefs.putBoolean(KEY_INCOGNITO_MODE, value)
 
 	val isReaderMultiTaskEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_MULTITASK, false)
 
 	var isChaptersReverse: Boolean
 		get() = prefs.getBoolean(KEY_REVERSE_CHAPTERS, false)
-		set(value) = prefs.edit { putBoolean(KEY_REVERSE_CHAPTERS, value) }
+		set(value) = prefs.putBoolean(KEY_REVERSE_CHAPTERS, value)
 
 	var isChaptersGridView: Boolean
 		get() = prefs.getBoolean(KEY_GRID_VIEW_CHAPTERS, false)
-		set(value) = prefs.edit { putBoolean(KEY_GRID_VIEW_CHAPTERS, value) }
+		set(value) = prefs.putBoolean(KEY_GRID_VIEW_CHAPTERS, value)
 
 	val zoomMode: ZoomMode
-		get() = prefs.getEnumValue(KEY_ZOOM_MODE, ZoomMode.FIT_CENTER)
+		get() = prefs.getEnum(KEY_ZOOM_MODE, ZoomMode.FIT_CENTER)
 
 	val trackSources: Set<String>
-		get() = prefs.getStringSet(KEY_TRACK_SOURCES, null) ?: setOf(TRACK_FAVOURITES)
+		get() = prefs.getStringSet(KEY_TRACK_SOURCES, emptySet()) ?: setOf(TRACK_FAVOURITES)
 
 	var appPassword: String?
-		get() = prefs.getString(KEY_APP_PASSWORD, null)
-		set(value) = prefs.edit {
-			if (value != null) putString(KEY_APP_PASSWORD, value) else remove(KEY_APP_PASSWORD)
-		}
+		get() = prefs.getStringOrNull(KEY_APP_PASSWORD)
+		set(value) = if (value != null) prefs.putString(KEY_APP_PASSWORD, value) else prefs.remove(KEY_APP_PASSWORD)
 
 	var isAppPasswordNumeric: Boolean
 		get() = prefs.getBoolean(KEY_APP_PASSWORD_NUMERIC, false)
-		set(value) = prefs.edit { putBoolean(KEY_APP_PASSWORD_NUMERIC, value) }
+		set(value) = prefs.putBoolean(KEY_APP_PASSWORD_NUMERIC, value)
 
 	val searchSuggestionTypes: Set<SearchSuggestionType>
-		get() = prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, null)?.let { stringSet ->
-			stringSet.mapNotNullTo(EnumSet.noneOf(SearchSuggestionType::class.java)) { x ->
+		get() = prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, emptySet()).let { stringSet ->
+			stringSet.mapNotNullTo(mutableSetOf<SearchSuggestionType>()) { x ->
 				enumValueOf<SearchSuggestionType>(x)
 			}
-		} ?: EnumSet.allOf(SearchSuggestionType::class.java)
+		} ?: SearchSuggestionType.entries.toSet()
 
 	var isBiometricProtectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_PROTECT_APP_BIOMETRIC, true)
-		set(value) = prefs.edit { putBoolean(KEY_PROTECT_APP_BIOMETRIC, value) }
+		set(value) = prefs.putBoolean(KEY_PROTECT_APP_BIOMETRIC, value)
 
 	val isMirrorSwitchingEnabled: Boolean
 		get() = prefs.getBoolean(KEY_MIRROR_SWITCHING, false)
@@ -300,7 +277,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	val defaultDetailsTab: Int
 		get() = if (isPagesTabEnabled) {
-			val raw = prefs.getString(KEY_DETAILS_TAB, null)?.toIntOrNull() ?: -1
+			val raw = prefs.getStringOrNull(KEY_DETAILS_TAB)?.toIntOrNull() ?: -1
 			if (raw == -1) {
 				lastDetailsTab
 			} else {
@@ -312,79 +289,77 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	var lastDetailsTab: Int
 		get() = prefs.getInt(KEY_DETAILS_LAST_TAB, 0)
-		set(value) = prefs.edit { putInt(KEY_DETAILS_LAST_TAB, value) }
+		set(value) = prefs.putInt(KEY_DETAILS_LAST_TAB, value)
 
 	val isContentPrefetchEnabled: Boolean
 		get() {
-			if (isBackgroundNetworkRestricted()) {
+			if (false /*isBackgroundNetworkRestricted*/) {
 				return false
 			}
 			val policy =
-				NetworkPolicy.from(prefs.getString(KEY_PREFETCH_CONTENT, null), NetworkPolicy.NEVER)
-			return policy.isNetworkAllowed(connectivityManager)
+				NetworkPolicy.from(prefs.getStringOrNull(KEY_PREFETCH_CONTENT), NetworkPolicy.NONE)
+			return policy.isNetworkAllowed()
 		}
 
 	var sourcesSortOrder: SourcesSortOrder
-		get() = prefs.getEnumValue(KEY_SOURCES_ORDER, SourcesSortOrder.MANUAL)
-		set(value) = prefs.edit { putEnumValue(KEY_SOURCES_ORDER, value) }
+		get() = prefs.getEnum(KEY_SOURCES_ORDER, SourcesSortOrder.MANUAL)
+		set(value) = prefs.putEnum(KEY_SOURCES_ORDER, value)
 
 	var isSourcesGridMode: Boolean
 		get() = prefs.getBoolean(KEY_SOURCES_GRID, true)
-		set(value) = prefs.edit { putBoolean(KEY_SOURCES_GRID, value) }
+		set(value) = prefs.putBoolean(KEY_SOURCES_GRID, value)
 
 	var sourcesVersion: Int
 		get() = prefs.getInt(KEY_SOURCES_VERSION, 0)
-		set(value) = prefs.edit { putInt(KEY_SOURCES_VERSION, value) }
+		set(value) = prefs.putInt(KEY_SOURCES_VERSION, value)
 
 	var isAllSourcesEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SOURCES_ENABLED_ALL, false)
-		set(value) = prefs.edit { putBoolean(KEY_SOURCES_ENABLED_ALL, value) }
+		set(value) = prefs.putBoolean(KEY_SOURCES_ENABLED_ALL, value)
 
 	val isPagesNumbersEnabled: Boolean
 		get() = prefs.getBoolean(KEY_PAGES_NUMBERS, false)
 
 	val screenshotsPolicy: ScreenshotsPolicy
-		get() = prefs.getEnumValue(KEY_SCREENSHOTS_POLICY, ScreenshotsPolicy.ALLOW)
+		get() = prefs.getEnum(KEY_SCREENSHOTS_POLICY, ScreenshotsPolicy.ALLOW)
 
 	val isAdBlockEnabled: Boolean
 		get() = prefs.getBoolean(KEY_ADBLOCK, false)
 
-	var userSpecifiedMangaDirectories: Set<File>
+	var userSpecifiedMangaDirectories: Set<String>
 		get() {
 			val set = prefs.getStringSet(KEY_LOCAL_MANGA_DIRS, emptySet()).orEmpty()
-			return set.mapNotNullToSet { File(it).takeIfReadable() }
+			return set
 		}
 		set(value) {
-			val set = value.mapToSet { it.absolutePath }
-			prefs.edit { putStringSet(KEY_LOCAL_MANGA_DIRS, set) }
+			val set = value
+			prefs.putStringSet(KEY_LOCAL_MANGA_DIRS, set)
 		}
 
-	var mangaStorageDir: File?
-		get() = prefs.getString(KEY_LOCAL_STORAGE, null)?.let {
-			File(it)
-		}?.takeIf { it.exists() && it in userSpecifiedMangaDirectories }
-		set(value) = prefs.edit {
+	var mangaStorageDir: String?
+		get() = prefs.getStringOrNull(KEY_LOCAL_STORAGE)
+		set(value) {
 			if (value == null) {
-				remove(KEY_LOCAL_STORAGE)
+				prefs.remove(KEY_LOCAL_STORAGE)
 			} else {
 				val userDirs = userSpecifiedMangaDirectories
 				if (value !in userDirs) {
 					userSpecifiedMangaDirectories = userDirs + value
 				}
-				putString(KEY_LOCAL_STORAGE, value.path)
+				prefs.putString(KEY_LOCAL_STORAGE, value)
 			}
 		}
 
 	var allowDownloadOnMeteredNetwork: TriStateOption
-		get() = prefs.getEnumValue(KEY_DOWNLOADS_METERED_NETWORK, TriStateOption.ASK)
-		set(value) = prefs.edit { putEnumValue(KEY_DOWNLOADS_METERED_NETWORK, value) }
+		get() = prefs.getEnum(KEY_DOWNLOADS_METERED_NETWORK, TriStateOption.ASK)
+		set(value) = prefs.putEnum(KEY_DOWNLOADS_METERED_NETWORK, value)
 
 	val preferredDownloadFormat: DownloadFormat
-		get() = prefs.getEnumValue(KEY_DOWNLOADS_FORMAT, DownloadFormat.AUTOMATIC)
+		get() = prefs.getEnum(KEY_DOWNLOADS_FORMAT, DownloadFormat.AUTOMATIC)
 
 	var isSuggestionsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SUGGESTIONS, false)
-		set(value) = prefs.edit { putBoolean(KEY_SUGGESTIONS, value) }
+		set(value) = prefs.putBoolean(KEY_SUGGESTIONS, value)
 
 	val isSuggestionsWiFiOnly: Boolean
 		get() = prefs.getBoolean(KEY_SUGGESTIONS_WIFI_ONLY, false)
@@ -400,7 +375,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	val suggestionsTagsBlacklist: Set<String>
 		get() {
-			val string = prefs.getString(KEY_SUGGESTIONS_EXCLUDE_TAGS, null)?.trimEnd(' ', ',')
+			val string = prefs.getStringOrNull(KEY_SUGGESTIONS_EXCLUDE_TAGS)?.trimEnd(' ', ',')
 			if (string.isNullOrEmpty()) {
 				return emptySet()
 			}
@@ -419,76 +394,45 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	val isReaderKeepScreenOn: Boolean
 		get() = prefs.getBoolean(KEY_READER_SCREEN_ON, true)
 
-	var readerColorFilter: ReaderColorFilter?
-		get() = runCatching {
-			ReaderColorFilter(
-				brightness = prefs.getFloat(KEY_CF_BRIGHTNESS, ReaderColorFilter.EMPTY.brightness),
-				contrast = prefs.getFloat(KEY_CF_CONTRAST, ReaderColorFilter.EMPTY.contrast),
-				isInverted = prefs.getBoolean(KEY_CF_INVERTED, ReaderColorFilter.EMPTY.isInverted),
-				isGrayscale = prefs.getBoolean(KEY_CF_GRAYSCALE, ReaderColorFilter.EMPTY.isGrayscale),
-				isBookBackground = prefs.getBoolean(KEY_CF_BOOK, ReaderColorFilter.EMPTY.isBookBackground),
-			).takeUnless { it.isEmpty }
-		}.getOrNull()
-		set(value) {
-			prefs.edit {
-				if (value != null) {
-					putFloat(KEY_CF_BRIGHTNESS, value.brightness)
-					putFloat(KEY_CF_CONTRAST, value.contrast)
-					putBoolean(KEY_CF_INVERTED, value.isInverted)
-					putBoolean(KEY_CF_GRAYSCALE, value.isGrayscale)
-					putBoolean(KEY_CF_BOOK, value.isBookBackground)
-				} else {
-					remove(KEY_CF_BRIGHTNESS)
-					remove(KEY_CF_CONTRAST)
-					remove(KEY_CF_INVERTED)
-					remove(KEY_CF_GRAYSCALE)
-					remove(KEY_CF_BOOK)
-				}
-			}
-		}
-
 	val imagesProxy: Int
 		get() {
-			val raw = prefs.getString(KEY_IMAGES_PROXY, null)?.toIntOrNull()
+			val raw = prefs.getStringOrNull(KEY_IMAGES_PROXY)?.toIntOrNull()
 			return raw ?: if (prefs.getBoolean(KEY_IMAGES_PROXY_OLD, false)) 0 else -1
 		}
 
-	val dnsOverHttps: DoHProvider
-		get() = prefs.getEnumValue(KEY_DOH, DoHProvider.NONE)
-
 	var isSSLBypassEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SSL_BYPASS, false)
-		set(value) = prefs.edit { putBoolean(KEY_SSL_BYPASS, value) }
+		set(value) = prefs.putBoolean(KEY_SSL_BYPASS, value)
 
 	val proxyType: Proxy.Type
 		get() {
-			val raw = prefs.getString(KEY_PROXY_TYPE, null) ?: return Proxy.Type.DIRECT
+			val raw = prefs.getStringOrNull(KEY_PROXY_TYPE) ?: return Proxy.Type.DIRECT
 			return enumValues<Proxy.Type>().find { it.name == raw } ?: Proxy.Type.DIRECT
 		}
 
 	val proxyAddress: String?
-		get() = prefs.getString(KEY_PROXY_ADDRESS, null)
+		get() = prefs.getStringOrNull(KEY_PROXY_ADDRESS)
 
 	val proxyPort: Int
-		get() = prefs.getString(KEY_PROXY_PORT, null)?.toIntOrNull() ?: 0
+		get() = prefs.getStringOrNull(KEY_PROXY_PORT)?.toIntOrNull() ?: 0
 
 	val proxyLogin: String?
-		get() = prefs.getString(KEY_PROXY_LOGIN, null)?.nullIfEmpty()
+		get() = prefs.getStringOrNull(KEY_PROXY_LOGIN)?.nullIfEmpty()
 
 	val proxyPassword: String?
-		get() = prefs.getString(KEY_PROXY_PASSWORD, null)?.nullIfEmpty()
+		get() = prefs.getStringOrNull(KEY_PROXY_PASSWORD)?.nullIfEmpty()
 
 	var localListOrder: SortOrder
-		get() = prefs.getEnumValue(KEY_LOCAL_LIST_ORDER, SortOrder.NEWEST)
-		set(value) = prefs.edit { putEnumValue(KEY_LOCAL_LIST_ORDER, value) }
+		get() = prefs.getEnum(KEY_LOCAL_LIST_ORDER, SortOrder.NEWEST)
+		set(value) = prefs.putEnum(KEY_LOCAL_LIST_ORDER, value)
 
 	var historySortOrder: ListSortOrder
-		get() = prefs.getEnumValue(KEY_HISTORY_ORDER, ListSortOrder.LAST_READ)
-		set(value) = prefs.edit { putEnumValue(KEY_HISTORY_ORDER, value) }
+		get() = prefs.getEnum(KEY_HISTORY_ORDER, ListSortOrder.LAST_READ)
+		set(value) = prefs.putEnum(KEY_HISTORY_ORDER, value)
 
 	var allFavoritesSortOrder: ListSortOrder
-		get() = prefs.getEnumValue(KEY_FAVORITES_ORDER, ListSortOrder.NEWEST)
-		set(value) = prefs.edit { putEnumValue(KEY_FAVORITES_ORDER, value) }
+		get() = prefs.getEnum(KEY_FAVORITES_ORDER, ListSortOrder.NEWEST)
+		set(value) = prefs.putEnum(KEY_FAVORITES_ORDER, value)
 
 	val isRelatedMangaEnabled: Boolean
 		get() = prefs.getBoolean(KEY_RELATED_MANGA, true)
@@ -498,40 +442,37 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 
 	var isWebtoonGapsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_WEBTOON_GAPS, false)
-		set(value) = prefs.edit { putBoolean(KEY_WEBTOON_GAPS, value) }
+		set(value) = prefs.putBoolean(KEY_WEBTOON_GAPS, value)
 
 	var isWebtoonPullGestureEnabled: Boolean
 		get() = prefs.getBoolean(KEY_WEBTOON_PULL_GESTURE, false)
-		set(value) = prefs.edit { putBoolean(KEY_WEBTOON_PULL_GESTURE, value) }
+		set(value) = prefs.putBoolean(KEY_WEBTOON_PULL_GESTURE, value)
 
-	@get:FloatRange(from = 0.0, to = 0.5)
+	
 	val defaultWebtoonZoomOut: Float
 		get() = prefs.getInt(KEY_WEBTOON_ZOOM_OUT, 0).coerceIn(0, 50) / 100f
 
-	@get:FloatRange(from = 0.0, to = 1.0)
+	
 	var readerAutoscrollSpeed: Float
 		get() = prefs.getFloat(KEY_READER_AUTOSCROLL_SPEED, 0f)
-		set(@FloatRange(from = 0.0, to = 1.0) value) = prefs.edit {
-			putFloat(
-				KEY_READER_AUTOSCROLL_SPEED,
-				value,
+		set( value) = prefs.putFloat(
+				KEY_READER_AUTOSCROLL_SPEED, value,
 			)
-		}
 
 	var isReaderAutoscrollFabVisible: Boolean
 		get() = prefs.getBoolean(KEY_READER_AUTOSCROLL_FAB, true)
-		set(value) = prefs.edit { putBoolean(KEY_READER_AUTOSCROLL_FAB, value) }
+		set(value) = prefs.putBoolean(KEY_READER_AUTOSCROLL_FAB, value)
 
 	val isPagesPreloadEnabled: Boolean
 		get() {
-			if (isBackgroundNetworkRestricted()) {
+			if (false /*isBackgroundNetworkRestricted*/) {
 				return false
 			}
 			val policy = NetworkPolicy.from(
-				prefs.getString(KEY_PAGES_PRELOAD, null),
+				prefs.getStringOrNull(KEY_PAGES_PRELOAD),
 				NetworkPolicy.NON_METERED,
 			)
-			return policy.isNetworkAllowed(connectivityManager)
+			return policy.isNetworkAllowed()
 		}
 
 	val is32BitColorsEnabled: Boolean
@@ -544,14 +485,14 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		get() = prefs.getBoolean(KEY_DISCORD_RPC_SKIP_NSFW, false)
 
 	var discordToken: String?
-		get() = prefs.getString(KEY_DISCORD_TOKEN, null)?.trim()?.nullIfEmpty()
-		set(value) = prefs.edit { putString(KEY_DISCORD_TOKEN, value?.nullIfEmpty()) }
+		get() = prefs.getStringOrNull(KEY_DISCORD_TOKEN)?.trim()?.nullIfEmpty()
+		set(value) = if (value != null) prefs.putString(KEY_DISCORD_TOKEN, value.nullIfEmpty() ?: "") else prefs.remove(KEY_DISCORD_TOKEN)
 
 	val isPeriodicalBackupEnabled: Boolean
 		get() = prefs.getBoolean(KEY_BACKUP_PERIODICAL_ENABLED, false)
 
     val periodicalBackupFrequency: Float
-        get() = prefs.getString(KEY_BACKUP_PERIODICAL_FREQUENCY, null)?.toFloatOrNull() ?: 7f
+        get() = prefs.getStringOrNull(KEY_BACKUP_PERIODICAL_FREQUENCY)?.toFloatOrNull() ?: 7f
 
 	val periodicalBackupFrequencyMillis: Long
         get() = (TimeUnit.DAYS.toMillis(1) * periodicalBackupFrequency).toLong()
@@ -563,15 +504,15 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 			Int.MAX_VALUE
 		}
 
-	var periodicalBackupDirectory: Uri?
-		get() = prefs.getString(KEY_BACKUP_PERIODICAL_OUTPUT, null)?.toUriOrNull()
-		set(value) = prefs.edit { putString(KEY_BACKUP_PERIODICAL_OUTPUT, value?.toString()) }
+	var periodicalBackupDirectory: String?
+		get() = prefs.getStringOrNull(KEY_BACKUP_PERIODICAL_OUTPUT)
+		set(value) = if (value != null) prefs.putString(KEY_BACKUP_PERIODICAL_OUTPUT, value) else prefs.remove(KEY_BACKUP_PERIODICAL_OUTPUT)
 
 	val isBackupTelegramUploadEnabled: Boolean
 		get() = prefs.getBoolean(KEY_BACKUP_TG_ENABLED, false)
 
 	val backupTelegramChatId: String?
-		get() = prefs.getString(KEY_BACKUP_TG_CHAT, null)?.nullIfEmpty()
+		get() = prefs.getStringOrNull(KEY_BACKUP_TG_CHAT)?.nullIfEmpty()
 
 	val isReadingTimeEstimationEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READING_TIME, true)
@@ -595,32 +536,33 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 	}
 
 	fun isTipEnabled(tip: String): Boolean {
-		return prefs.getStringSet(KEY_TIPS_CLOSED, emptySet())?.contains(tip) != true
+		return !prefs.getStringSet(KEY_TIPS_CLOSED, emptySet()).contains(tip)
 	}
 
 	fun closeTip(tip: String) {
-		val closedTips = prefs.getStringSet(KEY_TIPS_CLOSED, emptySet()).orEmpty()
+		val closedTips = prefs.getStringSet(KEY_TIPS_CLOSED, emptySet())
 		if (tip in closedTips) {
 			return
 		}
-		prefs.edit { putStringSet(KEY_TIPS_CLOSED, closedTips + tip) }
+		prefs.putStringSet(KEY_TIPS_CLOSED, closedTips + tip)
 	}
 
 	fun isIncognitoModeEnabled(isNsfw: Boolean): Boolean {
 		return isIncognitoModeEnabled || (isNsfw && incognitoModeForNsfw == TriStateOption.ENABLED)
 	}
 
-	fun getPagesSaveDir(context: Context): DocumentFile? =
-		prefs.getString(KEY_PAGES_SAVE_DIR, null)?.toUriOrNull()?.let {
-			DocumentFile.fromTreeUri(context, it)?.takeIf { it.canWrite() }
-		}
+	fun getPagesSaveDirUri(): String? = prefs.getStringOrNull(KEY_PAGES_SAVE_DIR)
 
-	fun setPagesSaveDir(uri: Uri?) {
-		prefs.edit { putString(KEY_PAGES_SAVE_DIR, uri?.toString()) }
+	fun setPagesSaveDir(uri: String?) {
+		if (uri != null) {
+			prefs.putString(KEY_PAGES_SAVE_DIR, uri)
+		} else {
+			prefs.remove(KEY_PAGES_SAVE_DIR)
+		}
 	}
 
 	fun getMangaListBadges(): Int {
-		val raw = prefs.getStringSet(KEY_MANGA_LIST_BADGES, mangaListBadgesDefault).orEmpty()
+		val raw = prefs.getStringSet(KEY_MANGA_LIST_BADGES, mangaListBadgesDefault)
 		var result = 0
 		for (item in raw) {
 			result = result or item.toInt()
@@ -628,35 +570,9 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		return result
 	}
 
-	fun subscribe(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-		prefs.registerOnSharedPreferenceChangeListener(listener)
-	}
 
-	fun unsubscribe(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
-		prefs.unregisterOnSharedPreferenceChangeListener(listener)
-	}
 
-	fun observeChanges() = prefs.observeChanges()
 
-	fun observe(vararg keys: String): Flow<String?> = prefs.observeChanges()
-		.filter { key -> key == null || key in keys }
-		.onStart { emit(null) }
-		.flowOn(Dispatchers.IO)
-
-	fun getAllValues(): Map<String, *> = prefs.all
-
-	fun upsertAll(m: Map<String, *>) = prefs.edit {
-		clear()
-		putAll(m)
-	}
-
-	private fun isBackgroundNetworkRestricted(): Boolean {
-		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-			connectivityManager.restrictBackgroundStatus == ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
-		} else {
-			false
-		}
-	}
 
 	companion object {
 
@@ -847,3 +763,7 @@ class AppSettings @Inject constructor(@ApplicationContext context: Context) {
 		private const val READER_CROP_WEBTOON = 2
 	}
 }
+
+
+
+

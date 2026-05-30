@@ -1,8 +1,8 @@
-package org.dokiteam.doki.core.prefs
+package org.nekosukuriputo.nekuva.core.prefs
 
-import androidx.annotation.Keep
 
-@Keep
+
+
 enum class ReaderAnimation {
 
 	// Do not rename this

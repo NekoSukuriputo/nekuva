@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.prefs
+package org.nekosukuriputo.nekuva.core.prefs
 
 import android.appwidget.AppWidgetProvider
 import android.content.Context
