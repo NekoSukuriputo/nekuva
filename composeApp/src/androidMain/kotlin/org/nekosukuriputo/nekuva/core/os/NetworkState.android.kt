@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.os
+package org.nekosukuriputo.nekuva.core.os
 
 import android.net.ConnectivityManager
 import android.net.ConnectivityManager.NetworkCallback
@@ -9,20 +9,20 @@ import android.net.NetworkRequest
 import android.os.Build
 import coil3.network.ConnectivityChecker
 import kotlinx.coroutines.flow.first
-import org.dokiteam.doki.core.prefs.AppSettings
-import org.dokiteam.doki.core.util.MediatorStateFlow
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.core.util.MediatorStateFlow
 
-class NetworkState(
+actual class NetworkState(
 	private val connectivityManager: ConnectivityManager,
 	private val settings: AppSettings,
 ) : MediatorStateFlow<Boolean>(connectivityManager.isOnline(settings)), ConnectivityChecker {
 
 	private val callback = NetworkCallbackImpl()
 
-	override val value: Boolean
+	actual override val value: Boolean
 		get() = connectivityManager.isOnline(settings)
 
-	override fun isOnline(): Boolean {
+	actual override fun isOnline(): Boolean {
 		return connectivityManager.isOnline(settings)
 	}
 
@@ -43,18 +43,18 @@ class NetworkState(
 		connectivityManager.unregisterNetworkCallback(callback)
 	}
 
-	fun isMetered(): Boolean {
+	actual fun isMetered(): Boolean {
 		return connectivityManager.isActiveNetworkMetered
 	}
 
-	fun isDataSaverEnabled(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+	actual fun isDataSaverEnabled(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
 		&& connectivityManager.restrictBackgroundStatus == RESTRICT_BACKGROUND_STATUS_ENABLED
 
-	fun isRestricted() = isMetered() && isDataSaverEnabled()
+	actual fun isRestricted() = isMetered() && isDataSaverEnabled()
 
-	fun isOfflineOrRestricted() = !isOnline() || isRestricted()
+	actual fun isOfflineOrRestricted() = !isOnline() || isRestricted()
 
-	suspend fun awaitForConnection() {
+	actual suspend fun awaitForConnection() {
 		if (value) {
 			return
 		}

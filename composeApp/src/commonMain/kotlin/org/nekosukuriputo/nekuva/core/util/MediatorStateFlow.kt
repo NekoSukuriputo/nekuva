@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.util
+package org.nekosukuriputo.nekuva.core.util
 
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow

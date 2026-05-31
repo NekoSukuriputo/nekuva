@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.util
+package org.nekosukuriputo.nekuva.core.util
 
 class CompositeResult private constructor(
 	private var successCount: Int,

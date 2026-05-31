@@ -1,6 +1,6 @@
-package org.dokiteam.doki.core.util.ext
+package org.nekosukuriputo.nekuva.core.util.ext
 
-import org.dokiteam.doki.core.io.NullOutputStream
+import org.nekosukuriputo.nekuva.core.io.NullOutputStream
 import java.io.ObjectOutputStream
 
 @Suppress("UNCHECKED_CAST")

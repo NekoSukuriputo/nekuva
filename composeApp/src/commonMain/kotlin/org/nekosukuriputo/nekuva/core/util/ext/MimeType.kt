@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.util.ext
+package org.nekosukuriputo.nekuva.core.util.ext
 
 import okhttp3.MediaType
 

@@ -1,9 +1,9 @@
-package org.dokiteam.doki.core.util.ext
+package org.nekosukuriputo.nekuva.core.util.ext
 
 import androidx.annotation.AnyThread
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.dokiteam.doki.core.util.Event
+import org.nekosukuriputo.nekuva.core.util.Event
 
 @Suppress("FunctionName")
 fun <T> MutableEventFlow() = MutableStateFlow<Event<T>?>(null)

@@ -1,3 +1,3 @@
-package org.dokiteam.doki.core.util
+package org.nekosukuriputo.nekuva.core.util
 
 interface CloseableSequence<T> : Sequence<T>, AutoCloseable

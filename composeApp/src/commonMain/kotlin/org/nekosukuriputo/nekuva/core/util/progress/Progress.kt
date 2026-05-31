@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.util.progress
+package org.nekosukuriputo.nekuva.core.util.progress
 
 data class Progress(
 	val progress: Int,
