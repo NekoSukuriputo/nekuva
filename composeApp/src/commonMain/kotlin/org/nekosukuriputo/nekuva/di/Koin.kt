@@ -7,6 +7,11 @@ import org.nekosukuriputo.nekuva.parser.AppMangaLoaderContext
 
 val appModule = module {
     single { AppMangaLoaderContext() }
+    single { 
+        org.nekosukuriputo.nekuva.core.db.getRoomDatabase(
+            org.nekosukuriputo.nekuva.core.db.getDatabaseBuilder()
+        )
+    }
 }
 
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
@@ -14,3 +19,5 @@ fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
         appDeclaration()
         modules(appModule)
     }
+
+

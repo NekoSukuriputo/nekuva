@@ -49,6 +49,8 @@ kotlin {
                 implementation(libs.coil.network.ktor)
                 
                 implementation(libs.androidx.room.runtime)
+                implementation(libs.androidx.sqlite.bundled)
+                implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.multiplatform.settings)
                 implementation(libs.multiplatform.settings.coroutines)
@@ -142,3 +144,5 @@ compose.desktop {
         }
     }
 }
+
+
