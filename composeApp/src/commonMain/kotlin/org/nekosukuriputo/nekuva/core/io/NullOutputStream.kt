@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.io
+package org.nekosukuriputo.nekuva.core.io
 
 import java.io.OutputStream
 import java.util.Objects

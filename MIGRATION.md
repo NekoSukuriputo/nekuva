@@ -78,7 +78,7 @@ Fokus Phase 1 adalah Android + Desktop parity. Jangan mulai area fitur sebelum 6
 ### Core Sub-sessions
 - [x] **Sub-sesi 1: core/model** (Manga, MangaSource, SortOrder, dll.)
 - [x] **Sub-sesi 2: core/prefs** (AppSettings, AppSettingsObserver, dll. ke multiplatform-settings)
-- [ ] **Sub-sesi 3: core/db** (Fresh V1 Room KMP, jangan redesign skema, buang migrasi lama)
+- [x] **Sub-sesi 3: core/db** (Fresh V1 Room KMP, jangan redesign skema, buang migrasi lama)
 - [ ] **Sub-sesi 4: core/util & core/io & core/fs & core/os** (Konversi utilitas ke `expect`/`actual`)
 - [ ] **Sub-sesi 5: core/network & core/image & core/parser & core/github & core/exceptions** (OkHttp tetap untuk layer parser)
 - [ ] **Sub-sesi 6: core/ui** (Rewrite base UI ke Compose)
