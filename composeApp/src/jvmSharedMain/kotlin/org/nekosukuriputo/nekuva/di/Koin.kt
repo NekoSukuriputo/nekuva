@@ -1,0 +1,24 @@
+﻿package org.nekosukuriputo.nekuva.di
+
+import org.koin.core.context.startKoin
+import org.koin.dsl.module
+import org.koin.core.KoinApplication
+import org.nekosukuriputo.nekuva.core.parser.AppMangaLoaderContext
+
+val appModule = module {
+    single { AppMangaLoaderContext(get(), get()) }
+    single { 
+        org.nekosukuriputo.nekuva.core.db.getRoomDatabase(
+            org.nekosukuriputo.nekuva.core.db.getDatabaseBuilder()
+        )
+    }
+}
+
+fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
+    startKoin {
+        appDeclaration()
+        modules(appModule)
+    }
+
+
+

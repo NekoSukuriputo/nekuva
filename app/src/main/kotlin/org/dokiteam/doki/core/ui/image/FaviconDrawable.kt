@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.ui.image
+﻿package org.dokiteam.doki.core.ui.image
 
 import android.content.Context
 import android.content.res.ColorStateList
@@ -22,7 +22,7 @@ import org.dokiteam.doki.R
 import org.dokiteam.doki.core.model.getTitle
 import org.dokiteam.doki.core.util.KotatsuColors
 import org.dokiteam.doki.core.util.ext.hasFocusStateSpecified
-import org.dokiteam.doki.core.util.ext.mangaSourceKey
+import org.nekosukuriputo.nekuva.core.image.mangaSourceKey
 
 open class FaviconDrawable(
 	context: Context,
@@ -143,3 +143,4 @@ open class FaviconDrawable(
 		}
 	}
 }
+

@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.ui.image
+﻿package org.dokiteam.doki.core.ui.image
 
 import android.animation.TimeAnimator
 import android.content.Context
@@ -15,7 +15,7 @@ import com.google.android.material.color.MaterialColors
 import org.dokiteam.doki.R
 import org.dokiteam.doki.core.model.getTitle
 import org.dokiteam.doki.core.util.ext.getAnimationDuration
-import org.dokiteam.doki.core.util.ext.mangaSourceKey
+import org.nekosukuriputo.nekuva.core.image.mangaSourceKey
 import kotlin.math.abs
 
 class AnimatedFaviconDrawable(
@@ -91,3 +91,4 @@ class AnimatedFaviconDrawable(
 		}
 	}
 }
+

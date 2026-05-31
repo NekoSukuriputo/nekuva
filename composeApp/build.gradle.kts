@@ -1,4 +1,4 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+﻿import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -30,6 +30,17 @@ kotlin {
     }
     
     sourceSets {
+        val jvmSharedMain by creating {
+            dependsOn(commonMain.get())
+            dependencies {
+                implementation(libs.ktor.client.okhttp)
+                implementation(libs.okhttp.tls)
+                implementation(libs.okhttp.dnsoverhttps)
+                implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
+                    exclude(group = "org.json", module = "json")
+                }
+            }
+        }
         val commonMain by getting {
             dependencies {
                 implementation(compose.runtime)
@@ -62,22 +73,16 @@ kotlin {
             }
         }
         val androidMain by getting {
+            dependsOn(jvmSharedMain)
             dependencies {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.koin.android)
-                implementation(libs.ktor.client.okhttp)
-                implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
-                    exclude(group = "org.json", module = "json")
-                }
             }
         }
         val desktopMain by getting {
+            dependsOn(jvmSharedMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
-                implementation(libs.ktor.client.okhttp)
-                implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
-                    exclude(group = "org.json", module = "json")
-                }
             }
         }
     }
@@ -144,5 +149,7 @@ compose.desktop {
         }
     }
 }
+
+
 
 
