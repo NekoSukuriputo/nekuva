@@ -15,7 +15,11 @@ import androidx.navigation.compose.rememberNavController
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = HomeRoute) {
         composable<HomeRoute> {
-            PlaceholderScreen("Local List")
+            org.nekosukuriputo.nekuva.local.ui.LocalListScreen(
+                onMangaClick = { id ->
+                    navController.navigate(MangaDetailsRoute(id))
+                }
+            )
         }
         composable<MangaDetailsRoute> {
             PlaceholderScreen("Manga Details")

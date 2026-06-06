@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.di
+package org.nekosukuriputo.nekuva.di
 
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -6,5 +6,8 @@ import org.nekosukuriputo.nekuva.local.data.DesktopLocalStorageManager
 import org.nekosukuriputo.nekuva.local.data.LocalStorageManager
 
 actual val platformModule: Module = module {
+    single<com.russhwolf.settings.ObservableSettings> { 
+        com.russhwolf.settings.PreferencesSettings(java.util.prefs.Preferences.userRoot().node("Nekuva")) 
+    }
     single<LocalStorageManager> { DesktopLocalStorageManager(get()) }
 }

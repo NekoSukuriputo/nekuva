@@ -1,4 +1,4 @@
-﻿import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 import java.io.FileInputStream
 
@@ -86,6 +86,7 @@ kotlin {
             dependsOn(jvmSharedMain)
             dependencies {
                 implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
             }
         }
     }

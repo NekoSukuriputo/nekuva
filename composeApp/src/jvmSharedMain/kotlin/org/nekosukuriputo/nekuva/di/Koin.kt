@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.di
+package org.nekosukuriputo.nekuva.di
 
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
@@ -26,10 +26,14 @@ val appModule = module {
     }
 }
 
+val prefsModule = module {
+    single { org.nekosukuriputo.nekuva.core.prefs.AppSettings(get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule)
     }
 
 
