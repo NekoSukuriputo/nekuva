@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.nav
+package org.nekosukuriputo.nekuva.core.nav
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +15,7 @@ import androidx.navigation.compose.rememberNavController
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
     NavHost(navController = navController, startDestination = HomeRoute) {
         composable<HomeRoute> {
-            PlaceholderScreen("Home Screen")
+            PlaceholderScreen("Local List")
         }
         composable<MangaDetailsRoute> {
             PlaceholderScreen("Manga Details")
@@ -35,3 +35,6 @@ private fun PlaceholderScreen(title: String) {
         Text(text = title)
     }
 }
+
+
+

@@ -1,4 +1,4 @@
-package org.nekosukuriputo.nekuva.local.data.index
+﻿package org.nekosukuriputo.nekuva.local.data.index
 
 import androidx.room.Dao
 import androidx.room.Query
@@ -25,3 +25,5 @@ interface LocalMangaIndexDao {
 	@Query("DELETE FROM local_index")
 	suspend fun clear()
 }
+
+
