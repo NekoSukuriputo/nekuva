@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.local.data.input
+package org.nekosukuriputo.nekuva.local.data.input
 
 import org.nekosukuriputo.nekuva.core.util.ext.buildUpon
 import org.nekosukuriputo.nekuva.core.util.ext.toFile
@@ -68,7 +68,7 @@ class LocalMangaParser(private val uri: URI) {
 							p.relativeTo(rootPath).toString()
 						} else {
 							p.toString()
-						}.removePrefix(Path.DIRECTORY_SEPARATOR)
+						}.removePrefix("/")
 						MangaChapter(
 							id = "$i$s".longHashCode(),
 							title = p.userFriendlyName(),
@@ -127,7 +127,7 @@ class LocalMangaParser(private val uri: URI) {
 			builder.scheme(URI_SCHEME_ZIP)
 		}
 		if (isZip || !resolve) {
-			builder.fragment(path.toString().removePrefix(Path.DIRECTORY_SEPARATOR))
+			builder.fragment(path.toString().removePrefix("/"))
 		} else {
 			builder.appendEncodedPath(path.relativeTo(file.toOkioPath()).toString())
 		}
@@ -146,7 +146,7 @@ class LocalMangaParser(private val uri: URI) {
 				}
 				if (recursive && file.isZip()) {
 					openZip(file).use { zipFs ->
-						zipFs.findFirstImageUri(Path.DIRECTORY_SEPARATOR.toPath())?.let { subUri ->
+						zipFs.findFirstImageUri("/".toPath())?.let { subUri ->
 							val subPath = subUri.path.orEmpty().removePrefix(uri.path.orEmpty())
 								.replace(Regex("^(/\\.\\.)+"), "")
 							return@runCatchingCancellable uri.child(file, resolve = true)
@@ -255,10 +255,10 @@ class LocalMangaParser(private val uri: URI) {
 			}
 		}
 
-		private fun String.toRootedPath(): Path = if (startsWith(Path.DIRECTORY_SEPARATOR)) {
+		private fun String.toRootedPath(): Path = if (startsWith("/")) {
 			this
 		} else {
-			Path.DIRECTORY_SEPARATOR + this
+			"/" + this
 		}.toPath()
 
 		private fun String.fileNameToTitle() = substringBeforeLast('.')

@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.nav
+package org.nekosukuriputo.nekuva.core.nav
 
 import kotlinx.serialization.Serializable
 
@@ -13,3 +13,9 @@ data class ReaderRoute(val mangaId: Long, val chapterId: Long)
 
 @Serializable
 data object SettingsRoute
+
+@Serializable
+data object ExploreRoute
+
+@Serializable
+data class RemoteListRoute(val sourceId: String)

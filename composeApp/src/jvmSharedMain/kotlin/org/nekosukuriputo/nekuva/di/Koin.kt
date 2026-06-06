@@ -17,8 +17,21 @@ val localModule = module {
     factory { LocalListViewModel(get()) }
 }
 
+val exploreModule = module {
+    single { org.nekosukuriputo.nekuva.explore.data.MangaSourcesRepository(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.explore.ui.ExploreViewModel(get(), get()) }
+}
+
+val remoteListModule = module {
+    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get()) }
+}
+
 val appModule = module {
     single { AppMangaLoaderContext(get(), get()) }
+    single<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext> { get<AppMangaLoaderContext>() }
+    single { org.nekosukuriputo.nekuva.core.cache.MemoryContentCache() }
+    single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get()) }
+    single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get()) }
     single { 
         org.nekosukuriputo.nekuva.core.db.getRoomDatabase(
             org.nekosukuriputo.nekuva.core.db.getDatabaseBuilder()
@@ -33,7 +46,7 @@ val prefsModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule)
     }
 
 

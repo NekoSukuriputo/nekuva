@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.parser
+package org.nekosukuriputo.nekuva.core.parser
 
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
@@ -43,10 +43,10 @@ class AppMangaLoaderContext(
     override fun getDefaultUserAgent(): String = UserAgents.FIREFOX_MOBILE
 
     override fun getConfig(source: MangaSource): MangaSourceConfig {
-        // Stub for now. We will wire this properly when SourceSettings is fully ported.
-        return object : MangaSourceConfig {
-            override fun <T> get(key: org.nekosukuriputo.nekuva.parsers.config.ConfigKey<T>): T = throw UnsupportedOperationException("Stub getConfig")
-        }
+        return org.nekosukuriputo.nekuva.core.prefs.SourceSettings(
+            source, 
+            org.nekosukuriputo.nekuva.core.prefs.getSourceObservableSettings(source.name)
+        )
     }
 
     override fun encodeBase64(data: ByteArray): String {

@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.prefs
+package org.nekosukuriputo.nekuva.core.prefs
 
 
 import kotlinx.coroutines.Dispatchers
@@ -316,7 +316,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		set(value) = prefs.putInt(KEY_SOURCES_VERSION, value)
 
 	var isAllSourcesEnabled: Boolean
-		get() = prefs.getBoolean(KEY_SOURCES_ENABLED_ALL, false)
+		get() = prefs.getBoolean(KEY_SOURCES_ENABLED_ALL, true)
 		set(value) = prefs.putBoolean(KEY_SOURCES_ENABLED_ALL, value)
 
 	val isPagesNumbersEnabled: Boolean

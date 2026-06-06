@@ -10,10 +10,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = HomeRoute) {
+    NavHost(navController = navController, startDestination = ExploreRoute) {
         composable<HomeRoute> {
             org.nekosukuriputo.nekuva.local.ui.LocalListScreen(
                 onMangaClick = { id ->
@@ -29,6 +30,20 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         }
         composable<SettingsRoute> {
             PlaceholderScreen("Settings")
+        }
+        composable<ExploreRoute> {
+            org.nekosukuriputo.nekuva.explore.ui.ExploreScreen(
+                onSourceClick = { sourceId ->
+                    navController.navigate(RemoteListRoute(sourceId))
+                }
+            )
+        }
+        composable<RemoteListRoute> {
+            org.nekosukuriputo.nekuva.remotelist.ui.RemoteListScreen(
+                onMangaClick = { id ->
+                    navController.navigate(MangaDetailsRoute(id))
+                }
+            )
         }
     }
 }
