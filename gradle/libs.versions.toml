@@ -26,13 +26,14 @@ json = "20250517"
 junit = "4.13.2"
 junitKtx = "1.3.0"
 kotlin = "2.1.0"
-compose-multiplatform = "1.7.0"
+compose-multiplatform = "1.10.0"
 koin = "4.0.0"
 ktor = "3.0.0"
 kizzyRpc = "ad8f2e32eb"
 ksp = "2.1.0-1.0.29"
 leakcanary = "3.0-alpha-8"
 lifecycle = "2.9.4"
+navigation-compose = "2.9.2"
 markwon = "4.6.2"
 material = "1.14.0-alpha05"
 moshi = "1.15.2"
@@ -129,6 +130,8 @@ koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
+lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
@@ -149,6 +152,7 @@ kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", vers
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 decoroutinator = { id = "dev.reformator.stacktracedecoroutinator", version.ref = "decoroutinator" }
+
 
 
 

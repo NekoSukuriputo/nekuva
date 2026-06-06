@@ -31,14 +31,14 @@ class AndroidCookieJar : MutableCookieJar {
 		}
 	}
 
-	override fun removeCookies(url: HttpUrl, predicate: Predicate<Cookie>?) {
+	override fun removeCookies(url: HttpUrl, predicate: ((Cookie) -> Boolean)?) {
 		val cookies = loadForRequest(url)
 		if (cookies.isEmpty()) {
 			return
 		}
 		val urlString = url.toString()
 		for (c in cookies) {
-			if (predicate != null && !predicate.test(c)) {
+			if (predicate != null && !predicate(c)) {
 				continue
 			}
 			val nc = c.newBuilder()

@@ -11,7 +11,7 @@ interface MutableCookieJar : CookieJar {
 
 	override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>)
 
-	fun removeCookies(url: HttpUrl, predicate: (Cookie) -> Boolean?)
+	fun removeCookies(url: HttpUrl, predicate: ((Cookie) -> Boolean)? = null)
 
 	suspend fun clear(): Boolean
 }

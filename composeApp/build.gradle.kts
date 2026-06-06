@@ -65,6 +65,9 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.multiplatform.settings)
                 implementation(libs.multiplatform.settings.coroutines)
+                implementation(libs.navigation.compose)
+                implementation(libs.lifecycle.viewmodel.compose)
+                implementation(libs.koin.compose.viewmodel)
             }
         }
         val commonTest by getting {
@@ -149,6 +152,7 @@ compose.desktop {
         }
     }
 }
+
 
 
 

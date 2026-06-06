@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.network.cookies
+package org.nekosukuriputo.nekuva.core.network.cookies
 
 import android.content.Context
 import androidx.annotation.WorkerThread
@@ -57,12 +57,12 @@ class PreferencesCookieJar(
 
 	@Synchronized
 	@WorkerThread
-	override fun removeCookies(url: HttpUrl, predicate: (Cookie) -> Boolean?) {
+	override fun removeCookies(url: HttpUrl, predicate: ((Cookie) -> Boolean)?) {
 		loadPersistent()
 		val toRemove = HashSet<String>()
 		for ((key, cookie) in cache) {
 			if (cookie.isExpired() || cookie.cookie.matches(url)) {
-				if (predicate == null || predicate.test(cookie.cookie)) {
+				if (predicate == null || predicate(cookie.cookie)) {
 					toRemove += key
 				}
 			}

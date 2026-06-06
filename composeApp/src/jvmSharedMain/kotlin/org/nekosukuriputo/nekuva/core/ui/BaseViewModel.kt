@@ -1,4 +1,4 @@
-package org.dokiteam.doki.core.ui
+package org.nekosukuriputo.nekuva.core.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,20 +18,17 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.dokiteam.doki.core.util.ext.EventFlow
-import org.dokiteam.doki.core.util.ext.MutableEventFlow
-import org.dokiteam.doki.core.util.ext.call
-import org.dokiteam.doki.core.util.ext.printStackTraceDebug
+import org.nekosukuriputo.nekuva.core.util.ext.EventFlow
+import org.nekosukuriputo.nekuva.core.util.ext.MutableEventFlow
+import org.nekosukuriputo.nekuva.core.util.ext.call
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 abstract class BaseViewModel : ViewModel() {
 
-	@JvmField
 	protected val loadingCounter = MutableStateFlow(0)
 
-	@JvmField
 	protected val errorEvent = MutableEventFlow<Throwable>()
 
 	val onError: EventFlow<Throwable>
@@ -66,7 +63,7 @@ abstract class BaseViewModel : ViewModel() {
 	}
 
 	protected fun <T> Flow<T>.withErrorHandling() = catch { error ->
-		error.printStackTraceDebug()
+		println("BaseViewModel error: ${error.message}")
 		errorEvent.call(error)
 	}
 
@@ -88,8 +85,7 @@ abstract class BaseViewModel : ViewModel() {
 			this + EventExceptionHandler(errorEvent)
 		}
 
-      protected object SkipErrors : AbstractCoroutineContextElement(Key) {
-
+	protected object SkipErrors : AbstractCoroutineContextElement(Key) {
 		private object Key : CoroutineContext.Key<SkipErrors>
 	}
 
@@ -99,7 +95,7 @@ abstract class BaseViewModel : ViewModel() {
 		CoroutineExceptionHandler {
 
 		override fun handleException(context: CoroutineContext, exception: Throwable) {
-			exception.printStackTraceDebug()
+			println("BaseViewModel CoroutineExceptionHandler caught: ${exception.message}")
 			if (context[SkipErrors.key] == null && exception !is CancellationException) {
 				event.call(exception)
 			}
