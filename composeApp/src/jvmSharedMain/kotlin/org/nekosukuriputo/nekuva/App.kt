@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva
+package org.nekosukuriputo.nekuva
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,13 +40,7 @@ fun App() {
     }
     
     MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Nekuva KMP â€” Phase 0 OK")
-                Spacer(Modifier.height(16.dp))
-                Text("Exts Integration: $dummyData")
-            }
-        }
+        org.nekosukuriputo.nekuva.core.nav.AppNavigation()
     }
 }
 
