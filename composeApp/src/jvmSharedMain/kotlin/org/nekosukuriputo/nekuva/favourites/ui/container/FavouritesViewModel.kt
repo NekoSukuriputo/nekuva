@@ -21,6 +21,5 @@ class FavouritesViewModel(
     val categories: StateFlow<List<FavouriteCategory>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private val _isAllFavouritesVisible = MutableStateFlow(settings.isAllFavouritesVisible)
-    val isAllFavouritesVisible = _isAllFavouritesVisible.asStateFlow()
+    val isAllFavouritesVisible = settings.isAllFavouritesVisibleFlow
 }

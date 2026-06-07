@@ -158,9 +158,15 @@ class AppSettings(private val prefs: ObservableSettings) {
 	val isOfflineCheckDisabled: Boolean
 		get() = prefs.getBoolean(KEY_OFFLINE_DISABLED, false)
 
+	private val _isAllFavouritesVisibleFlow = kotlinx.coroutines.flow.MutableStateFlow(prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true))
+	val isAllFavouritesVisibleFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.asStateFlow(_isAllFavouritesVisibleFlow)
+
 	var isAllFavouritesVisible: Boolean
 		get() = prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true)
-		set(value) = prefs.putBoolean(KEY_ALL_FAVOURITES_VISIBLE, value)
+		set(value) {
+            prefs.putBoolean(KEY_ALL_FAVOURITES_VISIBLE, value)
+            _isAllFavouritesVisibleFlow.value = value
+        }
 
 	val isTrackerEnabled: Boolean
 		get() = prefs.getBoolean(KEY_TRACKER_ENABLED, true)
