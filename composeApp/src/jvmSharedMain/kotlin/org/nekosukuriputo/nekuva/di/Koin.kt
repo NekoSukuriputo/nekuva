@@ -23,7 +23,11 @@ val exploreModule = module {
 }
 
 val remoteListModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get()) }
+}
+
+val detailsModule = module {
+    factory { params -> org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(params.get(), get(), get()) }
 }
 
 val appModule = module {
@@ -32,6 +36,7 @@ val appModule = module {
     single { org.nekosukuriputo.nekuva.core.cache.MemoryContentCache() }
     single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get()) }
     single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get()) }
+    single { org.nekosukuriputo.nekuva.core.parser.MangaDataRepository(get()) }
     single { 
         org.nekosukuriputo.nekuva.core.db.getRoomDatabase(
             org.nekosukuriputo.nekuva.core.db.getDatabaseBuilder()
@@ -43,10 +48,14 @@ val prefsModule = module {
     single { org.nekosukuriputo.nekuva.core.prefs.AppSettings(get()) }
 }
 
+val readerModule = module {
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule)
     }
 
 

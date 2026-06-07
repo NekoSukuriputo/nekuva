@@ -39,6 +39,7 @@ kotlin {
                 implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
                     exclude(group = "org.json", module = "json")
                 }
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             }
         }
         val commonMain by getting {
@@ -87,6 +88,8 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
+                implementation(libs.json)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.1")
             }
         }
     }

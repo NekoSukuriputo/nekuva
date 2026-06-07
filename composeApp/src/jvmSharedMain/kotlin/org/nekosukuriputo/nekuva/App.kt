@@ -39,8 +39,13 @@ fun App() {
         dummyData = parserContext.fetchDummyData()
     }
     
-    MaterialTheme {
-        org.nekosukuriputo.nekuva.core.nav.AppNavigation()
+    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme {
+        androidx.compose.material3.Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            org.nekosukuriputo.nekuva.core.nav.AppNavigation()
+        }
     }
 }
 

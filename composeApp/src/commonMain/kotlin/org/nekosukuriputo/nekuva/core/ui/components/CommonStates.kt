@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.ui.components
+package org.nekosukuriputo.nekuva.core.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.*
 
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
@@ -25,10 +27,10 @@ fun LoadingState(modifier: Modifier = Modifier) {
 fun ErrorState(error: Throwable?, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "Error: ${error?.message ?: "Unknown error"}", color = MaterialTheme.colorScheme.error)
+            Text(text = "${stringResource(Res.string.error)}: ${error?.message ?: stringResource(Res.string.unknown)}", color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onRetry) {
-                Text("Retry")
+                Text(stringResource(Res.string.retry))
             }
         }
     }

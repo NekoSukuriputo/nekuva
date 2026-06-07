@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.model.MangaSourceInfo
 
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.*
+
 @Composable
 fun ExploreScreen(
 	viewModel: ExploreViewModel = koinViewModel(),
@@ -35,20 +39,27 @@ fun ExploreScreen(
 		}
 		is ExploreUiState.Empty -> {
 			Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-				Text("No sources found")
+				Text(stringResource(Res.string.text_empty_holder_primary))
 			}
 		}
         is ExploreUiState.Success -> {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(state.sources) { source ->
-                    SourceItem(
-                        source = source,
-                        onClick = {
-                            val id = (source.mangaSource as? org.nekosukuriputo.nekuva.parsers.model.MangaParserSource)?.name ?: ""
-                            onSourceClick(id)
-                        }
-                    )
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
+                    items(state.sources) { source ->
+                        SourceItem(
+                            source = source,
+                            onClick = {
+                                val id = (source.mangaSource as? org.nekosukuriputo.nekuva.parsers.model.MangaParserSource)?.name ?: ""
+                                onSourceClick(id)
+                            }
+                        )
+                    }
                 }
+                org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                    state = listState,
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+                )
             }
         }
 	}

@@ -23,10 +23,21 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
         composable<MangaDetailsRoute> {
-            PlaceholderScreen("Manga Details")
+            org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
+                onChapterClick = { mangaId, chapterId ->
+                    navController.navigate(ReaderRoute(mangaId, chapterId))
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
         composable<ReaderRoute> {
-            PlaceholderScreen("Reader")
+            org.nekosukuriputo.nekuva.reader.ui.ReaderScreen(
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
         composable<SettingsRoute> {
             PlaceholderScreen("Settings")
