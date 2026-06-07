@@ -114,9 +114,24 @@ fun DetailsScreen(
             is DetailsUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
             is DetailsUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() }, modifier = Modifier.padding(paddingValues))
             is DetailsUiState.Success -> {
+                val favoriteText = if (!isFavorite) {
+                    stringResource(Res.string.add_to_favourites)
+                } else {
+                    val customCategoryNames = allCategories.filter { mangaCategories.contains(it.id) }.map { it.title }
+                    val hasDefault = mangaCategories.contains(0L) || mangaCategories.isEmpty()
+                    
+                    val names = buildList {
+                        if (hasDefault) add(stringResource(Res.string.default_category))
+                        addAll(customCategoryNames)
+                    }
+                    
+                    if (names.isEmpty()) stringResource(Res.string.default_category) else names.joinToString(", ")
+                }
+                
                 MangaDetailsContent(
                     manga = state.manga,
                     isFavorite = isFavorite,
+                    favoriteText = favoriteText,
                     onFavoriteClick = {
                         if (allCategories.isEmpty()) {
                             viewModel.toggleCategory(0L, !isFavorite)
@@ -136,6 +151,7 @@ fun DetailsScreen(
 fun MangaDetailsContent(
     manga: Manga,
     isFavorite: Boolean,
+    favoriteText: String,
     onFavoriteClick: () -> Unit,
     paddingValues: PaddingValues
 ) {
@@ -203,8 +219,7 @@ fun MangaDetailsContent(
                     val icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder
                     Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    val textRes = if (isFavorite) Res.string.in_library else Res.string.add_to_favourites
-                    Text(stringResource(textRes))
+                    Text(favoriteText)
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
                 }

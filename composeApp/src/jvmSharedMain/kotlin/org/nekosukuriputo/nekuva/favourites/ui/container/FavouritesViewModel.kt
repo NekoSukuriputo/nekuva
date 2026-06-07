@@ -9,10 +9,18 @@ import kotlinx.coroutines.flow.stateIn
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+
 class FavouritesViewModel(
-    repository: FavouritesRepository
+    repository: FavouritesRepository,
+    private val settings: AppSettings
 ) : ViewModel() {
 
     val categories: StateFlow<List<FavouriteCategory>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private val _isAllFavouritesVisible = MutableStateFlow(settings.isAllFavouritesVisible)
+    val isAllFavouritesVisible = _isAllFavouritesVisible.asStateFlow()
 }

@@ -57,8 +57,8 @@ val readerModule = module {
 val favouritesModule = module {
     single { org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository(get()) }
     factory { params -> org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListViewModel(params.get(), get()) }
-    factory { FavouritesViewModel(get()) }
-    factory { CategoryListViewModel(get()) }
+    factory { FavouritesViewModel(get(), get()) }
+    factory { CategoryListViewModel(get(), get()) }
 }
 
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =

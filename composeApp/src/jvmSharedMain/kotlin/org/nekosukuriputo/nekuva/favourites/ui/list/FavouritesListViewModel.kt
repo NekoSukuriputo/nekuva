@@ -36,10 +36,10 @@ class FavouritesListViewModel(
     private fun loadFavourites() {
         viewModelScope.launch {
             val order = ListSortOrder.NEWEST // Using a default since we simplified
-            val flow = if (categoryId == 0L) {
-                repository.observeAll(order, emptySet(), Int.MAX_VALUE)
+            val flow = if (categoryId == -1L) {
+                repository.observeAll(order, emptySet(), Int.MAX_VALUE) // All favourites
             } else {
-                repository.observeAll(categoryId, order, emptySet(), Int.MAX_VALUE)
+                repository.observeAll(categoryId, order, emptySet(), Int.MAX_VALUE) // Specific category, 0L is Default
             }
 
             flow.catch { e ->
@@ -57,7 +57,7 @@ class FavouritesListViewModel(
     fun removeFromFavourites(ids: Set<Long>) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
-            if (categoryId == 0L) {
+            if (categoryId == -1L || categoryId == 0L) {
                 repository.removeFromFavourites(ids)
             } else {
                 repository.removeFromCategory(categoryId, ids)

@@ -39,8 +39,12 @@ fun FavouritesScreen(
 ) {
     val viewModel = koinViewModel<FavouritesViewModel>()
     val categories by viewModel.categories.collectAsState()
+    val isAllFavouritesVisible by viewModel.isAllFavouritesVisible.collectAsState()
 
     val displayCategories = buildList {
+        if (isAllFavouritesVisible) {
+            add(FavouriteCategory(-1L, stringResource(Res.string.all_favourites), -1, 0L, true, true))
+        }
         add(FavouriteCategory(0L, "Default", 0, 0L, true, true)) // Default category representation, we can refine this later
         addAll(categories)
     }
@@ -67,7 +71,11 @@ fun FavouritesScreen(
                     edgePadding = 8.dp
                 ) {
                     displayCategories.forEachIndexed { index, category ->
-                        val title = if (category.id == 0L) stringResource(Res.string.default_category) else category.title
+                        val title = when (category.id) {
+                            -1L -> stringResource(Res.string.all_favourites)
+                            0L -> stringResource(Res.string.default_category)
+                            else -> category.title
+                        }
                         Tab(
                             selected = pagerState.currentPage == index,
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
@@ -82,6 +90,8 @@ fun FavouritesScreen(
                 modifier = Modifier.fillMaxSize()
             ) { page ->
                 val categoryId = displayCategories[page].id
+                // When categoryId is -1L, it should show ALL favorites. 
+                // We'll pass -1L to FavouritesListScreen, but we need to ensure FavouritesListViewModel handles it correctly!
                 FavouritesListScreen(
                     categoryId = categoryId,
                     onMangaClick = onMangaClick

@@ -10,12 +10,25 @@ import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+
 class CategoryListViewModel(
-    private val repository: FavouritesRepository
+    private val repository: FavouritesRepository,
+    private val settings: AppSettings
 ) : ViewModel() {
 
     val categories: StateFlow<List<FavouriteCategory>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private val _isAllFavouritesVisible = MutableStateFlow(settings.isAllFavouritesVisible)
+    val isAllFavouritesVisible = _isAllFavouritesVisible.asStateFlow()
+
+    fun toggleAllFavouritesVisibility() {
+        settings.isAllFavouritesVisible = !settings.isAllFavouritesVisible
+        _isAllFavouritesVisible.value = settings.isAllFavouritesVisible
+    }
 
     fun createCategory(title: String) {
         viewModelScope.launch {

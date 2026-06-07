@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.favourites_categories
+import nekuva.composeapp.generated.resources.all_favourites
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +31,7 @@ fun CategoryListScreen(
 ) {
     val viewModel = koinViewModel<CategoryListViewModel>()
     val categories by viewModel.categories.collectAsState()
+    val isAllFavouritesVisible by viewModel.isAllFavouritesVisible.collectAsState()
 
     var showDialog by remember { mutableStateOf(false) }
     var editingCategory by remember { mutableStateOf<FavouriteCategory?>(null) }
@@ -55,6 +59,21 @@ fun CategoryListScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(paddingValues)
         ) {
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(Res.string.all_favourites)) },
+                    trailingContent = {
+                        IconButton(onClick = { viewModel.toggleAllFavouritesVisibility() }) {
+                            Icon(
+                                if (isAllFavouritesVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                contentDescription = "Toggle Visibility"
+                            )
+                        }
+                    }
+                )
+                Divider()
+            }
+            
             itemsIndexed(categories, key = { _, it -> it.id }) { index, category ->
                 ListItem(
                     headlineContent = { Text(category.title) },
