@@ -30,6 +30,10 @@ import java.util.concurrent.TimeUnit
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.set
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 class AppSettings(private val prefs: ObservableSettings) {
 
 	val dnsOverHttps: org.nekosukuriputo.nekuva.core.network.DoHProvider get() = org.nekosukuriputo.nekuva.core.network.DoHProvider.NONE
@@ -158,8 +162,8 @@ class AppSettings(private val prefs: ObservableSettings) {
 	val isOfflineCheckDisabled: Boolean
 		get() = prefs.getBoolean(KEY_OFFLINE_DISABLED, false)
 
-	private val _isAllFavouritesVisibleFlow = kotlinx.coroutines.flow.MutableStateFlow(prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true))
-	val isAllFavouritesVisibleFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = kotlinx.coroutines.flow.asStateFlow(_isAllFavouritesVisibleFlow)
+	private val _isAllFavouritesVisibleFlow = MutableStateFlow(prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true))
+	val isAllFavouritesVisibleFlow: StateFlow<Boolean> = _isAllFavouritesVisibleFlow.asStateFlow()
 
 	var isAllFavouritesVisible: Boolean
 		get() = prefs.getBoolean(KEY_ALL_FAVOURITES_VISIBLE, true)
