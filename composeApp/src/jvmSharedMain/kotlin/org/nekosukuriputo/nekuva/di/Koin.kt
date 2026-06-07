@@ -5,6 +5,8 @@ import org.koin.dsl.module
 import org.koin.core.KoinApplication
 import org.nekosukuriputo.nekuva.core.parser.AppMangaLoaderContext
 
+import org.nekosukuriputo.nekuva.favourites.ui.container.FavouritesViewModel
+import org.nekosukuriputo.nekuva.favourites.ui.categories.CategoryListViewModel
 import org.nekosukuriputo.nekuva.local.domain.MangaLock
 import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
 import org.nekosukuriputo.nekuva.local.data.index.LocalMangaIndex
@@ -55,6 +57,8 @@ val readerModule = module {
 val favouritesModule = module {
     single { org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository(get()) }
     factory { params -> org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListViewModel(params.get(), get()) }
+    factory { FavouritesViewModel(get()) }
+    factory { CategoryListViewModel(get()) }
 }
 
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =

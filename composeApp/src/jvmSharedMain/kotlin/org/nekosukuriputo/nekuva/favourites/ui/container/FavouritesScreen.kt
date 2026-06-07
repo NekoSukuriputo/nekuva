@@ -1,0 +1,92 @@
+package org.nekosukuriputo.nekuva.favourites.ui.container
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
+import org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen
+import nekuva.composeapp.generated.resources.Res
+import nekuva.composeapp.generated.resources.favourites
+import nekuva.composeapp.generated.resources.all_favourites
+import nekuva.composeapp.generated.resources.default_category
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavouritesScreen(
+    onMangaClick: (Long) -> Unit,
+    onManageCategoriesClick: () -> Unit
+) {
+    val viewModel = koinViewModel<FavouritesViewModel>()
+    val categories by viewModel.categories.collectAsState()
+
+    val displayCategories = buildList {
+        add(FavouriteCategory(0L, "Default", 0, 0L, true, true)) // Default category representation, we can refine this later
+        addAll(categories)
+    }
+
+    val pagerState = rememberPagerState(pageCount = { displayCategories.size })
+    val coroutineScope = rememberCoroutineScope()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(Res.string.favourites)) },
+                actions = {
+                    IconButton(onClick = onManageCategoriesClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Manage Categories")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            if (displayCategories.size > 1) {
+                ScrollableTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    edgePadding = 8.dp
+                ) {
+                    displayCategories.forEachIndexed { index, category ->
+                        val title = if (category.id == 0L) stringResource(Res.string.default_category) else category.title
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+            }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val categoryId = displayCategories[page].id
+                FavouritesListScreen(
+                    categoryId = categoryId,
+                    onMangaClick = onMangaClick
+                )
+            }
+        }
+    }
+}

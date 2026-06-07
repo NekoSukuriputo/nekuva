@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 @Serializable object HistoryTabRoute
 @Serializable object FavoritesTabRoute
 @Serializable object FeedTabRoute
+@Serializable object CategoriesRoute
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
@@ -52,9 +53,19 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.main.ui.EmptyTabScreen("History (Not implemented yet)")
                 }
                 composable<FavoritesTabRoute> {
-                    org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen(
+                    org.nekosukuriputo.nekuva.favourites.ui.container.FavouritesScreen(
                         onMangaClick = { id ->
                             navController.navigate(MangaDetailsRoute(id))
+                        },
+                        onManageCategoriesClick = {
+                            navController.navigate(CategoriesRoute)
+                        }
+                    )
+                }
+                composable<CategoriesRoute> {
+                    org.nekosukuriputo.nekuva.favourites.ui.categories.CategoryListScreen(
+                        onBackClick = {
+                            navController.popBackStack()
                         }
                     )
                 }
