@@ -86,13 +86,15 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         }
                     )
                 }
-                composable<MangaDetailsRoute> {
+                composable<MangaDetailsRoute> { backStackEntry ->
+                    val args = backStackEntry.toRoute<MangaDetailsRoute>()
                     org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
                         onChapterClick = { mangaId, chapterId ->
                             navController.navigate(ReaderRoute(mangaId, chapterId))
                         },
-                        onBackClick = {
-                            navController.popBackStack()
+                        onBackClick = { navController.popBackStack() },
+                        onManageCategoriesClick = {
+                            navController.navigate(CategoriesRoute)
                         }
                     )
                 }

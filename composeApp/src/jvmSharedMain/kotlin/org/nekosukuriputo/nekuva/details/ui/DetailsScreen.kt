@@ -41,7 +41,8 @@ import nekuva.composeapp.generated.resources.*
 fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel(),
     onChapterClick: (Long, Long) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onManageCategoriesClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
@@ -56,7 +57,11 @@ fun DetailsScreen(
             selectedCategories = mangaCategories,
             isFavorite = isFavorite,
             onDismiss = { showCategoryDialog = false },
-            onToggleCategory = { categoryId, isSelected -> viewModel.toggleCategory(categoryId, isSelected) }
+            onToggleCategory = { categoryId, isSelected -> viewModel.toggleCategory(categoryId, isSelected) },
+            onManageClick = {
+                showCategoryDialog = false
+                onManageCategoriesClick()
+            }
         )
     }
 
@@ -398,7 +403,8 @@ fun CategorySelectionDialog(
     selectedCategories: Set<Long>,
     isFavorite: Boolean,
     onDismiss: () -> Unit,
-    onToggleCategory: (Long, Boolean) -> Unit
+    onToggleCategory: (Long, Boolean) -> Unit,
+    onManageClick: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -438,6 +444,11 @@ fun CategorySelectionDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(Res.string.action_done)) // Or "OK"
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onManageClick) {
+                Text(stringResource(Res.string.manage))
             }
         }
     )

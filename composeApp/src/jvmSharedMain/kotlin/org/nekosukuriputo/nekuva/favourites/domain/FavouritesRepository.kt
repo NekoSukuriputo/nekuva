@@ -19,8 +19,9 @@ import org.nekosukuriputo.nekuva.favourites.data.toFavouriteCategory
 import org.nekosukuriputo.nekuva.favourites.data.toMangaList
 import org.nekosukuriputo.nekuva.list.domain.ListFilterOption
 import org.nekosukuriputo.nekuva.parsers.model.Manga
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
+@OptIn(kotlin.time.ExperimentalTime::class)
 class FavouritesRepository(
 	private val db: MangaDatabase,
 ) {
