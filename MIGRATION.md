@@ -28,14 +28,14 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `explore`
 - [x] `list`
 - [x] `remotelist`
-- [x] `details`
-- [x] `reader` (Minimal fungsional)
+- [x] `details` (Done, resume + favorites integrated)
+- [x] `reader` (Done, history integrated)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [ ] `search`
 - [ ] `filter`
 - [x] `favourites`
-- [ ] `history`
+- [x] `history` (Done, Date grouping, Resume, Clear, Incognito)
 - [ ] `bookmarks`
 - [ ] `download`
 - [ ] `tracker`

@@ -24,6 +24,7 @@ class DetailsViewModel(
     private val mangaDataRepository: MangaDataRepository,
     private val repositoryFactory: MangaRepository.Factory,
     private val favouritesRepository: FavouritesRepository,
+    private val historyRepository: org.nekosukuriputo.nekuva.history.data.HistoryRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -41,6 +42,9 @@ class DetailsViewModel(
 
     val mangaCategories: StateFlow<Set<Long>> = favouritesRepository.observeCategoriesIds(mangaId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    val history: StateFlow<org.nekosukuriputo.nekuva.core.model.MangaHistory?> = historyRepository.observeOne(mangaId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         loadDetails()

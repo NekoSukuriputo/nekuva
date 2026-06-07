@@ -60,7 +60,9 @@ fun ReaderScreen(
             is ReaderUiState.Success -> {
                 ReaderContent(
                     pages = state.pages,
-                    paddingValues = paddingValues
+                    paddingValues = paddingValues,
+                    initialPage = state.initialPage,
+                    onPageChanged = { viewModel.onPageChanged(it) }
                 )
             }
         }
@@ -70,9 +72,15 @@ fun ReaderScreen(
 @Composable
 fun ReaderContent(
     pages: List<MangaPage>,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    initialPage: Int,
+    onPageChanged: (Int) -> Unit
 ) {
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialPage)
+
+    androidx.compose.runtime.LaunchedEffect(listState.firstVisibleItemIndex) {
+        onPageChanged(listState.firstVisibleItemIndex)
+    }
 
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         LazyColumn(

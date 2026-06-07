@@ -48,6 +48,7 @@ fun DetailsScreen(
     val isFavorite by viewModel.isFavorite.collectAsState()
     val allCategories by viewModel.allCategories.collectAsState()
     val mangaCategories by viewModel.mangaCategories.collectAsState()
+    val history by viewModel.history.collectAsState()
 
     var showCategoryDialog by remember { mutableStateOf(false) }
 
@@ -101,6 +102,7 @@ fun DetailsScreen(
                 val manga = (uiState as DetailsUiState.Success).manga
                 ChaptersSheetContent(
                     chapters = manga.chapters ?: emptyList(),
+                    history = history,
                     onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) }
                 )
             } else {
@@ -335,6 +337,7 @@ fun DetailRow(label: String, value: String) {
 @Composable
 fun ChaptersSheetContent(
     chapters: List<MangaChapter>,
+    history: org.nekosukuriputo.nekuva.core.model.MangaHistory?,
     onChapterClick: (MangaChapter) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -359,10 +362,24 @@ fun ChaptersSheetContent(
             }
             
             Button(
-                onClick = { /* Deferred: Read from history/first chapter */ },
+                onClick = {
+                    if (history != null) {
+                        val chapter = chapters.find { it.id == history.chapterId }
+                        if (chapter != null) onChapterClick(chapter)
+                    } else if (chapters.isNotEmpty()) {
+                        onChapterClick(chapters.first())
+                    }
+                },
                 contentPadding = PaddingValues(start = 16.dp, end = 8.dp)
             ) {
-                Text(stringResource(Res.string.read))
+                val buttonText = if (history != null) {
+                    val chapter = chapters.find { it.id == history.chapterId }
+                    val chapterTitle = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name
+                    if (chapterTitle != null) "Lanjut $chapterTitle" else stringResource(Res.string.read)
+                } else {
+                    stringResource(Res.string.read)
+                }
+                Text(buttonText)
                 Spacer(Modifier.width(4.dp))
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
             }

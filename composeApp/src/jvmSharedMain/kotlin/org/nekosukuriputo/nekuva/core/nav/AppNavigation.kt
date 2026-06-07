@@ -50,7 +50,14 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 modifier = Modifier.fillMaxSize()
             ) {
                 composable<HistoryTabRoute> {
-                    org.nekosukuriputo.nekuva.main.ui.EmptyTabScreen("History (Not implemented yet)")
+                    org.nekosukuriputo.nekuva.history.ui.HistoryScreen(
+                        onMangaClick = { id ->
+                            navController.navigate(MangaDetailsRoute(id))
+                        },
+                        onResumeClick = { mangaId, chapterId ->
+                            navController.navigate(ReaderRoute(mangaId, chapterId))
+                        }
+                    )
                 }
                 composable<FavoritesTabRoute> {
                     org.nekosukuriputo.nekuva.favourites.ui.container.FavouritesScreen(

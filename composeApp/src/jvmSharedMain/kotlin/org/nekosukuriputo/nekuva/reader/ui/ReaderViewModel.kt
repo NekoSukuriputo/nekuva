@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.history.domain.HistoryUpdateUseCase
 import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
@@ -22,6 +23,7 @@ class ReaderViewModel(
     private val mangaDataRepository: MangaDataRepository,
     private val repositoryFactory: MangaRepository.Factory,
     private val localMangaRepository: LocalMangaRepository,
+    private val historyUpdateUseCase: HistoryUpdateUseCase,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
@@ -68,7 +70,11 @@ class ReaderViewModel(
                 // 4. Fetch Pages
                 val pages = mangaRepository.getPages(chapter)
 
-                _uiState.value = ReaderUiState.Success(manga, chapter, pages)
+                // 5. Check History for initial page
+                val history = org.koin.mp.KoinPlatform.getKoin().get<org.nekosukuriputo.nekuva.history.data.HistoryRepository>().getOne(manga)
+                val initialPage = if (history != null && history.chapterId == chapterId) history.page else 0
+
+                _uiState.value = ReaderUiState.Success(manga, chapter, pages, initialPage)
             } catch (e: Exception) {
                 _uiState.value = ReaderUiState.Error(e)
             }
@@ -78,6 +84,24 @@ class ReaderViewModel(
     fun retry() {
         loadPages()
     }
+
+    fun onPageChanged(pageIndex: Int) {
+        val state = _uiState.value
+        if (state is ReaderUiState.Success) {
+            val pageCount = state.pages.size
+            if (pageCount == 0) return
+            
+            val percent = if (pageIndex == pageCount - 1) 1.0f else (pageIndex.toFloat() / pageCount.toFloat())
+            
+            historyUpdateUseCase.invokeAsync(
+                manga = state.manga,
+                chapterId = state.chapter.id,
+                page = pageIndex,
+                scroll = 0,
+                percent = percent
+            )
+        }
+    }
 }
 
 sealed interface ReaderUiState {
@@ -85,7 +109,8 @@ sealed interface ReaderUiState {
     data class Success(
         val manga: Manga,
         val chapter: MangaChapter,
-        val pages: List<MangaPage>
+        val pages: List<MangaPage>,
+        val initialPage: Int = 0
     ) : ReaderUiState
     data class Error(val exception: Throwable) : ReaderUiState
 }

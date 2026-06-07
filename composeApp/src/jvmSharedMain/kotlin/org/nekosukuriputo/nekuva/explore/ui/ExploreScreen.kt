@@ -132,6 +132,10 @@ fun ExploreScreen(
                         )
                     }
                 }
+                org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                    state = gridState,
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+                )
             }
         }
 	}

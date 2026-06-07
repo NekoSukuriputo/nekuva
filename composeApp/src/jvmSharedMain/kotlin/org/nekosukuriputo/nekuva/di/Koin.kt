@@ -29,7 +29,15 @@ val remoteListModule = module {
 }
 
 val detailsModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(params.get(), get(), get(), get()) }
+	factory { parameters ->
+		org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(
+			parameters.get(),
+			get(),
+			get(),
+			get(),
+			get()
+		)
+	}
 }
 
 val appModule = module {
@@ -51,7 +59,7 @@ val prefsModule = module {
 }
 
 val readerModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get()) }
 }
 
 val favouritesModule = module {
@@ -61,10 +69,16 @@ val favouritesModule = module {
     factory { CategoryListViewModel(get(), get()) }
 }
 
+val historyModule = module {
+    single { org.nekosukuriputo.nekuva.history.data.HistoryRepository(get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.history.domain.HistoryUpdateUseCase(get()) }
+    factory { org.nekosukuriputo.nekuva.history.ui.HistoryViewModel(get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule, favouritesModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule, favouritesModule, historyModule)
     }
 
 
