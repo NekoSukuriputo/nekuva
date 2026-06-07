@@ -34,7 +34,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [ ] `image`
 - [ ] `search`
 - [ ] `filter`
-- [ ] `favourites`
+- [x] `favourites`
 - [ ] `history`
 - [ ] `bookmarks`
 - [ ] `download`

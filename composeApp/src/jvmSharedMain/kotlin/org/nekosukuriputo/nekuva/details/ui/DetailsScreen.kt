@@ -1,19 +1,34 @@
 package org.nekosukuriputo.nekuva.details.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FileDownload
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -29,13 +44,66 @@ fun DetailsScreen(
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isFavorite by viewModel.isFavorite.collectAsState()
+    val allCategories by viewModel.allCategories.collectAsState()
+    val mangaCategories by viewModel.mangaCategories.collectAsState()
 
-    Scaffold(
+    var showCategoryDialog by remember { mutableStateOf(false) }
+
+    if (showCategoryDialog) {
+        CategorySelectionDialog(
+            categories = allCategories,
+            selectedCategories = mangaCategories,
+            isFavorite = isFavorite,
+            onDismiss = { showCategoryDialog = false },
+            onToggleCategory = { categoryId, isSelected -> viewModel.toggleCategory(categoryId, isSelected) }
+        )
+    }
+
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
+            skipHiddenState = true
+        )
+    )
+
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.details)) },
+                title = { }, // No title on TopAppBar as per Doki
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Deferred: Share */ }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    }
+                    IconButton(onClick = { /* Deferred: Download */ }) {
+                        Icon(Icons.Outlined.FileDownload, contentDescription = "Download")
+                    }
+                    IconButton(onClick = { /* Deferred: Overflow */ }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                }
             )
-        }
+        },
+        sheetContent = {
+            if (uiState is DetailsUiState.Success) {
+                val manga = (uiState as DetailsUiState.Success).manga
+                ChaptersSheetContent(
+                    chapters = manga.chapters ?: emptyList(),
+                    onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) }
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp))
+            }
+        },
+        sheetPeekHeight = 90.dp, // Adjusted to fit just the toolbar
+        sheetShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
     ) { paddingValues ->
         when (val state = uiState) {
             is DetailsUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
@@ -43,88 +111,334 @@ fun DetailsScreen(
             is DetailsUiState.Success -> {
                 MangaDetailsContent(
                     manga = state.manga,
-                    paddingValues = paddingValues,
-                    onChapterClick = { chapter -> onChapterClick(state.manga.id, chapter.id) }
+                    isFavorite = isFavorite,
+                    onFavoriteClick = {
+                        if (allCategories.isEmpty()) {
+                            viewModel.toggleCategory(0L, !isFavorite)
+                        } else {
+                            showCategoryDialog = true
+                        }
+                    },
+                    paddingValues = paddingValues
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MangaDetailsContent(
     manga: Manga,
-    paddingValues: PaddingValues,
-    onChapterClick: (MangaChapter) -> Unit
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    paddingValues: PaddingValues
 ) {
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    val scrollState = androidx.compose.foundation.rememberScrollState()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .weight(0.35f)
+                    .aspectRatio(13f / 18f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
                 AsyncImage(
                     model = manga.largeCoverUrl ?: manga.coverUrl,
                     contentDescription = "Cover",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.width(120.dp).aspectRatio(0.7f)
+                    modifier = Modifier.fillMaxSize()
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = manga.title, style = MaterialTheme.typography.titleLarge)
-                    Text(text = manga.authors.joinToString().takeIf { it.isNotEmpty() } ?: "Unknown Author", style = MaterialTheme.typography.bodyMedium)
-                    Text(text = manga.state?.name ?: "Unknown Status", style = MaterialTheme.typography.labelMedium)
-                    if (manga.rating >= 0f) {
-                        Text(text = "Rating: ${manga.rating}", style = MaterialTheme.typography.labelMedium)
-                    }
+                // NSFW Badges
+                if (manga.contentRating == org.nekosukuriputo.nekuva.parsers.model.ContentRating.SUGGESTIVE) {
+                    Badge(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), containerColor = androidx.compose.ui.graphics.Color(0xFFF57C00)) { Text("16+") }
+                } else if (manga.contentRating == org.nekosukuriputo.nekuva.parsers.model.ContentRating.ADULT) {
+                    Badge(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), containerColor = androidx.compose.ui.graphics.Color(0xFFD32F2F)) { Text("18+") }
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(0.65f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = manga.title, 
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val subtitle = manga.authors.joinToString().takeIf { it.isNotEmpty() }
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle, 
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
+                OutlinedButton(
+                    onClick = onFavoriteClick,
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    val icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    val textRes = if (isFavorite) Res.string.in_library else Res.string.add_to_favourites
+                    Text(stringResource(textRes))
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
+        // Details Table
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DetailRow(stringResource(Res.string.source), manga.source.name)
+                DetailRow(stringResource(Res.string.author), manga.authors.joinToString().takeIf { it.isNotEmpty() } ?: "-")
+                // Fallback for locale, if not present we just use "-" or name
+                val localeStr = try { manga.source.javaClass.getMethod("getLang").invoke(manga.source) as String } catch(e: Exception) { "-" }
+                DetailRow(stringResource(Res.string.translation), if (localeStr != "-") localeStr else "-")
+                
+                if (manga.rating >= 0f) {
+                    DetailRow(stringResource(Res.string.rating), "${manga.rating} / 10")
+                }
+                DetailRow(stringResource(Res.string.state), manga.state?.name ?: "-")
+                DetailRow(stringResource(Res.string.chapters), manga.chapters?.size?.toString() ?: "0")
+            }
+        }
+
+        // Description
         val description = manga.description?.replace("<br>".toRegex(RegexOption.IGNORE_CASE), "\n")?.replace("<[^>]*>".toRegex(), "")?.trim()
         if (!description.isNullOrEmpty()) {
-            item {
-                Text(text = stringResource(Res.string.description), style = MaterialTheme.typography.titleMedium)
-                Text(text = description, style = MaterialTheme.typography.bodyMedium)
+            var expanded by remember { mutableStateOf(false) }
+            Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = stringResource(Res.string.description), style = MaterialTheme.typography.titleMedium)
+                    if (!expanded) {
+                        TextButton(onClick = { expanded = true }, contentPadding = PaddingValues(0.dp)) {
+                            Text(stringResource(Res.string.more))
+                        }
+                    }
+                }
+                Text(
+                    text = description, 
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
         
+        // Tags
         if (!manga.tags.isNullOrEmpty()) {
-            item {
-                Text(text = manga.tags!!.joinToString { it.title }, style = MaterialTheme.typography.bodySmall)
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                manga.tags!!.forEach { tag ->
+                    FilterChip(
+                        selected = false,
+                        onClick = { /* Deferred: search tag */ },
+                        label = { Text(tag.title) },
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                }
             }
         }
-
-        item {
-            Text(text = stringResource(Res.string.chapters), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+        
+        // Related Manga (Deferred Placeholder)
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = stringResource(Res.string.related_manga), style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { /* Deferred */ }, contentPadding = PaddingValues(0.dp)) {
+                    Text(stringResource(Res.string.show_all))
+                }
+            }
         }
+        
+        Spacer(Modifier.height(16.dp))
+    }
+}
 
-        items(manga.chapters ?: emptyList()) { chapter ->
-            ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter) })
+@Composable
+fun DetailRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(0.35f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            modifier = Modifier.weight(0.65f),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun ChaptersSheetContent(
+    chapters: List<MangaChapter>,
+    onChapterClick: (MangaChapter) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Toolbar (Drag handle is provided by BottomSheetScaffold automatically)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 0.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(onClick = { /* Deferred: Switch to list */ }) {
+                    Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = "List View")
+                }
+                IconButton(onClick = { /* Deferred: Switch to grid */ }) {
+                    Icon(Icons.Default.GridView, contentDescription = "Grid View")
+                }
+                IconButton(onClick = { /* Deferred: Bookmark */ }) {
+                    Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark")
+                }
+            }
+            
+            Button(
+                onClick = { /* Deferred: Read from history/first chapter */ },
+                contentPadding = PaddingValues(start = 16.dp, end = 8.dp)
+            ) {
+                Text(stringResource(Res.string.read))
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+        }
+        
+        HorizontalDivider()
+        
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(chapters) { chapter ->
+                    ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter) })
+                }
+            }
+            org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                state = listState,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
         }
     }
-    org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
-        state = listState,
-        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterEnd)
-    )
-}
 }
 
 @Composable
 fun ChapterItem(chapter: MangaChapter, onClick: () -> Unit) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        val chapterTitle = chapter.title?.takeIf { it.isNotEmpty() } ?: chapter.name
-        Text(text = chapterTitle, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (chapter.uploadDate > 0L) {
-            Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+            val chapterTitle = chapter.title?.takeIf { it.isNotEmpty() } ?: chapter.name
+            Text(text = chapterTitle, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (chapter.uploadDate > 0L) {
+                Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        
+        IconButton(onClick = { /* Deferred: Download chapter */ }) {
+            Icon(Icons.Outlined.FileDownload, contentDescription = "Download")
         }
     }
+}
+
+@Composable
+fun CategorySelectionDialog(
+    categories: List<org.nekosukuriputo.nekuva.core.model.FavouriteCategory>,
+    selectedCategories: Set<Long>,
+    isFavorite: Boolean,
+    onDismiss: () -> Unit,
+    onToggleCategory: (Long, Boolean) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.add_to_favourites)) },
+        text = {
+            LazyColumn {
+                item {
+                    val isDefaultSelected = isFavorite && selectedCategories.isEmpty()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleCategory(0L, !isDefaultSelected) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = isDefaultSelected, onCheckedChange = null)
+                        Spacer(Modifier.width(16.dp))
+                        Text(stringResource(Res.string.default_category))
+                    }
+                }
+                items(categories) { category ->
+                    val isSelected = selectedCategories.contains(category.id)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleCategory(category.id, !isSelected) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = isSelected, onCheckedChange = null)
+                        Spacer(Modifier.width(16.dp))
+                        Text(category.title)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.action_done)) // Or "OK"
+            }
+        }
+    )
 }

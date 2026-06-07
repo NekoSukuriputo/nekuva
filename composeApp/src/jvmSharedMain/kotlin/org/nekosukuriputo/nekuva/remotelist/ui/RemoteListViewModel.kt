@@ -22,7 +22,7 @@ class RemoteListViewModel(
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<RemoteListRoute>()
-    private val sourceId = route.sourceId
+    val sourceId = route.sourceId
 
     private val _uiState = MutableStateFlow<RemoteListUiState>(RemoteListUiState.Loading)
     val uiState: StateFlow<RemoteListUiState> = _uiState.asStateFlow()

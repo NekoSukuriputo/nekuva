@@ -12,6 +12,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.SubcomposeAsyncImage
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -31,11 +37,20 @@ fun ReaderScreen(
             TopAppBar(
                 title = { 
                     if (uiState is ReaderUiState.Success) {
-                        Text((uiState as ReaderUiState.Success).chapter.name)
+                        Text(
+                            text = (uiState as ReaderUiState.Success).chapter.name,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     } else {
                         Text("Reader")
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -78,32 +93,39 @@ fun ReaderContent(
 
 @Composable
 fun ReaderPageItem(page: MangaPage, index: Int) {
-    // A single page taking full width, height adjusted to preserve aspect ratio
-    // We use SubcomposeAsyncImage to show loading indicators per page
-    SubcomposeAsyncImage(
-        model = page.url,
-        contentDescription = "Page $index",
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-        loading = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                CircularProgressIndicator()
+    var retryHash by remember { mutableIntStateOf(0) }
+
+    key(retryHash) {
+        SubcomposeAsyncImage(
+            model = page.url,
+            contentDescription = "Page $index",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+            loading = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            },
+            error = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { retryHash++ }) {
+                        Text(stringResource(Res.string.retry))
+                    }
+                }
             }
-        },
-        error = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
-            }
-        }
-    )
+        )
+    }
 }

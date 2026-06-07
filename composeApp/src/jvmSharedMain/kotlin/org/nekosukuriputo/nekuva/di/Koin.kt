@@ -27,7 +27,7 @@ val remoteListModule = module {
 }
 
 val detailsModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(params.get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(params.get(), get(), get(), get()) }
 }
 
 val appModule = module {
@@ -52,10 +52,15 @@ val readerModule = module {
     factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get()) }
 }
 
+val favouritesModule = module {
+    single { org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository(get()) }
+    factory { params -> org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListViewModel(params.get(), get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule, favouritesModule)
     }
 
 

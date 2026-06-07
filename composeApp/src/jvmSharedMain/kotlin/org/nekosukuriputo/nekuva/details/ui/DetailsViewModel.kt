@@ -13,11 +13,17 @@ import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
+import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
+import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
 
 class DetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val mangaDataRepository: MangaDataRepository,
     private val repositoryFactory: MangaRepository.Factory,
+    private val favouritesRepository: FavouritesRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -25,6 +31,16 @@ class DetailsViewModel(
 
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
+
+    val isFavorite: StateFlow<Boolean> = favouritesRepository.observeCategoriesIds(mangaId)
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val allCategories: StateFlow<List<FavouriteCategory>> = favouritesRepository.observeCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val mangaCategories: StateFlow<Set<Long>> = favouritesRepository.observeCategoriesIds(mangaId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     init {
         loadDetails()
@@ -59,6 +75,23 @@ class DetailsViewModel(
 
     fun retry() {
         loadDetails()
+    }
+
+    fun toggleCategory(categoryId: Long, isSelected: Boolean) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (state is DetailsUiState.Success) {
+                if (isSelected) {
+                    favouritesRepository.addToCategory(categoryId, listOf(state.manga))
+                } else {
+                    if (categoryId == 0L) {
+                        favouritesRepository.removeFromFavourites(listOf(mangaId))
+                    } else {
+                        favouritesRepository.removeFromCategory(categoryId, listOf(mangaId))
+                    }
+                }
+            }
+        }
     }
 }
 

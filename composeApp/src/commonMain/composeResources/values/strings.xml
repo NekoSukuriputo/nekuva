@@ -113,6 +113,9 @@
     <string name="done">Done</string>
     <string name="all_favourites">All favorites</string>
     <string name="favourites_category_empty">Empty category</string>
+    <string name="in_library">In library</string>
+    <string name="default_category">Default</string>
+    <string name="action_done">Done</string>
     <string name="read_later">Read later</string>
     <string name="updates">Updates</string>
     <string name="text_feed_holder">New chapters of what you are reading are shown here</string>

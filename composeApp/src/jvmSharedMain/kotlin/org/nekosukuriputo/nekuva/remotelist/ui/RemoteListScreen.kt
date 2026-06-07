@@ -20,19 +20,39 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemoteListScreen(
     viewModel: RemoteListViewModel = koinViewModel(),
-    onMangaClick: (Long) -> Unit
+    onMangaClick: (Long) -> Unit,
+    onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(viewModel.sourceId) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
         when (val state = uiState) {
             is RemoteListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
             is RemoteListUiState.Empty -> EmptyState(message = "No manga found.", modifier = Modifier.padding(paddingValues))
