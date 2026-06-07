@@ -5,6 +5,11 @@
 /.idea/
 .DS_Store
 
+*.jks
+*.keystore
+key.properties
+keystore/
+
 # Build folders
 build/
 composeApp/build/
