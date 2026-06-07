@@ -1,6 +1,6 @@
 package org.nekosukuriputo.nekuva.favourites.domain
 
-import androidx.room.withTransaction
+import org.nekosukuriputo.nekuva.core.db.withTransactionKmp
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -122,7 +122,7 @@ class FavouritesRepository(
 	}
 
 	suspend fun removeCategories(ids: Collection<Long>) {
-		db.withTransaction {
+		db.withTransactionKmp {
 			for (id in ids) {
 				db.getFavouritesDao().deleteAll(id)
 				db.getFavouriteCategoriesDao().delete(id)
@@ -137,7 +137,7 @@ class FavouritesRepository(
 
 	suspend fun reorderCategories(orderedIds: List<Long>) {
 		val dao = db.getFavouriteCategoriesDao()
-		db.withTransaction {
+		db.withTransactionKmp {
 			for ((i, id) in orderedIds.withIndex()) {
 				dao.updateSortKey(id, i)
 			}
@@ -145,7 +145,7 @@ class FavouritesRepository(
 	}
 
 	suspend fun addToCategory(categoryId: Long, mangas: Collection<Manga>) {
-		db.withTransaction {
+		db.withTransactionKmp {
 			for (manga in mangas) {
 				val tags = manga.tags.toEntities()
 				db.getTagsDao().upsert(tags)
@@ -164,7 +164,7 @@ class FavouritesRepository(
 	}
 
 	suspend fun removeFromFavourites(ids: Collection<Long>) {
-		db.withTransaction {
+		db.withTransactionKmp {
 			for (id in ids) {
 				db.getFavouritesDao().delete(mangaId = id)
 			}
@@ -173,7 +173,7 @@ class FavouritesRepository(
 	}
 
 	suspend fun removeFromCategory(categoryId: Long, ids: Collection<Long>) {
-		db.withTransaction {
+		db.withTransactionKmp {
 			for (id in ids) {
 				db.getFavouritesDao().delete(categoryId = categoryId, mangaId = id)
 			}
