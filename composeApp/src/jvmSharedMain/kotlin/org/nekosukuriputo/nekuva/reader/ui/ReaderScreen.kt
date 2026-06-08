@@ -15,6 +15,7 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
@@ -76,10 +77,23 @@ fun ReaderContent(
     initialPage: Int,
     onPageChanged: (Int) -> Unit
 ) {
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = initialPage)
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    androidx.compose.runtime.LaunchedEffect(listState.firstVisibleItemIndex) {
-        onPageChanged(listState.firstVisibleItemIndex)
+    // Resume: jump to the saved page exactly once. Progress reporting is gated behind
+    // `restored` so the transient firstVisibleItemIndex == 0 emitted during the first
+    // layout pass cannot overwrite the saved position with page 0 (Bug 2).
+    var restored by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(initialPage, pages.size) {
+        if (initialPage in 1 until pages.size) {
+            listState.scrollToItem(initialPage)
+        }
+        restored = true
+    }
+    androidx.compose.runtime.LaunchedEffect(restored) {
+        if (restored) {
+            androidx.compose.runtime.snapshotFlow { listState.firstVisibleItemIndex }
+                .collect { onPageChanged(it) }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {

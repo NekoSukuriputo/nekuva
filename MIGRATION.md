@@ -35,7 +35,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [ ] `search`
 - [ ] `filter`
 - [x] `favourites`
-- [x] `history` (Done, Date grouping, Resume, Clear, Incognito)
+- [x] `history` (2 bug inti FIXED & run-verified Android+Desktop 2026-06-08: tampil di History + resume halaman. Item parity lanjutan tetap deferred — lihat ledger)
 - [ ] `bookmarks`
 - [ ] `download`
 - [ ] `tracker`
@@ -97,6 +97,45 @@ Bagian ini mencatat setiap perilaku atau fitur dari aplikasi Doki lama yang seng
 - [ ] Expandable NavigationRail (animasi *drawer* buka-tutup pada Desktop).
 - [ ] Dynamic Tab Visibility (menyembunyikan tab Feed/Suggestions bergantung dari AppSettings).
 - [ ] Badge Counter untuk tab Feed/Updates.
+
+### Area: History (RE-OPENED — was wrongly marked done on compile only)
+
+**Status sinkron ke kondisi NYATA (re-verifikasi 2026-06-08).**
+
+Dua bug yang diverifikasi manusia — **SUDAH DIPERBAIKI & run-verified (2026-06-08)**:
+- [x] **BUG 1 — Manga yang dibaca tidak muncul di tab History.** FIXED. Tulis history sudah andal;
+      kegagalan tidak lagi ditelan diam-diam (`HistoryUpdateUseCase` log error + scope tunggal).
+      Diverifikasi: DB berisi baris history valid yang ter-join ke manga; tampil di tab History.
+- [x] **BUG 2 — Resume balik ke ATAS, bukan ke posisi halaman terakhir.** FIXED. `ReaderContent`
+      memakai `listState.scrollToItem(savedPage)` + guard `restored` agar `page=0` sesaat saat
+      layout awal tidak menimpa posisi tersimpan. Continue membuka chapter terakhir + halaman terakhir.
+
+Temuan investigasi DB (inspeksi langsung `%TEMP%\nekuva-db.db`, bukan asumsi):
+- Tabel `history` SUDAH berisi 1 baris VALID hari ini: "Eleceed" (SHINIGAMI),
+  `page=54`, `percent=0.75`, `chapter_id` & FK→`manga` valid, `deleted_at=0`. Query observe
+  (`LEFT JOIN manga … GROUP BY`) mengembalikan baris itu saat dijalankan manual di SQLite.
+- Artinya jalur TULIS BISA bekerja (tidak selalu gagal) dan jalur OBSERVE SQL-nya benar.
+- Hanya 1 manga padahal 253 manga & 3 favourites tersimpan → tulis tampak TIDAK ANDAL untuk
+  sebagian manga. Hipotesis kuat: banyak sumber butuh `evaluateJs` (masih stub, §4.2) → halaman
+  gagal load → `onPageChanged` tak pernah terpanggil → tak ada history. Sumber yang load (mis.
+  SHINIGAMI) tetap tercatat. Maka "History kosong" yang dilaporkan manusia kemungkinan (a) stale
+  (sebelum tulis berhasil), atau (b) diuji dengan sumber yang halamannya tak pernah load.
+
+Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1):
+- [ ] Sort order lengkap (LAST_READ/LONG_AGO_READ/NEWEST/OLDEST/PROGRESS/UNREAD/ALPHABETIC/…).
+      Saat ini hardcoded LAST_READ.
+- [ ] Quick filters (HistoryListQuickFilter) + chip filter.
+- [ ] Toggle grouping (KEY_HISTORY_GROUPING) + header berdasarkan progress saat sort = PROGRESS.
+- [ ] List mode (grid/list/detailed) — saat ini list saja.
+- [ ] Pagination (PAGE_SIZE 16, requestMoreItems) — saat ini load semua (Int.MAX_VALUE).
+- [ ] Menu "Clear history" dengan opsi (2 jam terakhir / hari ini / bukan favorit / semua) —
+      saat ini hanya "clear all".
+- [ ] Multi-select (long-press) + Mark as read (MarkAsReadUseCase) + Share.
+- [ ] Banner InfoModel "Incognito mode" saat incognito aktif.
+- [ ] Empty state ikon + teks primer/sekunder (sesuai Doki) — saat ini teks polos.
+- [ ] Indikator progress baca (ReadingProgressView) per item.
+- [ ] Hardcoded strings di HistoryScreen ("Riwayat Baca", "Tidak ada riwayat baca", "Lanjut bab",
+      "Hapus Riwayat") harus pindah ke Compose Resources (§4.4).
 
 ### Area: Settings & Cross-cutting
 - [ ] Security (Biometric Lock / App Lock).
