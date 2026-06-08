@@ -15,6 +15,9 @@ class HistoryUpdateUseCase(
 	private val historyRepository: HistoryRepository,
 ) {
 
+	// Single long-lived scope instead of allocating a new throwaway scope per page change.
+	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
 	suspend operator fun invoke(manga: Manga, chapterId: Long, page: Int, scroll: Int, percent: Float) {
 		historyRepository.addOrUpdate(
 			manga = manga,
@@ -32,14 +35,15 @@ class HistoryUpdateUseCase(
 		page: Int,
 		scroll: Int,
 		percent: Float
-	) = CoroutineScope(SupervisorJob() + Dispatchers.Default).launch(Dispatchers.Default, CoroutineStart.ATOMIC) {
+	) = scope.launch(start = CoroutineStart.ATOMIC) {
 		runCatchingCancellable {
 			withContext(NonCancellable) {
 				invoke(manga, chapterId, page, scroll, percent)
 			}
 		}.onFailure { e ->
-            println("HistoryUpdateUseCase Error: ${e.message}")
-            e.printStackTrace()
-        }
+			// NEVER swallow silently — a failed write is exactly why History showed empty (§4.6).
+			println("[Nekuva][history] addOrUpdate FAILED mangaId=${manga.id} chapter=$chapterId page=$page: ${e.message}")
+			e.printStackTrace()
+		}
 	}
 }
