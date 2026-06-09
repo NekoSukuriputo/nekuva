@@ -14,13 +14,16 @@ abstract class FavouriteCategoriesDao {
 	@Query("SELECT * FROM favourite_categories WHERE category_id = :id AND deleted_at = 0")
 	abstract suspend fun find(id: Int): FavouriteCategoryEntity
 
-	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 ORDER BY sort_key")
+	// category_id = 0 is the special "Default" category. It is a real row (so favourites can
+	// reference it via FK) but is represented synthetically in the UI, so it is excluded from the
+	// category LIST queries to avoid a duplicate "Default" tab / a deletable Default in Manage.
+	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 AND category_id != 0 ORDER BY sort_key")
 	abstract suspend fun findAll(): List<FavouriteCategoryEntity>
 
-	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 ORDER BY sort_key")
+	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 AND category_id != 0 ORDER BY sort_key")
 	abstract fun observeAll(): Flow<List<FavouriteCategoryEntity>>
 
-	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 AND show_in_lib = 1 ORDER BY sort_key")
+	@Query("SELECT * FROM favourite_categories WHERE deleted_at = 0 AND show_in_lib = 1 AND category_id != 0 ORDER BY sort_key")
 	abstract fun observeAllVisible(): Flow<List<FavouriteCategoryEntity>>
 
 	@Query("SELECT * FROM favourite_categories WHERE category_id = :id AND deleted_at = 0")
@@ -28,6 +31,14 @@ abstract class FavouriteCategoriesDao {
 
 	@Insert(onConflict = OnConflictStrategy.ABORT)
 	abstract suspend fun insert(category: FavouriteCategoryEntity): Long
+
+	/**
+	 * Ensure the special "Default" category (category_id = 0) exists so favourites can reference it.
+	 * Uses an explicit category_id = 0 because Room's @Insert treats the autoGenerate PK value 0 as
+	 * "unset" and lets SQLite assign a new id instead. INSERT OR IGNORE is a no-op if it already exists.
+	 */
+	@Query("INSERT OR IGNORE INTO favourite_categories (category_id, created_at, sort_key, title, `order`, track, show_in_lib, deleted_at) VALUES (0, :createdAt, 0, :title, :order, 0, 1, 0)")
+	abstract suspend fun ensureDefaultCategory(createdAt: Long, title: String, order: String)
 
 	suspend fun delete(id: Long) = setDeletedAt(id, System.currentTimeMillis())
 

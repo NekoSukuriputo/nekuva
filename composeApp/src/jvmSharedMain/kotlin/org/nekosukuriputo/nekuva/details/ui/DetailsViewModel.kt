@@ -88,11 +88,9 @@ class DetailsViewModel(
                 if (isSelected) {
                     favouritesRepository.addToCategory(categoryId, listOf(state.manga))
                 } else {
-                    if (categoryId == 0L) {
-                        favouritesRepository.removeFromFavourites(listOf(mangaId))
-                    } else {
-                        favouritesRepository.removeFromCategory(categoryId, listOf(mangaId))
-                    }
+                    // Default (id 0) is a real category now — unchecking it removes from that category
+                    // only, like any other category (not from all favourites).
+                    favouritesRepository.removeFromCategory(categoryId, listOf(mangaId))
                 }
             }
         }

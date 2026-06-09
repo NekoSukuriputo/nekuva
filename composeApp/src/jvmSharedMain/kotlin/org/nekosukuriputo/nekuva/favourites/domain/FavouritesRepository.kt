@@ -147,6 +147,15 @@ class FavouritesRepository(
 
 	suspend fun addToCategory(categoryId: Long, mangas: Collection<Manga>) {
 		db.withTransactionKmp {
+			// The "Default" category (id 0) is synthetic in the UI and has no seeded row on older DBs;
+			// make sure it exists before referencing it, or the favourite insert fails the FK (id 0).
+			if (categoryId == DEFAULT_CATEGORY_ID) {
+				db.getFavouriteCategoriesDao().ensureDefaultCategory(
+					createdAt = Clock.System.now().toEpochMilliseconds(),
+					title = "Default",
+					order = ListSortOrder.NEWEST.name,
+				)
+			}
 			for (manga in mangas) {
 				val tags = manga.tags.toEntities()
 				db.getTagsDao().upsert(tags)
@@ -187,5 +196,10 @@ class FavouritesRepository(
 			.filterNotNull()
 			.map { x -> ListSortOrder(x.order, ListSortOrder.NEWEST) }
 			.distinctUntilChanged()
+	}
+
+	companion object {
+		/** The special "Default" favourites category. Real row, synthetic in the UI. */
+		const val DEFAULT_CATEGORY_ID = 0L
 	}
 }

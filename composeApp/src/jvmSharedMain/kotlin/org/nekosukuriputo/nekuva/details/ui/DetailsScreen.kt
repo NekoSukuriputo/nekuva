@@ -120,7 +120,8 @@ fun DetailsScreen(
                     stringResource(Res.string.add_to_favourites)
                 } else {
                     val customCategoryNames = allCategories.filter { mangaCategories.contains(it.id) }.map { it.title }
-                    val hasDefault = mangaCategories.contains(0L) || mangaCategories.isEmpty()
+                    // Default (id 0) is a real category now — membership is purely "is 0 in the set".
+                    val hasDefault = mangaCategories.contains(0L)
                     
                     val names = buildList {
                         if (hasDefault) add(stringResource(Res.string.default_category))
@@ -444,7 +445,8 @@ fun CategorySelectionDialog(
         text = {
             LazyColumn {
                 item {
-                    val isDefaultSelected = isFavorite && selectedCategories.isEmpty()
+                    // Default is category id 0 — checked iff the manga is actually in category 0.
+                    val isDefaultSelected = selectedCategories.contains(0L)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
