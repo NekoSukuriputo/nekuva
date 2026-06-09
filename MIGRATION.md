@@ -86,8 +86,17 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
       yang tak disediakan source).
 
 **DEFERRED (masih ditunda):**
-- [ ] Fase berikut — **Global search dari Explore** (multi-source): hasil dikelompokkan per source,
-      header, paging per source. Search bar Explore masih dummy sampai fase ini.
+- [x] **Global Explore search** (multi-source) — DONE & run-verified. Search bar "Cari" Explore →
+      `GlobalSearchRoute(query)` → section per source via `getList(MangaListFilter(query))`, paralel
+      (Semaphore 4) + streaming; section **Riwayat/Disukai/Lokal** (DB/lokal, read-only) di atas; error
+      per-source tanpa crash (source JS-stub → error state); tap item → detail, "Lebih" (source nyata) →
+      RemoteList(source, query). Empty global = `nothing_found` + `text_search_holder_secondary`.
+- [ ] Footer **"Cari sumber nonaktif"** (continueSearch / `getDisabledSources()`) — DEFERRED.
+      GATING: dibangun bersama saat **"Source active/inactive toggle"** (lihat Area Explore & List)
+      diimplementasikan, karena prasyaratnya = source enable/disable. Sampai itu, search hanya enabled
+      sources dan TIDAK menampilkan tombol footer (hindari UI mati).
+- [ ] "Lebih" untuk section **Lokal** di global search (Doki punya): ditunda — `RemoteList` hanya
+      mendukung `MangaParserSource`, bukan LOCAL; perlu jalur ke daftar lokal dengan query.
 - [ ] Search suggestions (query/author/tag/source) + riwayat pencarian (recent queries) + hint.
 - [ ] **Parity item grid (lintas-layar, sesi terpisah)**: overlay di cover — ikon hati favorit +
       badge progres baca (%/centang) — seperti Doki (Explore/Favourites/History/RemoteList).

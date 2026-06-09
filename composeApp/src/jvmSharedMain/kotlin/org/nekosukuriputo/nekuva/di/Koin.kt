@@ -28,6 +28,14 @@ val remoteListModule = module {
     factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get()) }
 }
 
+val searchModule = module {
+    factory { params ->
+        org.nekosukuriputo.nekuva.search.ui.GlobalSearchViewModel(
+            params.get(), get(), get(), get(), get(), get(), get(), get(),
+        )
+    }
+}
+
 val detailsModule = module {
 	factory { parameters ->
 		org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(
@@ -78,7 +86,7 @@ val historyModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, detailsModule, readerModule, favouritesModule, historyModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, favouritesModule, historyModule)
     }
 
 

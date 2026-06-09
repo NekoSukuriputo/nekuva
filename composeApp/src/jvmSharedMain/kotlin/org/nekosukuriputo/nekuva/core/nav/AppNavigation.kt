@@ -83,7 +83,19 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.explore.ui.ExploreScreen(
                         onSourceClick = { sourceId ->
                             navController.navigate(RemoteListRoute(sourceId))
+                        },
+                        onSearchSubmit = { query ->
+                            navController.navigate(GlobalSearchRoute(query))
                         }
+                    )
+                }
+                composable<GlobalSearchRoute> {
+                    org.nekosukuriputo.nekuva.search.ui.GlobalSearchScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onSourceMore = { sourceId, query ->
+                            navController.navigate(RemoteListRoute(sourceId, query))
+                        },
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
                 composable<HomeRoute> { // Represents Local tab

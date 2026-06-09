@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,8 +59,10 @@ import nekuva.composeapp.generated.resources.*
 fun ExploreScreen(
 	viewModel: ExploreViewModel = koinViewModel(),
 	onSourceClick: (String) -> Unit,
+	onSearchSubmit: (String) -> Unit,
 ) {
 	val uiState by viewModel.uiState.collectAsState()
+	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
 
 	when (val state = uiState) {
 		is ExploreUiState.Loading -> {
@@ -84,12 +87,21 @@ fun ExploreScreen(
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         OutlinedTextField(
-                            value = "",
-                            onValueChange = {},
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
                             placeholder = { Text(stringResource(Res.string.search)) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            singleLine = true,
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onSearch = {
+                                    val q = searchQuery.trim()
+                                    if (q.isNotEmpty()) onSearchSubmit(q)
+                                },
+                            ),
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            enabled = false // Placeholder for now
                         )
                     }
 

@@ -11,6 +11,7 @@ import org.nekosukuriputo.nekuva.core.db.TABLE_FAVOURITES
 import org.nekosukuriputo.nekuva.core.db.TABLE_FAVOURITE_CATEGORIES
 import org.nekosukuriputo.nekuva.core.db.entity.toEntities
 import org.nekosukuriputo.nekuva.core.db.entity.toEntity
+import org.nekosukuriputo.nekuva.core.db.entity.toMangaList as toMangaListWithTags
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
 import org.nekosukuriputo.nekuva.favourites.data.FavouriteCategoryEntity
@@ -86,6 +87,11 @@ class FavouritesRepository(
 
 	suspend fun isFavorite(mangaId: Long): Boolean {
 		return db.getFavouritesDao().findCategoriesCount(mangaId) != 0
+	}
+
+	/** Read-only title search over favourites (for global search). */
+	suspend fun search(query: String, limit: Int): List<Manga> {
+		return db.getFavouritesDao().searchByTitle("%$query%", limit).toMangaListWithTags()
 	}
 
 	suspend fun getCategoriesIds(mangaId: Long): Set<Long> {

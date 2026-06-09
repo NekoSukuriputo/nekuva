@@ -1,0 +1,157 @@
+package org.nekosukuriputo.nekuva.search.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
+import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
+import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
+import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
+import nekuva.composeapp.generated.resources.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GlobalSearchScreen(
+    viewModel: GlobalSearchViewModel = koinViewModel(),
+    onMangaClick: (Long) -> Unit,
+    onSourceMore: (sourceId: String, query: String) -> Unit,
+    onBackClick: () -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(viewModel.query, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { paddingValues ->
+        when {
+            uiState.sections.isEmpty() && uiState.isLoading -> LoadingState(modifier = Modifier.padding(paddingValues))
+            uiState.sections.isEmpty() -> {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    EmptyState(message = stringResource(Res.string.nothing_found))
+                    Text(
+                        text = stringResource(Res.string.text_search_holder_secondary),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentPadding = PaddingValues(vertical = 8.dp, horizontal = 0.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(uiState.sections, key = { it.id }) { section ->
+                        SearchSectionItem(
+                            section = section,
+                            onMangaClick = onMangaClick,
+                            onMore = { sourceId -> onSourceMore(sourceId, viewModel.query) },
+                        )
+                    }
+                    if (uiState.isLoading) {
+                        item(key = "loading-footer") {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchSectionItem(
+    section: SearchSection,
+    onMangaClick: (Long) -> Unit,
+    onMore: (sourceId: String) -> Unit,
+) {
+    val title = when (section.kind) {
+        SearchSectionKind.HISTORY -> stringResource(Res.string.history)
+        SearchSectionKind.FAVOURITES -> stringResource(Res.string.favourites)
+        SearchSectionKind.LOCAL -> stringResource(Res.string.local_storage)
+        SearchSectionKind.SOURCE -> section.sourceName
+    }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            // "Lebih"/see-all only for real parser sources (mirrors Doki — UnknownMangaSource has none).
+            if (section.kind == SearchSectionKind.SOURCE && section.sourceId != null && section.error == null) {
+                TextButton(onClick = { onMore(section.sourceId) }) {
+                    Text(stringResource(Res.string.more))
+                }
+            }
+        }
+        if (section.error != null) {
+            Text(
+                text = section.error.message ?: stringResource(Res.string.error),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        } else {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(section.manga, key = { it.id }) { manga ->
+                    Box(modifier = Modifier.width(120.dp)) {
+                        MangaGridItem(manga = manga, onClick = { onMangaClick(manga.id) })
+                    }
+                }
+            }
+        }
+    }
+}

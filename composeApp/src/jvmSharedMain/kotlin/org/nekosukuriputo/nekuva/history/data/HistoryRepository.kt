@@ -50,6 +50,11 @@ class HistoryRepository(
 		return entities.map { it.toManga() }
 	}
 
+	/** Read-only title search over read history (for global search). */
+	suspend fun search(query: String, limit: Int): List<Manga> {
+		return db.getHistoryDao().searchByTitle("%$query%", limit).toMangaList()
+	}
+
 	suspend fun getLastOrNull(): Manga? {
 		val entity = db.getHistoryDao().findAll(0, 1).firstOrNull() ?: return null
 		return entity.toManga()

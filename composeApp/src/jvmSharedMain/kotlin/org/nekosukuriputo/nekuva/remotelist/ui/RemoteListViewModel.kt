@@ -63,6 +63,11 @@ class RemoteListViewModel(
     private var loadingJob: Job? = null
 
     init {
+        // Pre-applied query (e.g. opened from global search "see all").
+        route.query?.trim()?.takeIf { it.isNotBlank() }?.let {
+            query = it
+            _searchQuery.value = it
+        }
         availableSortOrders = repository?.sortOrders?.toList().orEmpty()
         emitFilterState(optionsLoading = true)
         loadFilterOptions()

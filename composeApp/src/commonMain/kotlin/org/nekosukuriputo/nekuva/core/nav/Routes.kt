@@ -18,7 +18,10 @@ data object SettingsRoute
 data object ExploreRoute
 
 @Serializable
-data class RemoteListRoute(val sourceId: String)
+data class RemoteListRoute(val sourceId: String, val query: String? = null)
 
 @Serializable
 data object HistoryRoute
+
+@Serializable
+data class GlobalSearchRoute(val query: String)
