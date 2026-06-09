@@ -23,6 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.Res
+import nekuva.composeapp.generated.resources.read_later
+import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 
 @Composable
 fun App() {
@@ -40,7 +44,15 @@ fun App() {
     LaunchedEffect(Unit) {
         dummyData = parserContext.fetchDummyData()
     }
-    
+
+    // Localise the seeded "Read Later" category to the device language (new + existing DBs).
+    val readLaterTitle = stringResource(Res.string.read_later)
+    LaunchedEffect(readLaterTitle) {
+        org.koin.core.context.GlobalContext.get()
+            .get<FavouritesRepository>()
+            .localizeSeededReadLater(readLaterTitle)
+    }
+
     org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme {
         androidx.compose.material3.Surface(
             modifier = Modifier.fillMaxSize(),

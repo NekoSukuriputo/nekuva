@@ -191,6 +191,17 @@ class FavouritesRepository(
 		}
 	}
 
+	/**
+	 * Localise the seeded "Read Later" category to the device language: rename the original
+	 * English seed title to [localizedTitle]. Idempotent — once renamed, the old title no longer
+	 * matches, so it is safe to call on every app start. Handles both new and existing databases.
+	 */
+	suspend fun localizeSeededReadLater(localizedTitle: String) {
+		if (localizedTitle.isNotBlank() && localizedTitle != SEED_READ_LATER_TITLE) {
+			db.getFavouriteCategoriesDao().renameByTitle(SEED_READ_LATER_TITLE, localizedTitle)
+		}
+	}
+
 	private fun observeOrder(categoryId: Long): Flow<ListSortOrder> {
 		return db.getFavouriteCategoriesDao().observe(categoryId)
 			.filterNotNull()
@@ -201,5 +212,8 @@ class FavouritesRepository(
 	companion object {
 		/** The special "Default" favourites category. Real row, synthetic in the UI. */
 		const val DEFAULT_CATEGORY_ID = 0L
+
+		/** Literal title used when seeding the "Read Later" category (localised on first run). */
+		const val SEED_READ_LATER_TITLE = "Read Later"
 	}
 }

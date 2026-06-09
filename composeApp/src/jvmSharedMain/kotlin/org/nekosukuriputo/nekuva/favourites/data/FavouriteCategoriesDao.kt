@@ -57,6 +57,10 @@ abstract class FavouriteCategoriesDao {
 	@Query("UPDATE favourite_categories SET sort_key = :sortKey WHERE category_id = :id")
 	abstract suspend fun updateSortKey(id: Long, sortKey: Int)
 
+	/** Rename a category matched by its exact (literal) title — used to localise seeded names. */
+	@Query("UPDATE favourite_categories SET title = :newTitle WHERE title = :oldTitle AND deleted_at = 0")
+	abstract suspend fun renameByTitle(oldTitle: String, newTitle: String)
+
 	@Query("DELETE FROM favourite_categories WHERE deleted_at != 0 AND deleted_at < :maxDeletionTime")
 	abstract suspend fun gc(maxDeletionTime: Long)
 
