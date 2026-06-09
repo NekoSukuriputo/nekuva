@@ -62,6 +62,43 @@ Bagian ini mencatat setiap perilaku atau fitur dari aplikasi Doki lama yang seng
 - [ ] Source active/inactive toggle (filtering).
 - [ ] Fungsi klik pintasan (Bookmarks, Random, Downloads) di Explore (saat ini tombolnya nonaktif).
 
+### Area: Search & Filter (SEDANG DIRENCANAKAN — parity-first)
+
+Model Doki: search & filter **disatukan** dalam `MangaListFilter` (query bagian dari filter), diterapkan
+per-source via `MangaRepository.getList(offset, order, filter)`; opsi filter dari
+`getFilterOptions(): MangaListFilterOptions` + `sortOrders` + `filterCapabilities`. `RemoteListViewModel`
+mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
+
+**DONE & run-verified (per-source, di layar RemoteList):**
+- [x] Search per-source (field toolbar + IME → set query → getList → hasil + paging).
+- [x] Filter sheet tersusun ala Doki: **Urutkan (dropdown) → Genre → Kecualikan genre → Tipe →
+      Status → Content rating**, dari `getFilterOptions()` + `sortOrders`.
+- [x] **Apply LIVE** (tiap toggle di sheet langsung re-query, tanpa staging/Apply — persis Doki).
+      Tutup sheet (Selesai / swipe) tidak me-revert (filter tetap). Tombol bawah: **Simpan** + **Selesai**.
+- [x] **Label Urutkan** = pasangan bermakna Doki via key Doki (popular/unpopular, by_rating/low_rating,
+      newest/order_oldest, updated/updated_long_ago, by_name/by_name_reverse, recently_added/added_long_ago,
+      by_relevance, popular_in_*) — bukan "base + ↑/↓".
+- [x] **Kecualikan genre** (`tagsExclude`, hanya bila `isTagsExclusionSupported`).
+- [x] **Tipe** (content type) dari `availableContentTypes`.
+- [x] **Quick-filter chip row** di bawah judul: chip "Genre" (buka sheet), **search-as-chip**
+      (`🔍 query ✕`), dan chip genre cepat (toggle include live).
+- [x] Empty ("Nothing found" + Reset), loading, error; capability-gating (sembunyikan field
+      yang tak disediakan source).
+
+**DEFERRED (masih ditunda):**
+- [ ] Fase berikut — **Global search dari Explore** (multi-source): hasil dikelompokkan per source,
+      header, paging per source. Search bar Explore masih dummy sampai fase ini.
+- [ ] Search suggestions (query/author/tag/source) + riwayat pencarian (recent queries) + hint.
+- [ ] **Parity item grid (lintas-layar, sesi terpisah)**: overlay di cover — ikon hati favorit +
+      badge progres baca (%/centang) — seperti Doki (Explore/Favourites/History/RemoteList).
+- [ ] Field filter lain: Demographics, Locale & Original locale, Year / Year range, Author search.
+- [ ] **SavedFilters preset** (tombol "Simpan"): serialisasi `MangaListFilter`, simpan/rename/hapus
+      preset bernama per-source (`SavedFiltersRepository`), chip preset di atas sheet. Tombol "Simpan"
+      SUDAH ditampilkan di posisi/label Doki tapi **DISABLED** (deviasi sadar) sampai subsistem ini dibuat.
+- [ ] "Lebih"/full tags catalog sheet (TagsCatalogSheet) dengan search tag (kini sheet tampilkan
+      semua tag tersedia sebagai chip).
+- [ ] Footer "Global search" pada hasil per-source; "Open in browser" pada error.
+
 ### Area: Details
 - [ ] Interactive actions untuk "Favorite this" (sekarang placeholder). Akan dikerjakan di sesi `favourites`.
 - [ ] Download action. Akan dikerjakan di sesi `download`.
