@@ -82,7 +82,17 @@ Bagian ini mencatat setiap perilaku atau fitur dari aplikasi Doki lama yang seng
 - [ ] Tap Grid Overlay (Ketuk kiri/kanan untuk navigasi, tengah untuk UI).
 - [ ] Reader Settings overlay (Brightness, keep screen on, color filter).
 - [ ] Zoom / Pan / Pinch-to-zoom Controls.
-- [ ] Navigasi Prev/Next Chapter saat menyentuh batas akhir/awal.
+- [x] Navigasi antar-chapter (DONE & run-verified Android + Desktop — subset reader-advanced):
+      - Forward continuous-append (muat chapter berikutnya saat mendekati ujung) untuk mode vertikal.
+      - Tombol Next/Prev chapter eksplisit di toolbar (Prev = ganti konten ke chapter sebelumnya).
+      - Update history saat pindah chapter (chapter baru + reset halaman) via jalur history yang ada.
+      - Boundary aman: chapter terakhir tanpa Next, pertama tanpa Prev (tidak crash).
+      DEFERRED dari sub-fitur ini:
+      - [ ] Backward continuous-prepend (scroll ke atas masuk chapter sebelumnya di list yang sama;
+            ditunda karena masalah "prepend jump" pada LazyColumn — sementara pakai tombol Prev).
+      - [ ] Pemilihan branch/translasi (`manga.chapters[branch]`); sementara pakai urutan
+            `manga.chapters` apa adanya.
+      - [ ] Page trimming memori (Doki trim >120 halaman); sementara semua chapter termuat tetap di list.
 - [ ] Keep Screen On.
 - [ ] RegionBitmapDecoder (untuk gambar sangat panjang/subsampling).
 - [ ] Page Save & Share.

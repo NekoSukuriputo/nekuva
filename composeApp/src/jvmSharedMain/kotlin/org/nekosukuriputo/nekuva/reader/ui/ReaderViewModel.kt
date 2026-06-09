@@ -4,13 +4,18 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.koin.mp.KoinPlatform
 import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.history.data.HistoryRepository
 import org.nekosukuriputo.nekuva.history.domain.HistoryUpdateUseCase
 import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
@@ -18,6 +23,22 @@ import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import org.nekosukuriputo.nekuva.parsers.model.MangaPage
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 
+/** A single page in the continuous reader list, tagged with the chapter it belongs to. */
+data class LoadedPage(
+    val page: MangaPage,
+    val chapterId: Long,
+    val pageInChapter: Int,
+)
+
+/**
+ * Reader with inter-chapter navigation (subset of reader-advanced — see MIGRATION.md):
+ * - Forward continuous-append: when the user nears the end of the loaded pages, the next
+ *   chapter's pages are appended to the SAME list (each page keeps its chapterId), mirroring
+ *   Doki's vertical/continuous behaviour.
+ * - Explicit Next/Prev chapter controls (replace content with the target chapter at page 0).
+ * - History moves with the active chapter via the existing [HistoryUpdateUseCase] path.
+ * Backward continuous-prepend, branch selection and page-trimming stay deferred (MIGRATION.md).
+ */
 class ReaderViewModel(
     savedStateHandle: SavedStateHandle,
     private val mangaDataRepository: MangaDataRepository,
@@ -28,79 +49,171 @@ class ReaderViewModel(
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
     private val mangaId = route.mangaId
-    private val chapterId = route.chapterId
+    private val initialChapterId = route.chapterId
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
+    private var manga: Manga? = null
+    private var chapters: List<MangaChapter> = emptyList()      // ordered (parser order)
+    private var loadedPages: List<LoadedPage> = emptyList()     // continuous, multi-chapter
+    private var currentChapterId: Long = 0L                     // chapter of the visible page
+
+    // Scroll signalling: the screen only (re)scrolls when scrollToken changes.
+    private var scrollToken: Int = 0
+    private var scrollTarget: Int = 0
+
+    private val appendMutex = Mutex()
+    private var appendingChapterId: Long? = null
+    private var navJob: Job? = null
+
     init {
-        loadPages()
+        loadInitial()
     }
 
-    private fun loadPages() {
-        viewModelScope.launch {
+    fun retry() = loadInitial()
+
+    private fun loadInitial() {
+        navJob?.cancel()
+        navJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading
             try {
-                // 1. Find Manga in DB
-                val manga = mangaDataRepository.findMangaById(mangaId, withChapters = true)
-                if (manga == null) {
-                    _uiState.value = ReaderUiState.Error(IllegalArgumentException("Manga with ID $mangaId not found."))
-                    return@launch
-                }
+                val m = mangaDataRepository.findMangaById(mangaId, withChapters = true)
+                    ?: throw IllegalArgumentException("Manga with ID $mangaId not found.")
+                manga = m
+                chapters = m.chapters ?: emptyList()
+                val chapter = chapters.find { it.id == initialChapterId }
+                    ?: throw IllegalArgumentException("Chapter with ID $initialChapterId not found.")
 
-                // 2. Find Chapter
-                val chapter = manga.chapters?.find { it.id == chapterId }
-                if (chapter == null) {
-                    _uiState.value = ReaderUiState.Error(IllegalArgumentException("Chapter with ID $chapterId not found."))
-                    return@launch
-                }
+                val pages = fetchPages(m, chapter)
+                loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, chapter.id, i) }
+                currentChapterId = chapter.id
 
-                // 3. Get repository
-                val mangaRepository = if (manga.source.name == "LOCAL") {
-                    localMangaRepository
+                // Resume to the saved page within the initial chapter.
+                val history = KoinPlatform.getKoin().get<HistoryRepository>().getOne(m)
+                val resumePage = if (history != null && history.chapterId == chapter.id) {
+                    history.page.coerceIn(0, (loadedPages.size - 1).coerceAtLeast(0))
                 } else {
-                    val source = MangaParserSource.entries.find { it.name == manga.source.name }
-                    if (source != null) {
-                        repositoryFactory.create(source)
-                    } else {
-                        throw IllegalArgumentException("Unknown source: ${manga.source.name}")
-                    }
+                    0
                 }
 
-                // 4. Fetch Pages
-                val pages = mangaRepository.getPages(chapter)
-
-                // 5. Check History for initial page
-                val history = org.koin.mp.KoinPlatform.getKoin().get<org.nekosukuriputo.nekuva.history.data.HistoryRepository>().getOne(manga)
-                val initialPage = if (history != null && history.chapterId == chapterId) history.page else 0
-
-                _uiState.value = ReaderUiState.Success(manga, chapter, pages, initialPage)
+                scrollTarget = resumePage
+                scrollToken++
+                emitSuccess()
             } catch (e: Exception) {
                 _uiState.value = ReaderUiState.Error(e)
             }
         }
     }
 
-    fun retry() {
-        loadPages()
+    private suspend fun fetchPages(m: Manga, chapter: MangaChapter): List<MangaPage> {
+        return if (m.source.name == "LOCAL") {
+            localMangaRepository.getPages(chapter)
+        } else {
+            val source = MangaParserSource.entries.find { it.name == m.source.name }
+                ?: throw IllegalArgumentException("Unknown source: ${m.source.name}")
+            repositoryFactory.create(source).getPages(chapter)
+        }
     }
 
-    fun onPageChanged(pageIndex: Int) {
-        val state = _uiState.value
-        if (state is ReaderUiState.Success) {
-            val pageCount = state.pages.size
-            if (pageCount == 0) return
-            
-            val percent = if (pageIndex == pageCount - 1) 1.0f else (pageIndex.toFloat() / pageCount.toFloat())
-            
-            historyUpdateUseCase.invokeAsync(
-                manga = state.manga,
-                chapterId = state.chapter.id,
-                page = pageIndex,
-                scroll = 0,
-                percent = percent
-            )
+    /** Called as the user scrolls; [index] is the first visible page index in [loadedPages]. */
+    fun onVisibleIndexChanged(index: Int) {
+        val lp = loadedPages.getOrNull(index) ?: return
+        writeHistory(lp)
+        if (lp.chapterId != currentChapterId) {
+            // The visible page crossed into another (already-appended) chapter — update the toolbar
+            // without moving the scroll position (scrollToken unchanged).
+            currentChapterId = lp.chapterId
+            emitSuccess()
         }
+        // Auto-advance: near the end of the loaded list -> append the next chapter.
+        if (index >= loadedPages.lastIndex - END_THRESHOLD) {
+            appendNextChapter()
+        }
+    }
+
+    private fun writeHistory(lp: LoadedPage) {
+        val m = manga ?: return
+        val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
+        val percent = (lp.pageInChapter + 1) / chapterPageCount.toFloat()
+        historyUpdateUseCase.invokeAsync(
+            manga = m,
+            chapterId = lp.chapterId,
+            page = lp.pageInChapter,
+            scroll = 0,
+            percent = percent,
+        )
+    }
+
+    private fun appendNextChapter() {
+        val lastId = loadedPages.lastOrNull()?.chapterId ?: return
+        val idx = chapters.indexOfFirst { it.id == lastId }
+        if (idx < 0) return
+        val next = chapters.getOrNull(idx + 1) ?: return        // last chapter -> nothing to append
+        if (appendingChapterId == next.id) return               // already in flight
+        if (loadedPages.any { it.chapterId == next.id }) return  // already appended
+        appendingChapterId = next.id
+        viewModelScope.launch {
+            try {
+                appendMutex.withLock {
+                    if (loadedPages.any { it.chapterId == next.id }) return@withLock
+                    val m = manga ?: return@withLock
+                    val pages = fetchPages(m, next)
+                    val wrapped = pages.mapIndexed { i, p -> LoadedPage(p, next.id, i) }
+                    // Append only — existing indices/scroll stay put.
+                    loadedPages = loadedPages + wrapped
+                    emitSuccess()
+                }
+            } catch (_: Exception) {
+                // Appending failed (e.g. stubbed JS / network); the explicit Next button still works.
+            } finally {
+                appendingChapterId = null
+            }
+        }
+    }
+
+    /** Explicit Next/Prev chapter control: replace the content with the target chapter at page 0. */
+    fun goToChapter(delta: Int) {
+        val idx = chapters.indexOfFirst { it.id == currentChapterId }
+        if (idx < 0) return
+        val target = chapters.getOrNull(idx + delta) ?: return   // boundary -> no-op, no crash
+        navJob?.cancel()
+        navJob = viewModelScope.launch {
+            _uiState.value = ReaderUiState.Loading
+            try {
+                val m = manga ?: return@launch
+                val pages = fetchPages(m, target)
+                loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, target.id, i) }
+                currentChapterId = target.id
+                loadedPages.firstOrNull()?.let { writeHistory(it) }
+                scrollTarget = 0
+                scrollToken++
+                emitSuccess()
+            } catch (e: Exception) {
+                _uiState.value = ReaderUiState.Error(e)
+            }
+        }
+    }
+
+    private fun emitSuccess() {
+        val m = manga ?: return
+        val idx = chapters.indexOfFirst { it.id == currentChapterId }
+        val chapter = chapters.getOrNull(idx)
+        _uiState.value = ReaderUiState.Success(
+            manga = m,
+            pages = loadedPages,
+            currentChapterName = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name ?: "",
+            currentChapterIndex = idx,
+            chaptersTotal = chapters.size,
+            hasPrev = idx > 0,
+            hasNext = idx in 0 until chapters.lastIndex,
+            scrollToIndex = scrollTarget.coerceAtLeast(0),
+            scrollToken = scrollToken,
+        )
+    }
+
+    private companion object {
+        const val END_THRESHOLD = 2
     }
 }
 
@@ -108,9 +221,14 @@ sealed interface ReaderUiState {
     data object Loading : ReaderUiState
     data class Success(
         val manga: Manga,
-        val chapter: MangaChapter,
-        val pages: List<MangaPage>,
-        val initialPage: Int = 0
+        val pages: List<LoadedPage>,
+        val currentChapterName: String,
+        val currentChapterIndex: Int,
+        val chaptersTotal: Int,
+        val hasPrev: Boolean,
+        val hasNext: Boolean,
+        val scrollToIndex: Int,
+        val scrollToken: Int,
     ) : ReaderUiState
     data class Error(val exception: Throwable) : ReaderUiState
 }
