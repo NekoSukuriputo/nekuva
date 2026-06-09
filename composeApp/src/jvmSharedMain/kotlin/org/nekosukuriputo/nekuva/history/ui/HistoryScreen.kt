@@ -22,6 +22,8 @@ import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.core.util.ext.formatEpochToDateString
 import org.nekosukuriputo.nekuva.history.domain.model.MangaWithHistory
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,10 +37,10 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Riwayat Baca") },
+                title = { Text(stringResource(Res.string.history)) },
                 actions = {
                     IconButton(onClick = { viewModel.clearAllHistory() }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Hapus Riwayat")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.clear_history))
                     }
                 }
             )
@@ -49,7 +51,7 @@ fun HistoryScreen(
             is HistoryUiState.Error -> ErrorState(error = state.error, onRetry = { }, modifier = Modifier.padding(paddingValues))
             is HistoryUiState.Success -> {
                 if (state.list.isEmpty()) {
-                    EmptyState(message = "Tidak ada riwayat baca.", modifier = Modifier.padding(paddingValues))
+                    EmptyState(message = stringResource(Res.string.text_history_holder_primary), modifier = Modifier.padding(paddingValues))
                 } else {
                     val grouped = state.list.groupBy { formatEpochToDateString(it.history.updatedAt) }
                     LazyColumn(
@@ -124,16 +126,16 @@ fun HistoryItem(
                 } else ""
                 
                 Text(
-                    text = "Lanjut bab${percentageStr}",
+                    text = stringResource(Res.string.resume) + percentageStr,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = onDeleteClick) {
-                Icon(Icons.Filled.Delete, contentDescription = "Remove")
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.remove_from_history))
             }
             IconButton(onClick = onResumeClick) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = "Resume")
+                Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(Res.string.resume))
             }
         }
     }

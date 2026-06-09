@@ -375,7 +375,7 @@ fun ChaptersSheetContent(
                 val buttonText = if (history != null) {
                     val chapter = chapters.find { it.id == history.chapterId }
                     val chapterTitle = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name
-                    if (chapterTitle != null) "Lanjut $chapterTitle" else stringResource(Res.string.read)
+                    if (chapterTitle != null) "${stringResource(Res.string.resume)}: $chapterTitle" else stringResource(Res.string.read)
                 } else {
                     stringResource(Res.string.read)
                 }

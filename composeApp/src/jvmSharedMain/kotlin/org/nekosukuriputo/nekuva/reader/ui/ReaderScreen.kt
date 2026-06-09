@@ -44,7 +44,7 @@ fun ReaderScreen(
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     } else {
-                        Text("Reader")
+                        Text(stringResource(Res.string.loading))
                     }
                 },
                 navigationIcon = {

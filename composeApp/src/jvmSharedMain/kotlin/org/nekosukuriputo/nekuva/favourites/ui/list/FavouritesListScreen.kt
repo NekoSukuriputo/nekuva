@@ -19,6 +19,8 @@ import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.*
 
 @Composable
 fun FavouritesListScreen(
@@ -31,7 +33,7 @@ fun FavouritesListScreen(
     Scaffold { paddingValues ->
         when (val state = uiState) {
             is FavouritesUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
-            is FavouritesUiState.Empty -> EmptyState(message = "Tidak ada manga di favorit.", modifier = Modifier.padding(paddingValues))
+            is FavouritesUiState.Empty -> EmptyState(message = stringResource(Res.string.text_empty_holder_primary), modifier = Modifier.padding(paddingValues))
             is FavouritesUiState.Error -> ErrorState(error = state.exception, onRetry = { }, modifier = Modifier.padding(paddingValues))
             is FavouritesUiState.Success -> {
                 LazyVerticalGrid(

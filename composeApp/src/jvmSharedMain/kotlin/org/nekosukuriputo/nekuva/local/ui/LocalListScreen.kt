@@ -49,7 +49,7 @@ fun LocalListScreen(
     Scaffold { paddingValues ->
         when (val state = uiState) {
             is LocalListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
-            is LocalListUiState.Empty -> EmptyState(message = "No local manga found.", modifier = Modifier.padding(paddingValues))
+            is LocalListUiState.Empty -> EmptyState(message = stringResource(Res.string.nothing_here), modifier = Modifier.padding(paddingValues))
             is LocalListUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.loadManga() }, modifier = Modifier.padding(paddingValues))
             is LocalListUiState.Success -> {
                 LazyVerticalGrid(

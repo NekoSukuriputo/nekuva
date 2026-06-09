@@ -31,6 +31,8 @@ import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
+import org.jetbrains.compose.resources.stringResource
+import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +57,7 @@ fun RemoteListScreen(
     ) { paddingValues ->
         when (val state = uiState) {
             is RemoteListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
-            is RemoteListUiState.Empty -> EmptyState(message = "No manga found.", modifier = Modifier.padding(paddingValues))
+            is RemoteListUiState.Empty -> EmptyState(message = stringResource(Res.string.nothing_found), modifier = Modifier.padding(paddingValues))
             is RemoteListUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() }, modifier = Modifier.padding(paddingValues))
             is RemoteListUiState.Success -> {
                 val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()

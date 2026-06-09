@@ -117,6 +117,12 @@ android {
         versionName = "1.0"
     }
 
+    // Declare supported locales so Android 13+ exposes the per-app language picker and
+    // the platform resolves to a shipped locale (incl. legacy `in`/`iw`) instead of English.
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
     if (localPropertiesFile.exists()) {

@@ -20,9 +20,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
-import nekuva.composeapp.generated.resources.Res
-import nekuva.composeapp.generated.resources.favourites_categories
-import nekuva.composeapp.generated.resources.all_favourites
+import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,12 +144,12 @@ fun CategoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialName.isEmpty()) "Create Category" else "Edit Category") },
+        title = { Text(stringResource(if (initialName.isEmpty()) Res.string.create_category else Res.string.rename)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Category Name") },
+                label = { Text(stringResource(Res.string.enter_name)) },
                 singleLine = true
             )
         },
@@ -160,12 +158,12 @@ fun CategoryDialog(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank()
             ) {
-                Text("Save")
+                Text(stringResource(Res.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.cancel))
             }
         }
     )
