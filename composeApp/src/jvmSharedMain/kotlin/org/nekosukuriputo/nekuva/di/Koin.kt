@@ -43,6 +43,7 @@ val detailsModule = module {
 			get(),
 			get(),
 			get(),
+			get(),
 			get()
 		)
 	}
@@ -67,7 +68,12 @@ val prefsModule = module {
 }
 
 val readerModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get()) }
+}
+
+val bookmarksModule = module {
+    single { org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository(get()) }
+    factory { org.nekosukuriputo.nekuva.bookmarks.ui.BookmarksViewModel(get()) }
 }
 
 val favouritesModule = module {
@@ -86,7 +92,7 @@ val historyModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, favouritesModule, historyModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule)
     }
 
 

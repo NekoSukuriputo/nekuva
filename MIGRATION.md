@@ -36,7 +36,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [ ] `filter`
 - [x] `favourites`
 - [x] `history` (2 bug inti FIXED & run-verified Android+Desktop 2026-06-08: tampil di History + resume halaman. Item parity lanjutan tetap deferred — lihat ledger)
-- [ ] `bookmarks`
+- [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
 - [ ] `download`
 - [ ] `tracker`
 - [ ] `scrobbling`
@@ -192,6 +192,33 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 - [ ] Indikator progress baca (ReadingProgressView) per item.
 - [ ] Hardcoded strings di HistoryScreen ("Riwayat Baca", "Tidak ada riwayat baca", "Lanjut bab",
       "Hapus Riwayat") harus pindah ke Compose Resources (§4.4).
+
+### Area: Bookmarks (Markah)
+
+**DONE (run-verified Android+Desktop) — parity perilaku layar Doki:**
+- [x] Data: `BookmarksRepository` (addBookmark **upsert manga dulu** → insert; removeBookmark;
+      removeBookmarks+undo; observeBookmark/observeBookmarks(manga)/observeBookmarks grouped). `createdAt` = `kotlin.time.Clock`.
+- [x] Reader: **overlay ala Doki** — tahan/tap layar → app bar + **tombol mengambang tengah-bawah** muncul →
+      bottom sheet "Opsi" (mirror `sheet_reader_config`) dengan **toggle bookmark FUNGSIONAL** (add/remove
+      halaman aktif; ikon reaktif via `observeBookmark`). Menyimpan pageId/imageUrl(preview?:url)/page/percent.
+- [x] Layar Bookmarks: **grid grouped per manga** (header judul + thumbnail = **gambar halaman yang
+      di-bookmark** (`imageUrl`, di-load via Coil seperti Doki) + progress%); tap thumbnail → reader di
+      **chapter + page** persis (ReaderRoute `page` WAJIB/path-arg; `scrollToItem(page)` jalur resume yang
+      sama dgn history); **tap header → detail manga**; **long-press → mode seleksi** (multi-remove) + **undo**.
+      Catatan: `page` index DISIMPAN saat add (DB-verified) dari `listState` yang sama dgn history;
+      open run-verified mendarat di page yang benar.
+- [x] **Markah di bottom sheet Detail manga**: ikon bookmark di toolbar sheet bab toggle view CHAPTERS↔BOOKMARKS;
+      view bookmark = grid thumbnail halaman manga ini → tap → reader di halaman yang di-bookmark.
+- [x] Shortcut **"Markah"** Explore → layar Bookmarks. Empty = `no_bookmarks_yet`/`no_bookmarks_summary`.
+
+**DEFERRED (terblokir area lain / di luar scope) → masuk sesi reader-polish:**
+- [ ] **Save pages** dari mode seleksi (action_save Doki) — butuh `PageSaveHelper` / area **image-save/download**
+      (belum ada). Gating: dibangun bersama area download/save.
+- [ ] **Incognito saat buka dari bookmark** (Doki paksa incognito + toast) — area **incognito** (deferred).
+      Sementara buka reader normal (history tetap ter-update).
+- [ ] **Fungsi lain bottom-sheet reader** (UI sudah dibuat, masih non-fungsional/redup): Save page, Mode baca
+      (standard/RTL/vertical/webtoon), 2 halaman landscape, pull gesture, rotate, auto-scroll, koreksi warna,
+      Settings. Reader-polish.
 
 ### Area: Settings & Cross-cutting
 - [ ] Security (Biometric Lock / App Lock).

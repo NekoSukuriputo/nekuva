@@ -55,7 +55,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.navigate(MangaDetailsRoute(id))
                         },
                         onResumeClick = { mangaId, chapterId ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId))
+                            navController.navigate(ReaderRoute(mangaId, chapterId, -1))
                         }
                     )
                 }
@@ -86,7 +86,19 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onSearchSubmit = { query ->
                             navController.navigate(GlobalSearchRoute(query))
+                        },
+                        onBookmarksClick = {
+                            navController.navigate(BookmarksRoute)
                         }
+                    )
+                }
+                composable<BookmarksRoute> {
+                    org.nekosukuriputo.nekuva.bookmarks.ui.BookmarksScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onOpenReader = { mangaId, chapterId, page ->
+                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
+                        },
+                        onBackClick = { navController.popBackStack() }
                     )
                 }
                 composable<GlobalSearchRoute> {
@@ -109,7 +121,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     val args = backStackEntry.toRoute<MangaDetailsRoute>()
                     org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
                         onChapterClick = { mangaId, chapterId ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId))
+                            navController.navigate(ReaderRoute(mangaId, chapterId, -1))
+                        },
+                        onBookmarkClick = { mangaId, chapterId, page ->
+                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
                         },
                         onBackClick = { navController.popBackStack() },
                         onManageCategoriesClick = {

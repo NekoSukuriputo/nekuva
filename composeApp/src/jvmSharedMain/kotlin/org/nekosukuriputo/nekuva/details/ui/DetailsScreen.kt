@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.outlined.FileDownload
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
+import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import nekuva.composeapp.generated.resources.*
@@ -41,6 +45,7 @@ import nekuva.composeapp.generated.resources.*
 fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel(),
     onChapterClick: (Long, Long) -> Unit,
+    onBookmarkClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
     onBackClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
 ) {
@@ -49,6 +54,7 @@ fun DetailsScreen(
     val allCategories by viewModel.allCategories.collectAsState()
     val mangaCategories by viewModel.mangaCategories.collectAsState()
     val history by viewModel.history.collectAsState()
+    val bookmarks by viewModel.bookmarks.collectAsState()
 
     var showCategoryDialog by remember { mutableStateOf(false) }
 
@@ -103,7 +109,9 @@ fun DetailsScreen(
                 ChaptersSheetContent(
                     chapters = manga.chapters ?: emptyList(),
                     history = history,
-                    onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) }
+                    bookmarks = bookmarks,
+                    onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) },
+                    onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) }
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp))
@@ -335,12 +343,18 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
+private enum class SheetView { CHAPTERS, BOOKMARKS }
+
 @Composable
 fun ChaptersSheetContent(
     chapters: List<MangaChapter>,
     history: org.nekosukuriputo.nekuva.core.model.MangaHistory?,
-    onChapterClick: (MangaChapter) -> Unit
+    bookmarks: List<Bookmark>,
+    onChapterClick: (MangaChapter) -> Unit,
+    onBookmarkClick: (Bookmark) -> Unit,
 ) {
+    var view by remember { mutableStateOf(SheetView.CHAPTERS) }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Toolbar (Drag handle is provided by BottomSheetScaffold automatically)
         Row(
@@ -351,17 +365,27 @@ fun ChaptersSheetContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                IconButton(onClick = { /* Deferred: Switch to list */ }) {
-                    Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = "List View")
+                // Chapters view
+                IconButton(onClick = { view = SheetView.CHAPTERS }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ViewList,
+                        contentDescription = stringResource(Res.string.chapters),
+                        tint = if (view == SheetView.CHAPTERS) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                    )
                 }
-                IconButton(onClick = { /* Deferred: Switch to grid */ }) {
+                IconButton(onClick = { /* Deferred: grid layout for chapters */ }) {
                     Icon(Icons.Default.GridView, contentDescription = "Grid View")
                 }
-                IconButton(onClick = { /* Deferred: Bookmark */ }) {
-                    Icon(Icons.Outlined.BookmarkBorder, contentDescription = "Bookmark")
+                // Bookmarks of this manga
+                IconButton(onClick = { view = SheetView.BOOKMARKS }) {
+                    Icon(
+                        Icons.Outlined.BookmarkBorder,
+                        contentDescription = stringResource(Res.string.bookmarks),
+                        tint = if (view == SheetView.BOOKMARKS) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                    )
                 }
             }
-            
+
             Button(
                 onClick = {
                     if (history != null) {
@@ -385,22 +409,75 @@ fun ChaptersSheetContent(
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
-        
+
         HorizontalDivider()
-        
-        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(chapters) { chapter ->
-                    ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter) })
+
+        when (view) {
+            SheetView.CHAPTERS -> {
+                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(chapters) { chapter ->
+                            ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter) })
+                        }
+                    }
+                    org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                        state = listState,
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
                 }
             }
-            org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
-                state = listState,
-                modifier = Modifier.align(Alignment.CenterEnd)
+            SheetView.BOOKMARKS -> {
+                if (bookmarks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(Res.string.no_bookmarks_yet),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 100.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        gridItems(bookmarks, key = { it.pageId }) { bm ->
+                            DetailsBookmarkThumb(bookmark = bm, onClick = { onBookmarkClick(bm) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailsBookmarkThumb(bookmark: Bookmark, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(13f / 18f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick),
+    ) {
+        // Thumbnail = the actual bookmarked page image (like Doki).
+        AsyncImage(
+            model = bookmark.imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        if (bookmark.percent in 0f..1f) {
+            LinearProgressIndicator(
+                progress = { bookmark.percent },
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
             )
         }
     }

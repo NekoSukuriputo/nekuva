@@ -9,7 +9,7 @@ data object HomeRoute
 data class MangaDetailsRoute(val mangaId: Long)
 
 @Serializable
-data class ReaderRoute(val mangaId: Long, val chapterId: Long)
+data class ReaderRoute(val mangaId: Long, val chapterId: Long, val page: Int)
 
 @Serializable
 data object SettingsRoute
@@ -25,3 +25,6 @@ data object HistoryRoute
 
 @Serializable
 data class GlobalSearchRoute(val query: String)
+
+@Serializable
+data object BookmarksRoute

@@ -14,17 +14,23 @@ import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
+import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
+import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val mangaDataRepository: MangaDataRepository,
     private val repositoryFactory: MangaRepository.Factory,
     private val favouritesRepository: FavouritesRepository,
     private val historyRepository: org.nekosukuriputo.nekuva.history.data.HistoryRepository,
+    private val bookmarksRepository: BookmarksRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -32,6 +38,13 @@ class DetailsViewModel(
 
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
+
+    private val loadedManga = MutableStateFlow<Manga?>(null)
+
+    /** Bookmarks of the currently opened manga (shown in the chapters bottom sheet). */
+    val bookmarks: StateFlow<List<Bookmark>> = loadedManga.filterNotNull()
+        .flatMapLatest { bookmarksRepository.observeBookmarks(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val isFavorite: StateFlow<Boolean> = favouritesRepository.observeCategoriesIds(mangaId)
         .map { it.isNotEmpty() }
@@ -71,6 +84,7 @@ class DetailsViewModel(
                 }
 
                 _uiState.value = DetailsUiState.Success(manga!!)
+                loadedManga.value = manga
             } catch (e: Exception) {
                 _uiState.value = DetailsUiState.Error(e)
             }

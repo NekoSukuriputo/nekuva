@@ -60,6 +60,7 @@ fun ExploreScreen(
 	viewModel: ExploreViewModel = koinViewModel(),
 	onSourceClick: (String) -> Unit,
 	onSearchSubmit: (String) -> Unit,
+	onBookmarksClick: () -> Unit,
 ) {
 	val uiState by viewModel.uiState.collectAsState()
 	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -116,7 +117,7 @@ fun ExploreScreen(
                                 Spacer(modifier = Modifier.size(8.dp))
                                 Text(stringResource(Res.string.local_storage))
                             }
-                            Button(onClick = { /* DITUNDA */ }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                            Button(onClick = onBookmarksClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
                                 Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.size(8.dp))
                                 Text(stringResource(Res.string.bookmarks))

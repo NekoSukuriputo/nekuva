@@ -6,12 +6,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.mp.KoinPlatform
+import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
+import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
 import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
@@ -22,6 +29,8 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import org.nekosukuriputo.nekuva.parsers.model.MangaPage
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /** A single page in the continuous reader list, tagged with the chapter it belongs to. */
 data class LoadedPage(
@@ -39,12 +48,14 @@ data class LoadedPage(
  * - History moves with the active chapter via the existing [HistoryUpdateUseCase] path.
  * Backward continuous-prepend, branch selection and page-trimming stay deferred (MIGRATION.md).
  */
+@OptIn(ExperimentalTime::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ReaderViewModel(
     savedStateHandle: SavedStateHandle,
     private val mangaDataRepository: MangaDataRepository,
     private val repositoryFactory: MangaRepository.Factory,
     private val localMangaRepository: LocalMangaRepository,
     private val historyUpdateUseCase: HistoryUpdateUseCase,
+    private val bookmarksRepository: BookmarksRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
@@ -58,6 +69,16 @@ class ReaderViewModel(
     private var chapters: List<MangaChapter> = emptyList()      // ordered (parser order)
     private var loadedPages: List<LoadedPage> = emptyList()     // continuous, multi-chapter
     private var currentChapterId: Long = 0L                     // chapter of the visible page
+    private var currentVisibleIndex: Int = 0                    // index into loadedPages
+
+    // Reactive bookmark state of the currently visible page (drives the toolbar bookmark icon).
+    private val bookmarkKey = MutableStateFlow<Triple<Manga, Long, Int>?>(null)
+    val isBookmarked: StateFlow<Boolean> = bookmarkKey
+        .flatMapLatest { key ->
+            if (key == null) flowOf(false)
+            else bookmarksRepository.observeBookmark(key.first, key.second, key.third).map { it != null }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Scroll signalling: the screen only (re)scrolls when scrollToken changes.
     private var scrollToken: Int = 0
@@ -89,12 +110,17 @@ class ReaderViewModel(
                 loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, chapter.id, i) }
                 currentChapterId = chapter.id
 
-                // Resume to the saved page within the initial chapter.
-                val history = KoinPlatform.getKoin().get<HistoryRepository>().getOne(m)
-                val resumePage = if (history != null && history.chapterId == chapter.id) {
-                    history.page.coerceIn(0, (loadedPages.size - 1).coerceAtLeast(0))
+                // Resume target: an explicit page (e.g. opened from a bookmark) overrides history.
+                val maxIndex = (loadedPages.size - 1).coerceAtLeast(0)
+                val resumePage = if (route.page >= 0) {
+                    route.page.coerceIn(0, maxIndex)
                 } else {
-                    0
+                    val history = KoinPlatform.getKoin().get<HistoryRepository>().getOne(m)
+                    if (history != null && history.chapterId == chapter.id) {
+                        history.page.coerceIn(0, maxIndex)
+                    } else {
+                        0
+                    }
                 }
 
                 scrollTarget = resumePage
@@ -119,6 +145,8 @@ class ReaderViewModel(
     /** Called as the user scrolls; [index] is the first visible page index in [loadedPages]. */
     fun onVisibleIndexChanged(index: Int) {
         val lp = loadedPages.getOrNull(index) ?: return
+        currentVisibleIndex = index
+        manga?.let { bookmarkKey.value = Triple(it, lp.chapterId, lp.pageInChapter) }
         writeHistory(lp)
         if (lp.chapterId != currentChapterId) {
             // The visible page crossed into another (already-appended) chapter — update the toolbar
@@ -191,6 +219,36 @@ class ReaderViewModel(
                 emitSuccess()
             } catch (e: Exception) {
                 _uiState.value = ReaderUiState.Error(e)
+            }
+        }
+    }
+
+    /** Toolbar action: bookmark/un-bookmark the currently visible page. */
+    fun toggleBookmark() {
+        val lp = loadedPages.getOrNull(currentVisibleIndex) ?: return
+        val m = manga ?: return
+        viewModelScope.launch {
+            try {
+                if (isBookmarked.value) {
+                    bookmarksRepository.removeBookmark(m.id, lp.chapterId, lp.pageInChapter)
+                } else {
+                    val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
+                    val percent = (lp.pageInChapter + 1) / chapterPageCount.toFloat()
+                    bookmarksRepository.addBookmark(
+                        Bookmark(
+                            manga = m,
+                            pageId = lp.page.id,
+                            chapterId = lp.chapterId,
+                            page = lp.pageInChapter,
+                            scroll = 0,
+                            imageUrl = lp.page.preview?.takeIf { it.isNotEmpty() } ?: lp.page.url,
+                            createdAt = Clock.System.now().toEpochMilliseconds(),
+                            percent = percent,
+                        ),
+                    )
+                }
+            } catch (e: Exception) {
+                println("[Nekuva][bookmark] toggle failed: ${e.message}")
             }
         }
     }
