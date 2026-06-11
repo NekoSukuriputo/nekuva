@@ -29,10 +29,12 @@ import java.util.concurrent.TimeUnit
 
 import com.russhwolf.settings.ObservableSettings
 import com.russhwolf.settings.set
+import com.russhwolf.settings.coroutines.toFlowSettings
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 
 class AppSettings(private val prefs: ObservableSettings) {
 
@@ -45,15 +47,26 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getEnum(KEY_LIST_MODE, ListMode.GRID)
 		set(value) = prefs.putEnum(KEY_LIST_MODE, value)
 
-	val theme: Int
-		get() = prefs.getStringOrNull(KEY_THEME)?.toIntOrNull()
-			?: -1
+	// -1 = follow system, 1 = light, 2 = dark (AppCompatDelegate night-mode convention).
+	var theme: Int
+		get() = prefs.getStringOrNull(KEY_THEME)?.toIntOrNull() ?: -1
+		set(value) = prefs.putString(KEY_THEME, value.toString())
 
 	val colorScheme: ColorScheme
 		get() = prefs.getEnum(KEY_COLOR_THEME, ColorScheme.default)
 
-	val isAmoledTheme: Boolean
+	var isAmoledTheme: Boolean
 		get() = prefs.getBoolean(KEY_THEME_AMOLED, false)
+		set(value) = prefs.putBoolean(KEY_THEME_AMOLED, value)
+
+	/** Live theme observers for [org.nekosukuriputo.nekuva.App] so theme/AMOLED changes apply instantly. */
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeTheme(): kotlinx.coroutines.flow.Flow<Int> =
+		prefs.toFlowSettings().getStringOrNullFlow(KEY_THEME).map { it?.toIntOrNull() ?: -1 }
+
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeAmoled(): kotlinx.coroutines.flow.Flow<Boolean> =
+		prefs.toFlowSettings().getBooleanFlow(KEY_THEME_AMOLED, false)
 
 	var mainNavItems: List<NavItem>
 		get() {
@@ -366,8 +379,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getEnum(KEY_DOWNLOADS_METERED_NETWORK, TriStateOption.ASK)
 		set(value) = prefs.putEnum(KEY_DOWNLOADS_METERED_NETWORK, value)
 
-	val preferredDownloadFormat: DownloadFormat
+	var preferredDownloadFormat: DownloadFormat
 		get() = prefs.getEnum(KEY_DOWNLOADS_FORMAT, DownloadFormat.AUTOMATIC)
+		set(value) = prefs.putEnum(KEY_DOWNLOADS_FORMAT, value)
 
 	var isSuggestionsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SUGGESTIONS, false)

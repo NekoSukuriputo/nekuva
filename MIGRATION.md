@@ -41,7 +41,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [ ] `tracker`
 - [ ] `scrobbling`
 - [ ] `sync`
-- [ ] `settings` (Termasuk Security/Biometric, UI/Theme lanjutan, ACRA dll)
+- [~] `settings` (Phase S1 DONE pending run-verify: menu root 9 kategori + **Appearance** (tema sistem/terang/gelap + AMOLED, live re-theme) + **Downloads** (kelola direktori unduhan: list/tambah-via-picker/hapus/set-default + format) + **About** (versi + link GitHub). Storage 174 key sudah ada. Sisanya (Reader, Sources, Storage&Network, Tracker, Services, Backup) = Phase S2/S3, lihat ledger)
 - [ ] `alternatives`
 - [ ] `browser`
 - [ ] `picker`
@@ -284,7 +284,40 @@ kosong) — output dibaca balik oleh `LocalMangaParser` (berbasis struktur, tanp
       file. Ini pekerjaan area **local/details**, BUKAN bug engine download. Tanpa ini, manga terunduh belum
       bisa dibaca offline. **Prioritas berikutnya setelah settings.**
 
-### Area: Settings & Cross-cutting
+### Area: Settings (Pengaturan) — bertahap
+
+`AppSettings` sudah punya **174 key** (semua preference Doki). Yang dibangun = UI Compose + logika aksi.
+Akses: **top bar bersama di SETIAP tab** (`MainTopBar`: kotak pencarian "Cari manga" + menu titik-tiga)
+→ item **"Pengaturan"** → `SettingsRootScreen` (9 kategori). Pencarian → global search (sudah jalan).
+
+**Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
+**Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,
+Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola sumber, Mode penyamaran)
+**ditampilkan disabled → deferred ke sesi polish** (sesuai permintaan). Search box internal Explore lama dihapus.
+
+**Phase S1 DONE (pending run-verify Android+Desktop):**
+- [x] **Menu root** 9 kategori; 3 aktif (Appearance/Downloads/About), 6 lain tampil "Segera hadir" (disabled).
+- [x] **Appearance**: Tema (ikuti sistem / terang / gelap) + **AMOLED** — keduanya **live re-theme** (App() observe
+      `observeTheme`/`observeAmoled` via `ObservableSettings.toFlowSettings`). `theme`/`isAmoledTheme` jadi `var`.
+- [x] **Downloads**: kelola **direktori unduhan** (daftar dir writeable + set-default via radio + hapus dir kustom +
+      **tambah folder** via picker Desktop) + **format unduhan** default. Memakai `userSpecifiedMangaDirectories`/
+      `mangaStorageDir`/`preferredDownloadFormat` (jadi `var`).
+- [x] **About**: versi + link **Source code (GitHub)** via `LocalUriHandler` (lintas-platform).
+
+**Phase S2 (berikutnya):**
+- [ ] **Backup & Restore** (ekspor/impor favorit, kategori, riwayat, bookmark, settings ke file) — area `backups`, standalone.
+- [ ] **Storage & Network**: data cleanup (clear cache/db/cookies/webview), proxy, DoH, image proxy, toggle SSL/offline/adblock.
+
+**Phase S3 — DEFERRED (UI bisa dibuat, fungsi tergantung area lain):**
+- [ ] **Reader settings** (~30 pref) → butuh reader-advanced.
+- [ ] **Remote sources** (enable/urut/katalog/auth) → area `sources`.
+- [ ] **Tracker / Services / Sync** (AniList/Kitsu/MAL/Shikimori, Discord RPC, stats, sync) → area tracker/scrobbling/sync/stats.
+- [ ] **Appearance lanjutan**: bahasa (in-app locale override — kompleks lintas-platform), list mode, grid size,
+      badge, nav config, app-lock/biometric, screenshots policy → sebagian butuh wiring layar konsumen / area lain.
+- [ ] **Downloads lanjutan**: download-over-metered (butuh connectivity check), pages-saving dir (area image/save),
+      battery optimization (Android).
+
+### Cross-cutting
 - [ ] Security (Biometric Lock / App Lock).
-- [ ] Tema / UI Lanjutan (Mis. AMOLED murni, Material You dynamic color).
+- [ ] Tema / UI Lanjutan (Mis. Material You dynamic color).
 - [ ] Crashlytics / ACRA (Platform specific).

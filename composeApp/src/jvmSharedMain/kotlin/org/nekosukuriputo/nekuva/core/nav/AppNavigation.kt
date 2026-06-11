@@ -92,6 +92,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onDownloadsClick = {
                             navController.navigate(DownloadsRoute)
+                        },
+                        onSettingsClick = {
+                            navController.navigate(SettingsRoute)
                         }
                     )
                 }
@@ -149,7 +152,27 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     )
                 }
                 composable<SettingsRoute> {
-                    PlaceholderScreen("Settings")
+                    org.nekosukuriputo.nekuva.settings.ui.SettingsRootScreen(
+                        onAppearance = { navController.navigate(AppearanceSettingsRoute) },
+                        onDownloads = { navController.navigate(DownloadsSettingsRoute) },
+                        onAbout = { navController.navigate(AboutSettingsRoute) },
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<AppearanceSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.appearance.AppearanceSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<DownloadsSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.downloads.DownloadsSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<AboutSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.about.AboutSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
                 }
                 composable<RemoteListRoute> {
                     org.nekosukuriputo.nekuva.remotelist.ui.RemoteListScreen(

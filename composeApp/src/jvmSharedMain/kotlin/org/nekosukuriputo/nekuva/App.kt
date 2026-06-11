@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +54,17 @@ fun App() {
             .localizeSeededReadLater(readLaterTitle)
     }
 
-    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme {
+    // Live theme: react to the appearance settings (system / light / dark + AMOLED).
+    val settings = koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+    val themeMode by settings.observeTheme().collectAsState(initial = settings.theme)
+    val amoled by settings.observeAmoled().collectAsState(initial = settings.isAmoledTheme)
+    val darkTheme = when (themeMode) {
+        1 -> false // light
+        2 -> true // dark
+        else -> androidx.compose.foundation.isSystemInDarkTheme() // -1 = follow system
+    }
+
+    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme(darkTheme = darkTheme, amoled = amoled) {
         androidx.compose.material3.Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

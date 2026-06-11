@@ -118,10 +118,15 @@ val downloadModule = module {
     factory { org.nekosukuriputo.nekuva.download.ui.list.DownloadsViewModel(get()) }
 }
 
+val settingsModule = module {
+    factory { org.nekosukuriputo.nekuva.settings.ui.appearance.AppearanceViewModel(get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.downloads.DownloadsSettingsViewModel(get(), get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule)
     }
 
 

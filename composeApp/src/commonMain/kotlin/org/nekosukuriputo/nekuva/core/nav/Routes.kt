@@ -31,3 +31,12 @@ data object BookmarksRoute
 
 @Serializable
 data object DownloadsRoute
+
+@Serializable
+data object AppearanceSettingsRoute
+
+@Serializable
+data object DownloadsSettingsRoute
+
+@Serializable
+data object AboutSettingsRoute

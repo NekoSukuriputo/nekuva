@@ -485,6 +485,7 @@
     <string name="on_device">On device</string>
     <string name="directories">Directories</string>
     <string name="specify_directory">Choose folder…</string>
+    <string name="coming_soon">Coming soon</string>
     <string name="main_screen_sections">Main screen sections</string>
     <string name="items_limit_exceeded">No more items can be added</string>
     <string name="to_top">To top</string>

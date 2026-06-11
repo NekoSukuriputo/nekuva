@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.Search
@@ -62,6 +63,7 @@ fun ExploreScreen(
 	onSearchSubmit: (String) -> Unit,
 	onBookmarksClick: () -> Unit,
 	onDownloadsClick: () -> Unit,
+	onSettingsClick: () -> Unit,
 ) {
 	val uiState by viewModel.uiState.collectAsState()
 	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -88,26 +90,6 @@ fun ExploreScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text(stringResource(Res.string.search)) },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            singleLine = true,
-                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                imeAction = androidx.compose.ui.text.input.ImeAction.Search,
-                            ),
-                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                                onSearch = {
-                                    val q = searchQuery.trim()
-                                    if (q.isNotEmpty()) onSearchSubmit(q)
-                                },
-                            ),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        )
-                    }
-
-                    item(span = { GridItemSpan(maxLineSpan) }) {
                         FlowRow(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -132,6 +114,11 @@ fun ExploreScreen(
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.size(8.dp))
                                 Text(stringResource(Res.string.downloads))
+                            }
+                            Button(onClick = onSettingsClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                                Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.size(8.dp))
+                                Text(stringResource(Res.string.settings))
                             }
                         }
                     }
