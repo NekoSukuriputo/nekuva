@@ -15,6 +15,7 @@ import org.nekosukuriputo.nekuva.local.domain.model.LocalManga
 class LocalListViewModel(
     private val localMangaRepository: LocalMangaRepository,
     private val localStorageChanges: MutableSharedFlow<LocalManga?>,
+    private val mangaDataRepository: org.nekosukuriputo.nekuva.core.parser.MangaDataRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LocalListUiState>(LocalListUiState.Loading)
@@ -28,12 +29,21 @@ class LocalListViewModel(
         }
     }
 
+    fun deleteManga(manga: org.nekosukuriputo.nekuva.parsers.model.Manga) {
+        viewModelScope.launch {
+            runCatching { localMangaRepository.delete(manga) }
+            loadManga()
+        }
+    }
+
     fun loadManga() {
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
             try {
                 // For simplicity in the vertical slice, we just load the whole list at once
                 val list = localMangaRepository.getList(0, null, null)
+                // Store local manga in the DB so Details/Reader can resolve them by id.
+                list.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
                 if (list.isEmpty()) {
                     _uiState.value = LocalListUiState.Empty
                 } else {

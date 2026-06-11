@@ -2,38 +2,158 @@ package org.nekosukuriputo.nekuva.local.data.output
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.nekosukuriputo.nekuva.core.model.isLocal
+import org.nekosukuriputo.nekuva.core.util.MimeTypes
+import org.nekosukuriputo.nekuva.core.util.ext.deleteAwait
+import org.nekosukuriputo.nekuva.core.util.ext.takeIfReadable
+import org.nekosukuriputo.nekuva.core.util.ext.toFileNameSafe
+import org.nekosukuriputo.nekuva.core.zip.ZipOutput
+import org.nekosukuriputo.nekuva.local.data.MangaIndex
+import org.nekosukuriputo.nekuva.parsers.model.Manga
+import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import java.io.File
 
 /**
- * MULTIPLE_CBZ: a `<title>/` directory containing `<chapterDir>/<page>` images.
- *
- * Note: Doki's MULTIPLE_CBZ produces one .cbz per chapter; here we emit a folder-per-chapter tree, which
- * Nekuva's [org.nekosukuriputo.nekuva.local.data.input.LocalMangaParser] reads identically. The per-chapter
- * .cbz refinement is deferred (see MIGRATION.md).
+ * MULTIPLE_CBZ: a `<title>/` directory with one `.cbz` per chapter (flat [FILENAME_PATTERN] page names)
+ * plus an `index.json` at the root. Ported from Doki.
  */
 class LocalMangaDirOutput(
-    rootFile: File,
+	rootFile: File,
+	manga: Manga,
 ) : LocalMangaOutput(rootFile) {
 
-    override suspend fun mergeWithExisting() {
-        // Directory already persists on disk; new chapters are simply added alongside existing ones.
-    }
+	private val chaptersOutput = HashMap<MangaChapter, ZipOutput>()
+	private val index = MangaIndex(File(rootFile, ENTRY_NAME_INDEX).takeIfReadable()?.readText())
+	private val mutex = Mutex()
 
-    override suspend fun addPage(chapterDir: String, fileName: String, source: File) {
-        runInterruptible(Dispatchers.IO) {
-            val dir = File(rootFile, chapterDir)
-            dir.mkdirs()
-            source.copyTo(File(dir, fileName), overwrite = true)
-        }
-    }
+	init {
+		// The `<title>/` dir must exist before any chapter .cbz / index.json is written into it.
+		rootFile.mkdirs()
+		if (!manga.isLocal) {
+			index.setMangaInfo(manga)
+		}
+	}
 
-    override suspend fun finish() {
-        // Files are already written in place.
-    }
+	override suspend fun mergeWithExisting() = Unit
 
-    override suspend fun cleanup() {
-        // Keep whatever chapters finished; partial chapter folders are harmless and re-downloadable.
-    }
+	override suspend fun addCover(file: File, type: String?) = mutex.withLock {
+		val name = buildString {
+			append("cover")
+			MimeTypes.getExtensionFromMimeType(type)?.let { ext ->
+				append('.')
+				append(ext)
+			}
+		}
+		runInterruptible(Dispatchers.IO) {
+			file.copyTo(File(rootFile, name), overwrite = true)
+		}
+		index.setCoverEntry(name)
+		flushIndex()
+	}
 
-    override fun close() = Unit
+	override suspend fun addPage(chapter: IndexedValue<MangaChapter>, file: File, pageNumber: Int, type: String?) =
+		mutex.withLock {
+			val output = chaptersOutput.getOrPut(chapter.value) {
+				ZipOutput(File(rootFile, chapterFileName(chapter) + SUFFIX_TMP))
+			}
+			val name = buildString {
+				append(FILENAME_PATTERN.format(chapter.value.branch.hashCode(), chapter.index + 1, pageNumber))
+				MimeTypes.getExtensionFromMimeType(type)?.let { ext ->
+					append('.')
+					append(ext)
+				}
+			}
+			runInterruptible(Dispatchers.IO) {
+				output.put(name, file)
+			}
+			index.addChapter(chapter, chapterFileName(chapter))
+		}
+
+	override suspend fun flushChapter(chapter: MangaChapter): Boolean = mutex.withLock {
+		val output = chaptersOutput.remove(chapter) ?: return@withLock false
+		output.flushAndFinish()
+		flushIndex()
+		true
+	}
+
+	override suspend fun finish() = mutex.withLock {
+		flushIndex()
+		for (output in chaptersOutput.values) {
+			output.flushAndFinish()
+		}
+		chaptersOutput.clear()
+	}
+
+	override suspend fun cleanup() = mutex.withLock {
+		for (output in chaptersOutput.values) {
+			output.file.deleteAwait()
+		}
+		// Sweep any orphaned chapter temp archives (e.g. from a cancelled in-flight chapter).
+		runInterruptible(Dispatchers.IO) {
+			rootFile.listFiles { f -> f.isFile && f.name.endsWith(SUFFIX_TMP) }?.forEach { it.delete() }
+		}
+		Unit
+	}
+
+	override fun close() {
+		for (output in chaptersOutput.values) {
+			try {
+				output.close()
+			} catch (e: Throwable) {
+				e.printStackTrace()
+			}
+		}
+	}
+
+	private suspend fun ZipOutput.flushAndFinish() = runInterruptible(Dispatchers.IO) {
+		val e: Throwable? = try {
+			finish()
+			null
+		} catch (e: Throwable) {
+			e
+		} finally {
+			close()
+		}
+		if (e == null) {
+			val resFile = File(file.absolutePath.removeSuffix(SUFFIX_TMP))
+			file.renameTo(resFile)
+		} else {
+			file.delete()
+			throw e
+		}
+	}
+
+	private fun chapterFileName(chapter: IndexedValue<MangaChapter>): String {
+		index.getChapterFileName(chapter.value.id)?.let {
+			return it
+		}
+		val baseName = buildString {
+			append(chapter.index)
+			chapter.value.title?.takeIf { it.isNotEmpty() }?.let {
+				append('_')
+				append(it.toFileNameSafe())
+			}
+			if (length > 32) {
+				deleteRange(31, lastIndex)
+			}
+		}
+		var i = 0
+		while (true) {
+			val name = (if (i == 0) baseName else baseName + "_$i") + ".cbz"
+			if (!File(rootFile, name).exists()) {
+				return name
+			}
+			i++
+		}
+	}
+
+	private suspend fun flushIndex() = runInterruptible(Dispatchers.IO) {
+		File(rootFile, ENTRY_NAME_INDEX).writeText(index.toString())
+	}
+
+	private companion object {
+		const val FILENAME_PATTERN = "%08d_%04d%04d"
+	}
 }

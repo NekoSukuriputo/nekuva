@@ -17,7 +17,20 @@ fun String.toFileNameSafe(): String {
 const val URI_SCHEME_ZIP = "zip"
 fun URI.isZipUri() = scheme == URI_SCHEME_ZIP
 fun URI.isFileUri() = scheme == "file" || scheme == null
-fun URI.toFile() = File(this.path)
+
+/**
+ * Convert a `file:` / `zip:` URI's path part to a real [File], correct on **Windows**.
+ *
+ * `URI.path` is already percent-decoded, but on Windows a file/zip URI's path is `"/D:/dir/file"` —
+ * the leading slash before the drive letter must be stripped, or `File("/D:/...")` resolves to a
+ * bogus path and **every local manga silently breaks on Desktop** (no chapters, no cover, no pages).
+ * POSIX paths (`/home/...`) are left untouched. See CLAUDE.md §4.6.
+ */
+fun URI.toFile(): File {
+    val raw = this.path ?: this.schemeSpecificPart
+    val fixed = if (raw.length >= 3 && raw[0] == '/' && raw[2] == ':') raw.substring(1) else raw
+    return File(fixed)
+}
 
 fun FileSystem.isDirectory(path: Path) = metadataOrNull(path)?.isDirectory == true
 fun FileSystem.isRegularFile(path: Path) = metadataOrNull(path)?.isRegularFile == true

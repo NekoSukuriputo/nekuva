@@ -57,4 +57,7 @@ data class DownloadState(
     val isFinished: Boolean get() = status == DownloadStatus.COMPLETED ||
         status == DownloadStatus.FAILED ||
         status == DownloadStatus.CANCELLED
+
+    /** True when the download has settled but at least one chapter failed → a retry is offered. */
+    val canRetry: Boolean get() = isFinished && chapters.any { it.status == ChapterDownloadStatus.FAILED }
 }

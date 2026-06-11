@@ -1,4 +1,3 @@
-﻿/*
 package org.nekosukuriputo.nekuva.local.data
 
 import androidx.annotation.WorkerThread
@@ -9,7 +8,6 @@ import okio.buffer
 import org.jetbrains.annotations.Blocking
 import org.json.JSONArray
 import org.json.JSONObject
-import org.nekosukuriputo.nekuva.BuildConfig
 import org.nekosukuriputo.nekuva.core.model.MangaSource
 import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.core.util.ext.printStackTraceDebug
@@ -20,7 +18,6 @@ import org.nekosukuriputo.nekuva.parsers.model.MangaSource
 import org.nekosukuriputo.nekuva.parsers.model.MangaState
 import org.nekosukuriputo.nekuva.parsers.model.MangaTag
 import org.nekosukuriputo.nekuva.parsers.model.RATING_UNKNOWN
-import org.nekosukuriputo.nekuva.parsers.util.json.getBooleanOrDefault
 import org.nekosukuriputo.nekuva.parsers.util.json.getEnumValueOrNull
 import org.nekosukuriputo.nekuva.parsers.util.json.getFloatOrDefault
 import org.nekosukuriputo.nekuva.parsers.util.json.getIntOrDefault
@@ -32,6 +29,11 @@ import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
 import org.nekosukuriputo.nekuva.parsers.util.toTitleCase
 import java.io.File
 
+/**
+ * Reads/writes the `index.json` stored inside a downloaded manga (cbz or directory). Holds the
+ * original manga metadata + the original remote chapter IDs, so a downloaded chapter keeps the same
+ * id as its remote counterpart (history/resume/tracking stay consistent). Ported from Doki.
+ */
 class MangaIndex(source: String?) {
 
 	private val json: JSONObject = source?.let(::JSONObject) ?: JSONObject()
@@ -40,17 +42,14 @@ class MangaIndex(source: String?) {
 		require(!manga.isLocal) { "Local manga information cannot be stored" }
 		json.put(KEY_ID, manga.id)
 		json.put(KEY_TITLE, manga.title)
-		json.put(KEY_TITLE_ALT, manga.altTitle) // for backward compatibility
 		json.put(KEY_ALT_TITLES, JSONArray(manga.altTitles))
 		json.put(KEY_URL, manga.url)
 		json.put(KEY_PUBLIC_URL, manga.publicUrl)
-		json.put(KEY_AUTHOR, manga.author) // for backward compatibility
 		json.put(KEY_AUTHORS, JSONArray(manga.authors))
 		json.put(KEY_COVER, manga.coverUrl)
 		json.put(KEY_DESCRIPTION, manga.description)
 		json.put(KEY_RATING, manga.rating)
-		json.put(KEY_CONTENT_RATING, manga.contentRating)
-		json.put(KEY_NSFW, manga.isNsfw) // for backward compatibility
+		json.put(KEY_CONTENT_RATING, manga.contentRating?.name)
 		json.put(KEY_STATE, manga.state?.name)
 		json.put(KEY_SOURCE, manga.source.name)
 		json.put(KEY_COVER_LARGE, manga.largeCoverUrl)
@@ -68,8 +67,8 @@ class MangaIndex(source: String?) {
 		if (!json.has(KEY_CHAPTERS)) {
 			json.put(KEY_CHAPTERS, JSONObject())
 		}
-		json.put(KEY_APP_ID, false)
-		json.put(KEY_APP_VERSION, false)
+		json.put(KEY_APP_ID, APP_ID)
+		json.put(KEY_APP_VERSION, APP_VERSION)
 	}
 
 	fun getMangaInfo(): Manga? = if (json.length() == 0) null else runCatching {
@@ -77,17 +76,14 @@ class MangaIndex(source: String?) {
 		Manga(
 			id = json.getLong(KEY_ID),
 			title = json.getString(KEY_TITLE),
-			altTitles = json.optJSONArray(KEY_ALT_TITLES)?.toStringSet()
-				?: setOfNotNull(json.getStringOrNull(KEY_TITLE_ALT)),
+			altTitles = json.optJSONArray(KEY_ALT_TITLES)?.toStringSet() ?: emptySet(),
 			url = json.getString(KEY_URL),
 			publicUrl = json.getStringOrNull(KEY_PUBLIC_URL).orEmpty(),
-			authors = json.optJSONArray(KEY_AUTHORS)?.toStringSet()
-				?: setOfNotNull(json.getStringOrNull(KEY_AUTHOR)),
+			authors = json.optJSONArray(KEY_AUTHORS)?.toStringSet() ?: emptySet(),
 			largeCoverUrl = json.getStringOrNull(KEY_COVER_LARGE),
 			source = source,
 			rating = json.getFloatOrDefault(KEY_RATING, RATING_UNKNOWN),
-			contentRating = json.getEnumValueOrNull(KEY_CONTENT_RATING, ContentRating::class.java)
-				?: if (json.getBooleanOrDefault(KEY_NSFW, false)) ContentRating.ADULT else null,
+			contentRating = json.getEnumValueOrNull(KEY_CONTENT_RATING, ContentRating::class.java),
 			coverUrl = json.getStringOrNull(KEY_COVER),
 			state = json.getEnumValueOrNull(KEY_STATE, MangaState::class.java),
 			description = json.getStringOrNull(KEY_DESCRIPTION),
@@ -139,25 +135,6 @@ class MangaIndex(source: String?) {
 			.getString(KEY_ENTRIES),
 	)
 
-	fun sortChaptersByName() {
-		val jo = json.getJSONObject(KEY_CHAPTERS)
-		val list = ArrayList<JSONObject>(jo.length())
-		jo.keys().forEach { id ->
-			val item = jo.getJSONObject(id)
-			item.put(KEY_ID, id)
-			list.add(item)
-		}
-		val comparator = org.nekosukuriputo.nekuva.core.util.AlphanumComparator()
-		list.sortWith(compareBy(comparator) { it.getString(KEY_NAME) })
-		val newJo = JSONObject()
-		list.forEachIndexed { i, obj ->
-			obj.put(KEY_NUMBER, i + 1)
-			val id = obj.remove(KEY_ID) as String
-			newJo.put(id, obj)
-		}
-		json.put(KEY_CHAPTERS, newJo)
-	}
-
 	fun clear() {
 		val keys = json.keys()
 		while (keys.hasNext()) {
@@ -193,27 +170,23 @@ class MangaIndex(source: String?) {
 		return chapters.sortedBy { it.number }
 	}
 
-	override fun toString(): String = if (false) {
-		json.toString(4)
-	} else {
-		json.toString()
-	}
+	override fun toString(): String = json.toString()
 
 	companion object {
 
+		private const val APP_ID = "org.nekosukuriputo.nekuva"
+		private const val APP_VERSION = 1
+
 		private const val KEY_ID = "id"
 		private const val KEY_TITLE = "title"
-		private const val KEY_TITLE_ALT = "title_alt"
 		private const val KEY_ALT_TITLES = "alt_titles"
 		private const val KEY_URL = "url"
 		private const val KEY_PUBLIC_URL = "public_url"
-		private const val KEY_AUTHOR = "author"
 		private const val KEY_AUTHORS = "authors"
 		private const val KEY_COVER = "cover"
 		private const val KEY_DESCRIPTION = "description"
 		private const val KEY_RATING = "rating"
 		private const val KEY_CONTENT_RATING = "content_rating"
-		private const val KEY_NSFW = "nsfw"
 		private const val KEY_STATE = "state"
 		private const val KEY_SOURCE = "source"
 		private const val KEY_COVER_LARGE = "cover_large"
@@ -257,10 +230,3 @@ class MangaIndex(source: String?) {
 		fun read(file: File): MangaIndex? = read(FileSystem.SYSTEM, file.toOkioPath())
 	}
 }
-
-
-
-
-
-
-*/

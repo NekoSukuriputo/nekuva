@@ -2,6 +2,7 @@ package org.nekosukuriputo.nekuva.download.ui.dialog
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
@@ -12,7 +13,9 @@ actual val supportsDirectoryPicker: Boolean = true
 actual suspend fun pickMangaDirectory(): String? = withContext(Dispatchers.IO) {
     var result: String? = null
     SwingUtilities.invokeAndWait {
-        val chooser = JFileChooser().apply {
+        // Start in the user's home, NOT the JVM working dir (= the project dir when run via Gradle),
+        // so the project folder isn't accidentally added as a manga directory.
+        val chooser = JFileChooser(File(System.getProperty("user.home"))).apply {
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
         }
         if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {

@@ -34,6 +34,8 @@ fun App() {
     setSingletonImageLoaderFactory { context ->
         val repositoryFactory = org.koin.core.context.GlobalContext.get().get<org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory>()
         ImageLoader.Builder(context).components {
+            // Local manga page/cover images (zip:/file:) must come before the network fetcher.
+            add(org.nekosukuriputo.nekuva.core.image.LocalImageFetcher.Factory())
             add(KtorNetworkFetcherFactory(createHttpClient()))
             add(org.nekosukuriputo.nekuva.core.image.FaviconFetcher.Factory(repositoryFactory))
         }.crossfade(true).build()

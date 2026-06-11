@@ -40,6 +40,9 @@ kotlin {
                     exclude(group = "org.json", module = "json")
                 }
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+                // org.json for MangaIndex (download index.json). compileOnly: Android bundles it in the
+                // platform; Desktop provides it via desktopMain's implementation(libs.json) at runtime.
+                compileOnly(libs.json)
             }
         }
         val commonMain by getting {

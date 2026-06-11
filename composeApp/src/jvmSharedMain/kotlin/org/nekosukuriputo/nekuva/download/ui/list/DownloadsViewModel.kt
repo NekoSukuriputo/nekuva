@@ -40,6 +40,8 @@ class DownloadsViewModel(
     fun pause(id: String) = downloadManager.pause(id)
     fun resume(id: String) = downloadManager.resume(id)
     fun cancel(id: String) = downloadManager.cancel(id)
+    fun retry(id: String) = downloadManager.retry(id)
+    fun retryChapter(id: String, chapterId: Long) = downloadManager.retryChapter(id, chapterId)
     fun remove(id: String) = downloadManager.remove(id)
     fun pauseAll() = downloadManager.pauseAll()
     fun resumeAll() = downloadManager.resumeAll()

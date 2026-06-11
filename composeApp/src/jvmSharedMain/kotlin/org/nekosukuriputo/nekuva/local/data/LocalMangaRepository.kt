@@ -21,7 +21,10 @@ import org.nekosukuriputo.nekuva.core.util.ext.deleteAwait
 import org.nekosukuriputo.nekuva.core.util.ext.printStackTraceDebug
 import org.nekosukuriputo.nekuva.core.util.ext.takeIfWriteable
 import org.nekosukuriputo.nekuva.core.util.ext.withChildren
+import org.nekosukuriputo.nekuva.core.util.MimeTypes
+import org.nekosukuriputo.nekuva.core.util.ext.toFile
 import org.nekosukuriputo.nekuva.local.data.index.LocalMangaIndex
+import org.nekosukuriputo.nekuva.local.data.output.LocalMangaOutput.Companion.ENTRY_NAME_INDEX
 import org.nekosukuriputo.nekuva.local.data.input.LocalMangaParser
 import org.nekosukuriputo.nekuva.local.data.output.LocalMangaOutput
 import org.nekosukuriputo.nekuva.local.data.output.LocalMangaUtil
@@ -141,9 +144,22 @@ class LocalMangaRepository constructor(
 		return LocalMangaParser(chapter.url.let { URI(it) }).getPages(chapter)
 	}
 
+	/**
+	 * Offline-first: if [manga] has a downloaded local copy that contains [chapter] (matched by the
+	 * original remote chapter id, preserved in index.json), return that chapter's pages from disk;
+	 * otherwise null so the caller fetches online. Mirrors Doki reading a downloaded chapter offline.
+	 */
+	suspend fun getPagesIfDownloaded(manga: Manga, chapter: MangaChapter): List<MangaPage>? {
+		if (manga.isLocal) return runCatchingCancellable { getPages(chapter) }.getOrNull()
+		val saved = findSavedManga(manga, withDetails = true)?.manga ?: return null
+		val localChapter = saved.chapters?.find { it.id == chapter.id } ?: return null
+		return runCatchingCancellable { getPages(localChapter) }.getOrNull()
+	}
+
 	suspend fun delete(manga: Manga): Boolean {
-		val file = manga.url.let { URI(it) }.let { java.io.File(it) }
-		val result = file.deleteAwait()
+		val file = URI(manga.url).toFile()
+		// deleteRecursively handles both a `.cbz` file and a `<title>/` directory of chapter archives.
+		val result = runInterruptible(Dispatchers.IO) { file.deleteRecursively() }
 		if (result) {
 			localMangaIndex.delete(manga.id)
 			localStorageChanges.emit(null)
@@ -258,12 +274,38 @@ class LocalMangaRepository constructor(
 	private suspend fun getAllFiles() = storageManager.getReadableDirs()
 		.asSequence()
 		.flatMap { dir ->
-			dir.withChildren { children -> children.filterNot { it.isHidden || it.shouldSkip() }.toList() }
+			dir.withChildren { children ->
+				children.filter { !it.isHidden && !it.shouldSkip() && it.looksLikeManga() }.toList()
+			}
 		}
 
 	private fun Collection<LocalManga>.unwrap(): List<Manga> = map { it.manga }
 
 	private fun File.shouldSkip(): Boolean = isDirectory && File(this, FILENAME_SKIP).exists()
+
+	/**
+	 * A scanned child is a manga only if it is a `.cbz`/`.zip`, or a directory that is a Nekuva/Doki
+	 * download (`index.json`), contains chapter `.cbz` files or page images directly, or has chapter
+	 * sub-folders that contain images. The shallow (≤2 level) check keeps non-manga directories — e.g. a
+	 * project's `gradle/`, `composeApp/`, `build/`, `.git/` — out of the Local list when a broad folder
+	 * is configured as a manga directory.
+	 */
+	private fun File.looksLikeManga(): Boolean = when {
+		isZipArchive -> true
+		isDirectory -> {
+			val children = listFiles() ?: return false
+			children.any { it.name == ENTRY_NAME_INDEX } ||
+				children.any { it.isFile && (it.isImageFile() || it.isZipArchive) } ||
+				children.any { sub ->
+					sub.isDirectory && (sub.listFiles()?.any { it.isFile && it.isImageFile() } == true)
+				}
+		}
+
+		else -> false
+	}
+
+	private fun File.isImageFile(): Boolean =
+		MimeTypes.getMimeTypeFromExtension(name)?.startsWith("image/") == true
 }
 
 

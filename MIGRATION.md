@@ -34,8 +34,11 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       pinch/double-tap zoom + pan + tap-zone navigasi; mode dipilih dari menu & **diingat** (default = WEBTOON).
       **R2 DONE**: terapkan setting reader yang lintas-platform — background reader (DEFAULT/LIGHT/DARK/WHITE/BLACK),
       info bar bawah (nama bab + halaman x/total), nomor halaman; setting "Mode baca default" di Settings kini
-      terhubung. **R3** (gambar lokal/offline → baca manga unduhan), **R4** (save-page, koreksi warna, auto-scroll,
-      double-page, keep-screen-on/fullscreen/orientasi/volume — platform Android) = berikutnya.)
+      terhubung. **R3 DONE** (run-verified Android+Desktop): baca manga lokal/unduhan **offline** — `LocalImageFetcher`
+      (Coil) memuat gambar `zip:`/`file:` (drive-letter Windows aman), dan reader memilih sumber **per-bab**
+      (`getPagesIfDownloaded`): bab yang sudah diunduh dibaca dari disk, sisanya online (offline-first ala Doki).
+      **R4** (save-page, koreksi warna, auto-scroll, double-page, keep-screen-on/fullscreen/orientasi/volume —
+      platform Android) = berikutnya.)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [ ] `search`
@@ -43,11 +46,11 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `favourites`
 - [x] `history` (2 bug inti FIXED & run-verified Android+Desktop 2026-06-08: tampil di History + resume halaman. Item parity lanjutan tetap deferred — lihat ledger)
 - [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
-- [x] `download` (run-verified Android+Desktop: engine coroutine KMP + penulis CBZ asli (BUKAN WorkManager); dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail (ikon app bar + popup split-button), layar Downloads manager **card-based ala Doki** (per-manga card, daftar bab expandable+scroll dgn ✓/⚠, Jeda/Lanjut/Batal per-card + global di app bar, by-date sections), unduh→muncul di Local, folder kustom persist, lanjut-saat-gagal. **CATATAN: membuka/membaca manga lokal hasil unduh masih gagal (area local/details — deferred, prioritas berikutnya).** Notifikasi foreground, metered-network, settings download, save-page dll deferred — lihat ledger)
+- [x] `download` (run-verified Android+Desktop: engine coroutine KMP (BUKAN WorkManager) dengan **output desain `index.json` Doki** — `MangaIndex`(org.json, `compileOnly(libs.json)`) + `ZipOutput` asli; `LocalMangaZipOutput`=SINGLE_CBZ (satu `.cbz` flat + index.json), `LocalMangaDirOutput`=MULTIPLE_CBZ (per-bab `.cbz` + index.json), `canWriteTo` (cocok manga.id, kalau tidak sufiks `_1`), id bab = id remote asli. Dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail, layar Downloads manager card-based ala Doki. **Fitur run-verified:** unduh→muncul di Local dgn **cover asli** (`addCover`), buka & **baca offline** manga unduhan, **resume** (bab sudah-unduh otomatis ✓ tak diulang), **retry** (tombol kartu = semua bab gagal + ikon ↻ per-bab), **pause** (ikon pause, bukan spinner), **cancel** (tak ada spinner nyangkut), pembersihan temp (`page*.tmp`/`*.cbz.tmp`), folder kustom persist, lanjut-saat-gagal. Hapus manga lokal (long-press di Local). Notifikasi foreground (Android), metered-network, save-page dll deferred — lihat ledger)
 - [ ] `tracker`
 - [ ] `scrobbling`
 - [ ] `sync`
-- [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & dipersist**, sesuai
+- [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & harus sama**, sesuai
       permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
       Beberapa BEHAVIOR menunggu area konsumennya (reader-advanced, tracker, sync, stats, biometric, proxy/DoH);
       nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen (nav config, proxy, suggestions, login
@@ -235,8 +238,18 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 **Keputusan arsitektur:** Doki memakai **WorkManager** (foreground service, broadcast pause/resume,
 notifikasi sistem, constraint jaringan, tahan app-kill) — Android-only, tak bisa di Desktop. Nekuva
 memakai **engine coroutine `DownloadManager`** (jvmShared, in-process, jalan di Android + Desktop).
-Penulis CBZ asli mengisi `LocalMangaOutput`/`LocalMangaZipOutput`/`LocalMangaDirOutput` (sebelumnya stub
-kosong) — output dibaca balik oleh `LocalMangaParser` (berbasis struktur, tanpa index.json).
+
+**UPDATE 2026-06-11 — output di-port ke desain `index.json` Doki (sebelumnya "berbasis struktur tanpa
+index.json", yang menimbulkan bug nyata).** Pendekatan tanpa-index lama bikin: id bab sintetis → reader
+"Chapter with ID … not found"; SINGLE_CBZ malah jadi folder gambar lepasan; pilihan format diabaikan
+saat folder sudah ada. Sekarang verbatim dari Doki: `MangaIndex` (org.json, `compileOnly(libs.json)` di
+jvmSharedMain), `ZipOutput` asli, `LocalMangaOutput.getImpl` dgn `canWriteTo` (cocokkan `index.json`
+manga.id, kalau tidak coba sufiks `_1`), nama halaman flat `FILENAME_PATTERN="%08d_%04d%04d"`, dan **id
+bab = id remote asli** (disimpan di index.json) sehingga reader/history/resume konsisten. `LocalMangaZipOutput`
+= SINGLE_CBZ (satu `.cbz` flat + index.json), `LocalMangaDirOutput` = MULTIPLE_CBZ (satu `.cbz` per bab di
+folder `<judul>/` + index.json). Parser baca index.json (id asli), **fallback ke struktur (id sintetis)
+hanya bila tak ada index.json** (download lama tetap terbaca). Plus 2 bug Windows §4.6 diperbaiki:
+`URI.toFile()` strip `/` sebelum huruf drive; `MimeTypes.getMimeTypeFromExtension` terima nama file lengkap.
 
 **DONE (pending run-verify Android+Desktop):**
 - [x] Penulis output: `LocalMangaZipOutput` (SINGLE_CBZ: satu `.cbz` berisi folder-per-bab) +
@@ -282,6 +295,11 @@ kosong) — output dibaca balik oleh `LocalMangaParser` (berbasis struktur, tanp
       tiap bab tampil badge nomor + status (✓ selesai / spinner mengunduh / ⚠ gagal + pesan error). Bab yg
       gagal TIDAK menghentikan unduhan — engine lanjut ke bab berikutnya & catat errornya (overall COMPLETED
       selama ada ≥1 bab sukses, else FAILED).
+- [x] **Buka & baca manga lokal/unduhan offline** (reader R3, sebelumnya deferred): (a) manga lokal kini
+      DISIMPAN ke DB saat tab Local dimuat (`LocalListViewModel` → `storeManga`) sehingga `findMangaById`
+      menemukannya; (b) `DetailsViewModel` cabang khusus `isLocal` → baca bab via `LocalMangaRepository.getDetails`;
+      (c) **`LocalImageFetcher`** (Coil) memuat gambar `zip:` (entry .cbz) & `file:` (folder) untuk cover + halaman.
+      Reader sudah pakai `LocalMangaRepository.getPages`. Manga unduhan kini bisa dibuka & dibaca offline.
 - [x] **Jeda/Lanjut** (per-card + app bar) FIXED: callback progres halaman in-flight tak lagi menimpa status
       `PAUSED` jadi `RUNNING`, jadi tombol berubah ke "Lanjut" dan resume berfungsi.
 

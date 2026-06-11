@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -77,6 +78,7 @@ import nekuva.composeapp.generated.resources.minutes
 import nekuva.composeapp.generated.resources.pause
 import nekuva.composeapp.generated.resources.paused
 import nekuva.composeapp.generated.resources.queued
+import nekuva.composeapp.generated.resources.remove
 import nekuva.composeapp.generated.resources.remove_completed
 import nekuva.composeapp.generated.resources.remove_completed_downloads_confirm
 import nekuva.composeapp.generated.resources.resume
@@ -178,6 +180,8 @@ fun DownloadsScreen(
                             onResume = { viewModel.resume(entry.state.id) },
                             onCancel = { viewModel.cancel(entry.state.id) },
                             onRemove = { viewModel.remove(entry.state.id) },
+                            onRetry = { viewModel.retry(entry.state.id) },
+                            onRetryChapter = { chapterId -> viewModel.retryChapter(entry.state.id, chapterId) },
                         )
                     }
                 }
@@ -235,7 +239,10 @@ private fun DownloadItem(
     onResume: () -> Unit,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
+    onRetry: () -> Unit,
+    onRetryChapter: (Long) -> Unit,
 ) {
+    val isPaused = state.status == DownloadStatus.PAUSED
     // Active downloads start expanded (chapters visible); finished ones collapse like Doki.
     var expanded by remember(state.id) { mutableStateOf(!state.isFinished) }
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -316,7 +323,12 @@ private fun DownloadItem(
                         .verticalScroll(rememberScrollState()),
                 ) {
                     state.chapters.forEachIndexed { index, chapter ->
-                        ChapterRow(number = index + 1, chapter = chapter)
+                        ChapterRow(
+                            number = index + 1,
+                            chapter = chapter,
+                            paused = isPaused,
+                            onRetry = { onRetryChapter(chapter.id) },
+                        )
                     }
                 }
             }
@@ -331,6 +343,10 @@ private fun DownloadItem(
                 state.status == DownloadStatus.QUEUED -> {
                     { CardActions(primaryLabel = null, onPrimary = null, onCancel = onCancel) }
                 }
+                // Finished with failed chapters → offer "Retry" (re-downloads only the failed ones), like Doki.
+                state.canRetry -> {
+                    { CardActions(primaryLabel = stringResource(Res.string.retry), onPrimary = onRetry, onCancel = onRemove, cancelLabel = stringResource(Res.string.remove)) }
+                }
                 else -> null
             }
             if (footerActions != null) {
@@ -342,7 +358,12 @@ private fun DownloadItem(
 }
 
 @Composable
-private fun CardActions(primaryLabel: String?, onPrimary: (() -> Unit)?, onCancel: () -> Unit) {
+private fun CardActions(
+    primaryLabel: String?,
+    onPrimary: (() -> Unit)?,
+    onCancel: () -> Unit,
+    cancelLabel: String = stringResource(Res.string.cancel),
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
@@ -350,12 +371,17 @@ private fun CardActions(primaryLabel: String?, onPrimary: (() -> Unit)?, onCance
         if (primaryLabel != null && onPrimary != null) {
             OutlinedButton(onClick = onPrimary) { Text(primaryLabel) }
         }
-        OutlinedButton(onClick = onCancel) { Text(stringResource(Res.string.cancel)) }
+        OutlinedButton(onClick = onCancel) { Text(cancelLabel) }
     }
 }
 
 @Composable
-private fun ChapterRow(number: Int, chapter: DownloadChapterState) {
+private fun ChapterRow(
+    number: Int,
+    chapter: DownloadChapterState,
+    paused: Boolean = false,
+    onRetry: (() -> Unit)? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -399,15 +425,23 @@ private fun ChapterRow(number: Int, chapter: DownloadChapterState) {
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
             )
-            ChapterDownloadStatus.FAILED -> Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-            )
-            ChapterDownloadStatus.DOWNLOADING -> CircularProgressIndicator(
-                modifier = Modifier.width(18.dp).height(18.dp),
-                strokeWidth = 2.dp,
-            )
+            // Failed → tappable refresh icon to retry just this chapter (Doki).
+            ChapterDownloadStatus.FAILED -> IconButton(onClick = { onRetry?.invoke() }, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = stringResource(Res.string.retry),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+            // While paused, an in-flight chapter shows a pause icon instead of a live spinner.
+            ChapterDownloadStatus.DOWNLOADING -> if (paused) {
+                Icon(Icons.Default.Pause, contentDescription = stringResource(Res.string.paused))
+            } else {
+                CircularProgressIndicator(
+                    modifier = Modifier.width(18.dp).height(18.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
             ChapterDownloadStatus.PENDING -> Unit
         }
     }

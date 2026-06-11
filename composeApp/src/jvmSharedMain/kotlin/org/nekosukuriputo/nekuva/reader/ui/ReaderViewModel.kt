@@ -169,13 +169,12 @@ class ReaderViewModel(
     }
 
     private suspend fun fetchPages(m: Manga, chapter: MangaChapter): List<MangaPage> {
-        return if (m.source.name == "LOCAL") {
-            localMangaRepository.getPages(chapter)
-        } else {
-            val source = MangaParserSource.entries.find { it.name == m.source.name }
-                ?: throw IllegalArgumentException("Unknown source: ${m.source.name}")
-            repositoryFactory.create(source).getPages(chapter)
-        }
+        // Offline-first (Doki parity): read the chapter from disk if it's downloaded — even for a
+        // remote manga where only some chapters are downloaded — else fetch online.
+        localMangaRepository.getPagesIfDownloaded(m, chapter)?.let { return it }
+        val source = MangaParserSource.entries.find { it.name == m.source.name }
+            ?: throw IllegalArgumentException("Unknown source: ${m.source.name}")
+        return repositoryFactory.create(source).getPages(chapter)
     }
 
     /** Called as the user scrolls; [index] is the first visible page index in [loadedPages]. */

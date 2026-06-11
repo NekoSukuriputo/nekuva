@@ -21,13 +21,14 @@ import org.nekosukuriputo.nekuva.core.util.MimeTypes
 import org.nekosukuriputo.nekuva.core.util.ext.URI_SCHEME_ZIP
 import org.nekosukuriputo.nekuva.core.util.ext.isDirectory
 import org.nekosukuriputo.nekuva.core.util.ext.isFileUri
-import org.nekosukuriputo.nekuva.core.util.ext.isImage
 import org.nekosukuriputo.nekuva.core.util.ext.isRegularFile
 import org.nekosukuriputo.nekuva.core.util.ext.isZipUri
 import org.nekosukuriputo.nekuva.core.util.ext.printStackTraceDebug
 import org.nekosukuriputo.nekuva.core.util.ext.toFileNameSafe
+import org.nekosukuriputo.nekuva.local.data.MangaIndex
 import org.nekosukuriputo.nekuva.local.data.hasZipExtension
 import org.nekosukuriputo.nekuva.local.data.isZipArchive
+import org.nekosukuriputo.nekuva.local.data.output.LocalMangaOutput.Companion.ENTRY_NAME_INDEX
 import org.nekosukuriputo.nekuva.local.domain.model.LocalManga
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
@@ -37,76 +38,127 @@ import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
 import org.nekosukuriputo.nekuva.parsers.util.toTitleCase
 import java.io.File
 
+/**
+ * Reads a downloaded manga (a `.cbz` file or a directory).
+ *
+ * If an `index.json` ([MangaIndex]) is present, the manga metadata and the **original remote chapter
+ * ids** come from it (so reading/history/resume stay consistent with the remote source). Otherwise the
+ * manga is reconstructed from the folder/zip *structure* with synthetic ids.
+ */
 class LocalMangaParser(private val uri: URI) {
 
 	constructor(file: File) : this(file.toURI())
 
-	private val rootFile: File = File(uri.schemeSpecificPart)
+	private val rootFile: File = uri.toFile()
 
 	suspend fun getManga(withDetails: Boolean): LocalManga = runInterruptible(Dispatchers.IO) {
 		uri.resolveFsAndPath().use { (fileSystem, rootPath) ->
-			val title = rootFile.name.fileNameToTitle()
-			val manga = Manga(
-				id = rootFile.absolutePath.longHashCode(),
-				title = title,
-				url = rootFile.toURI().toString(),
-				publicUrl = rootFile.toURI().toString(),
-				source = LocalMangaSource,
-				coverUrl = fileSystem.findFirstImageUri(rootPath)?.toString(),
-				chapters = if (withDetails) {
-					val chapters = fileSystem.listRecursively(rootPath)
-						.mapNotNullTo(HashSet()) { path ->
-							when {
-								!fileSystem.isRegularFile(path) -> null
-								path.isImage() -> path.parent
-								hasZipExtension(path.name) -> path
-								else -> null
+			val index = MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)
+			val mangaInfo = index?.getMangaInfo()
+			val manga = if (mangaInfo != null) {
+				val coverEntry: Path? = index.getCoverEntry()?.let { rootPath / it }?.takeIf {
+					fileSystem.exists(it)
+				}
+				mangaInfo.copy(
+					source = LocalMangaSource,
+					url = rootFile.toURI().toString(),
+					coverUrl = coverEntry?.let {
+						uri.child(it, resolve = true).toString()
+					} ?: fileSystem.findFirstImageUri(rootPath)?.toString(),
+					largeCoverUrl = null,
+					chapters = if (withDetails) {
+						mangaInfo.chapters?.mapNotNull { c ->
+							val path = index.getChapterFileName(c.id)?.toPath()
+							if (path != null && !fileSystem.exists(rootPath / path)) {
+								null
+							} else {
+								c.copy(
+									url = path?.let { uri.child(it, resolve = false).toString() } ?: uri.toString(),
+									source = LocalMangaSource,
+								)
 							}
-						}.sortedWith(compareBy(AlphanumComparator()) { x -> x.toString() })
-					chapters.mapIndexed { i, p ->
-						val s = if (p.root == rootPath.root) {
-							p.relativeTo(rootPath).toString()
-						} else {
-							p.toString()
-						}.removePrefix("/")
-						MangaChapter(
-							id = "$i$s".longHashCode(),
-							title = p.userFriendlyName(),
-							number = 0f,
-							volume = 0,
-							source = LocalMangaSource,
-							uploadDate = 0L,
-							url = uri.child(p.relativeTo(rootPath), resolve = false).toString(),
-							scanlator = null,
-							branch = null,
-						)
-					}
-				} else {
-					null
-				},
-				altTitles = emptySet(),
-				rating = -1f,
-				contentRating = null,
-				tags = emptySet(),
-				state = null,
-				authors = emptySet(),
-				largeCoverUrl = null,
-				description = null,
-			)
+						}
+					} else {
+						null
+					},
+				)
+			} else {
+				structureBasedManga(fileSystem, rootPath, withDetails)
+			}
 			LocalManga(manga, rootFile)
 		}
 	}
 
+	/** Build a manga from the folder/zip structure (no index.json) with synthetic chapter ids. */
+	private fun structureBasedManga(fileSystem: FileSystem, rootPath: Path, withDetails: Boolean): Manga {
+		val title = rootFile.name.fileNameToTitle()
+		return Manga(
+			id = rootFile.absolutePath.longHashCode(),
+			title = title,
+			url = rootFile.toURI().toString(),
+			publicUrl = rootFile.toURI().toString(),
+			source = LocalMangaSource,
+			coverUrl = fileSystem.findFirstImageUri(rootPath)?.toString(),
+			chapters = if (withDetails) {
+				val chapters = fileSystem.listRecursively(rootPath)
+					.mapNotNullTo(HashSet()) { path ->
+						when {
+							!fileSystem.isRegularFile(path) -> null
+							path.isImage() -> path.parent
+							hasZipExtension(path.name) -> path
+							else -> null
+						}
+					}.sortedWith(compareBy(AlphanumComparator()) { x -> x.toString() })
+				chapters.mapIndexed { i, p ->
+					val s = if (p.root == rootPath.root) {
+						p.relativeTo(rootPath).toString()
+					} else {
+						p.toString()
+					}.removePrefix("/")
+					MangaChapter(
+						id = "$i$s".longHashCode(),
+						title = p.userFriendlyName(),
+						number = 0f,
+						volume = 0,
+						source = LocalMangaSource,
+						uploadDate = 0L,
+						url = uri.child(p.relativeTo(rootPath), resolve = false).toString(),
+						scanlator = null,
+						branch = null,
+					)
+				}
+			} else {
+				null
+			},
+			altTitles = emptySet(),
+			rating = -1f,
+			contentRating = null,
+			tags = emptySet(),
+			state = null,
+			authors = emptySet(),
+			largeCoverUrl = null,
+			description = null,
+		)
+	}
+
 	suspend fun getMangaInfo(): Manga? = runInterruptible(Dispatchers.IO) {
-		null
+		uri.resolveFsAndPath().use { (fileSystem, rootPath) ->
+			MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)?.getMangaInfo()
+		}
 	}
 
 	suspend fun getPages(chapter: MangaChapter): List<MangaPage> = runInterruptible(Dispatchers.IO) {
 		val chapterUri = java.net.URI(chapter.url).resolve()
 		chapterUri.resolveFsAndPath().use { (fileSystem, rootPath) ->
+			val index = MangaIndex.read(fileSystem, rootPath / ENTRY_NAME_INDEX)
 			val entries = fileSystem.listRecursively(rootPath).filter { fileSystem.isRegularFile(it) }
-			entries.filter { x -> x.isImage() && x.parent == rootPath }
-				.sortedWith(compareBy(AlphanumComparator()) { x -> x.toString() })
+			val matched = if (index != null) {
+				val pattern = index.getChapterNamesPattern(chapter)
+				entries.filter { x -> x.name.substringBefore('.').matches(pattern) }
+			} else {
+				entries.filter { x -> x.isImage() && x.parent == rootPath }
+			}
+			matched.sortedWith(compareBy(AlphanumComparator()) { x -> x.toString() })
 				.map { x ->
 					val entryUri = chapterUri.child(x, resolve = true).toString()
 					MangaPage(
@@ -126,10 +178,11 @@ class LocalMangaParser(private val uri: URI) {
 		if (isZip) {
 			builder.scheme(URI_SCHEME_ZIP)
 		}
+		// okio Path.toString() uses the platform separator ('\' on Windows); URIs must use '/'.
 		if (isZip || !resolve) {
-			builder.fragment(path.toString().removePrefix("/"))
+			builder.fragment(path.toString().removePrefix("/").replace('\\', '/'))
 		} else {
-			builder.appendEncodedPath(path.relativeTo(file.toOkioPath()).toString())
+			builder.appendEncodedPath(path.relativeTo(file.toOkioPath()).toString().replace('\\', '/'))
 		}
 		return builder.build()
 	}
@@ -226,14 +279,14 @@ class LocalMangaParser(private val uri: URI) {
 			this
 		}
 
-		private fun URI.fileFromPath(): File = File(requireNotNull(path) { "Uri path is null: $this" })
+		private fun URI.fileFromPath(): File = toFile()
 
 		@Blocking
 		private fun URI.resolveFsAndPath(): FsAndPath {
 			val resolved = resolve()
 			return when {
 				resolved.isZipUri() -> FsAndPath(
-					FileSystem.SYSTEM.openZip(resolved.schemeSpecificPart.toPath()),
+					FileSystem.SYSTEM.openZip(resolved.toFile().toOkioPath()),
 					resolved.fragment.orEmpty().toRootedPath(),
 					isCloseable = true,
 				)
@@ -242,7 +295,7 @@ class LocalMangaParser(private val uri: URI) {
 					val file = toFile()
 					if (file.isZipArchive) {
 						FsAndPath(
-							FileSystem.SYSTEM.openZip(schemeSpecificPart.toPath()),
+							FileSystem.SYSTEM.openZip(file.toOkioPath()),
 							fragment.orEmpty().toRootedPath(),
 							isCloseable = true,
 						)
@@ -266,4 +319,3 @@ class LocalMangaParser(private val uri: URI) {
 			.replaceFirstChar { it.uppercase() }
 	}
 }
-

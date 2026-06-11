@@ -67,6 +67,7 @@ class DownloadManager(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val queueSemaphore = Semaphore(1)
     private val controllers = ConcurrentHashMap<String, Controller>()
+    private val tasks = ConcurrentHashMap<String, DownloadTask>() // kept so a download can be retried
     private val stateMutex = Mutex()
 
     private val _downloads = MutableStateFlow<List<DownloadState>>(emptyList())
@@ -85,6 +86,7 @@ class DownloadManager(
         for (task in tasks) {
             mangaDataRepository.storeManga(task.manga, replaceExisting = true)
             val id = UUID.randomUUID().toString()
+            this.tasks[id] = task
             val controller = Controller(MutableStateFlow(task.startPaused))
             controllers[id] = controller
             putState(
@@ -116,6 +118,20 @@ class DownloadManager(
         controllers[id]?.job?.cancel()
     }
 
+    /** Retry all failed chapters of a download (already-downloaded chapters stay checked, like Doki). */
+    fun retry(id: String) = relaunch(id, retryOnly = null)
+
+    /** Retry a single chapter while the others keep their status. */
+    fun retryChapter(id: String, chapterId: Long) = relaunch(id, retryOnly = setOf(chapterId))
+
+    private fun relaunch(id: String, retryOnly: Set<Long>?) {
+        val task = tasks[id] ?: return
+        controllers[id]?.job?.cancel()
+        val controller = Controller(MutableStateFlow(false))
+        controllers[id] = controller
+        controller.job = scope.launch { runDownload(id, task, controller, retryOnly) }
+    }
+
     fun pauseAll() {
         controllers.values.forEach { it.paused.value = true }
     }
@@ -130,21 +146,22 @@ class DownloadManager(
 
     fun remove(id: String) {
         controllers.remove(id)?.job?.cancel()
+        tasks.remove(id)
         _downloads.update { list -> list.filterNot { it.id == id } }
     }
 
     fun removeCompleted() {
         val toRemove = _downloads.value.filter { it.isFinished }.map { it.id }
-        toRemove.forEach { controllers.remove(it) }
+        toRemove.forEach { controllers.remove(it); tasks.remove(it) }
         _downloads.update { list -> list.filterNot { it.isFinished } }
     }
 
-    private suspend fun runDownload(id: String, task: DownloadTask, controller: Controller) {
+    private suspend fun runDownload(id: String, task: DownloadTask, controller: Controller, retryOnly: Set<Long>? = null) {
         try {
             // Wait here if the download was added paused, so it doesn't occupy the single queue slot.
             awaitResume(id, controller)
             queueSemaphore.withPermit {
-                downloadImpl(id, task, controller)
+                downloadImpl(id, task, controller, retryOnly)
             }
         } catch (e: CancellationException) {
             withContext(NonCancellable) {
@@ -162,7 +179,7 @@ class DownloadManager(
         }
     }
 
-    private suspend fun downloadImpl(id: String, task: DownloadTask, controller: Controller) {
+    private suspend fun downloadImpl(id: String, task: DownloadTask, controller: Controller, retryOnly: Set<Long>? = null) {
         var manga = task.manga
         updateState(id) { it.copy(status = DownloadStatus.RUNNING, isIndeterminate = true) }
         val source = MangaParserSource.entries.find { it.name == manga.source.name }
@@ -182,22 +199,57 @@ class DownloadManager(
                     format = task.format ?: settings.preferredDownloadFormat,
                 )
                 output.mergeWithExisting()
+                // Store the real manga cover (like Doki) so the local entry shows the proper cover art,
+                // not the first page. Cover failure must not abort the download.
+                val coverUrl = manga.largeCoverUrl?.takeIf { it.isNotEmpty() } ?: manga.coverUrl
+                if (!coverUrl.isNullOrEmpty()) {
+                    runCatching {
+                        val (coverFile, coverMime) = downloadFile(repo, coverUrl, destination)
+                        output.addCover(coverFile, coverMime)
+                        coverFile.deleteAwait()
+                    }.onFailure { it.printStackTraceDebug() }
+                }
+                // Each selected chapter paired with its GLOBAL index in the manga (stable page names).
                 val chapters = resolveChapters(manga, task.chaptersIds)
-                // Seed the per-chapter list (all pending) so the expandable UI can show progress.
-                updateState(id) { st ->
-                    st.copy(
+                // Chapters already present in an existing download are skipped (Doki resume behaviour).
+                val alreadyDownloaded: Set<Long> = runCatching {
+                    LocalMangaParser(output.rootFile).getManga(withDetails = true).manga.chapters
+                        ?.mapTo(HashSet()) { it.id }
+                }.getOrNull().orEmpty()
+                // Decide each chapter's status: already-on-disk = done; chapters being (re)downloaded =
+                // pending; others keep their previous status (preserves failures not part of a retry).
+                val prev = _downloads.value.find { it.id == id }?.chapters?.associateBy { it.id }.orEmpty()
+                val seeded = chapters.map { (gi, c) ->
+                    val status = when {
+                        c.id in alreadyDownloaded -> ChapterDownloadStatus.DONE
+                        retryOnly == null || c.id in retryOnly -> ChapterDownloadStatus.PENDING
+                        else -> prev[c.id]?.status ?: ChapterDownloadStatus.PENDING
+                    }
+                    DownloadChapterState(
+                        id = c.id,
+                        name = chapterDisplayName(c, gi),
+                        status = status,
+                        error = if (status == ChapterDownloadStatus.FAILED) prev[c.id]?.error else null,
+                    )
+                }
+                // Only chapters marked PENDING are (re)downloaded in this run.
+                val toDownload = seeded.filterTo(HashSet()) { it.status == ChapterDownloadStatus.PENDING }.mapTo(HashSet()) { it.id }
+                updateState(id) {
+                    it.copy(
                         totalChapters = chapters.size,
-                        chapters = chapters.mapIndexed { i, c ->
-                            DownloadChapterState(id = c.id, name = chapterDisplayName(c, i), status = ChapterDownloadStatus.PENDING)
-                        },
+                        downloadedChapters = seeded.count { c -> c.status == ChapterDownloadStatus.DONE },
+                        errorMessage = null,
+                        chapters = seeded,
                     )
                 }
                 val startTime = Clock.System.now().toEpochMilliseconds()
                 var pagesDoneTotal = 0
                 var pagesExpectedTotal = 0
-                var anyDone = false
-                for ((chapterIndex, chapter) in chapters.withIndex()) {
+                var anyDone = seeded.any { it.status == ChapterDownloadStatus.DONE }
+                for ((loopIndex, indexedChapter) in chapters.withIndex()) {
+                    val chapter = indexedChapter.value
                     awaitResume(id, controller)
+                    if (chapter.id !in toDownload) continue // done already, or not part of this (retry) run
                     setChapterStatus(id, chapter.id, ChapterDownloadStatus.DOWNLOADING)
                     try {
                         val pages = repo.getPages(chapter)
@@ -205,10 +257,9 @@ class DownloadManager(
                             // Rough total for percentage (assumes uniform page count, like Doki).
                             pagesExpectedTotal = pages.size * chapters.size
                         }
-                        val chapterDir = chapterDirName(chapter, chapterIndex)
                         val pageCounter = java.util.concurrent.atomic.AtomicInteger(0)
-                        channelFlowDownloadPages(repo, pages, destination, controller, id) { pageIndex, file ->
-                            output.addPage(chapterDir, pageFileName(pageIndex, file), file)
+                        channelFlowDownloadPages(repo, pages, destination, controller, id) { pageIndex, file, mime ->
+                            output.addPage(indexedChapter, file, pageIndex, mime)
                             file.deleteAwait()
                             val done = pageCounter.incrementAndGet()
                             val elapsed = Clock.System.now().toEpochMilliseconds() - startTime
@@ -224,13 +275,15 @@ class DownloadManager(
                                     status = if (controller.paused.value) DownloadStatus.PAUSED else DownloadStatus.RUNNING,
                                     isIndeterminate = false,
                                     totalChapters = chapters.size,
-                                    currentChapter = chapterIndex,
+                                    currentChapter = loopIndex,
                                     totalPages = pages.size,
                                     currentPage = done - 1,
                                     eta = eta,
                                 )
                             }
                         }
+                        // Finalize this chapter's .cbz (DIR output); SINGLE_CBZ flushes at the end.
+                        output.flushChapter(chapter)
                         pagesDoneTotal += pages.size
                         setChapterStatus(id, chapter.id, ChapterDownloadStatus.DONE)
                         anyDone = true
@@ -265,10 +318,29 @@ class DownloadManager(
             } catch (e: Throwable) {
                 withContext(NonCancellable) {
                     output?.cleanup()
+                    // On cancel/error, no chapter must keep spinning (DOWNLOADING).
+                    updateState(id) { st ->
+                        st.copy(
+                            chapters = st.chapters.map { c ->
+                                if (c.status == ChapterDownloadStatus.DOWNLOADING) {
+                                    c.copy(status = ChapterDownloadStatus.PENDING)
+                                } else {
+                                    c
+                                }
+                            },
+                        )
+                    }
                 }
                 throw e
             } finally {
                 output?.close()
+                // Remove stray page temp files (cover + pages left by cancelled in-flight downloads).
+                withContext(NonCancellable) {
+                    runCatching {
+                        destination.listFiles { f -> f.isFile && f.name.startsWith("page") && f.name.endsWith(".tmp") }
+                            ?.forEach { it.delete() }
+                    }
+                }
             }
         }
     }
@@ -280,27 +352,28 @@ class DownloadManager(
         destination: File,
         controller: Controller,
         id: String,
-        onPage: suspend (pageIndex: Int, file: File) -> Unit,
+        onPage: suspend (pageIndex: Int, file: File, mimeType: String) -> Unit,
     ) {
-        val flow = channelFlow<Pair<Int, File>> {
+        val flow = channelFlow<Triple<Int, File, String>> {
             val semaphore = Semaphore(MAX_PAGES_PARALLELISM)
             for ((pageIndex, page) in pages.withIndex()) {
                 launch {
                     semaphore.withPermit {
                         awaitResume(id, controller)
                         val url = repo.getPageUrl(page)
-                        val file = downloadFile(repo, url, destination)
-                        send(Pair(pageIndex, file))
+                        val (file, mime) = downloadFile(repo, url, destination)
+                        send(Triple(pageIndex, file, mime))
                     }
                 }
             }
         }
-        flow.collect { pair ->
-            onPage(pair.first, pair.second)
+        flow.collect { (pageIndex, file, mime) ->
+            onPage(pageIndex, file, mime)
         }
     }
 
-    private suspend fun downloadFile(repo: MangaRepository, url: String, destination: File): File {
+    /** Returns the downloaded temp file and its (image) mime type for the output's entry naming. */
+    private suspend fun downloadFile(repo: MangaRepository, url: String, destination: File): Pair<File, String> {
         val builder = Request.Builder().url(url)
         (repo as? ParserMangaRepository)?.getRequestHeaders()?.let { builder.headers(it) }
         val response = imageProxyInterceptor.interceptPageRequest(builder.build(), okHttp)
@@ -310,7 +383,8 @@ class DownloadManager(
         }
         return response.use { resp ->
             val body = resp.body ?: throw java.io.IOException("Empty body for $url")
-            val ext = pageExtension(url, body.contentType()?.let { "${it.type}/${it.subtype}" })
+            val contentType = body.contentType()?.let { "${it.type}/${it.subtype}" }
+            val ext = pageExtension(url, contentType)
             val file = File.createTempFile("page", ".$ext.tmp", destination)
             try {
                 file.outputStream().use { out ->
@@ -320,7 +394,10 @@ class DownloadManager(
                 file.delete()
                 throw e
             }
-            file
+            val mime = contentType?.takeIf { it.startsWith("image/") }
+                ?: MimeTypes.getMimeTypeFromExtension(ext)
+                ?: "image/jpeg"
+            file to mime
         }
     }
 
@@ -330,16 +407,13 @@ class DownloadManager(
         return MimeTypes.getExtensionFromMimeType(mimeType) ?: "jpg"
     }
 
-    private fun resolveChapters(manga: Manga, chaptersIds: Set<Long>?): List<MangaChapter> {
+    /** Selected chapters paired with their GLOBAL index in the full manga, so page entry names
+     * (`FILENAME_PATTERN` uses chapter index) stay stable when more chapters are downloaded later. */
+    private fun resolveChapters(manga: Manga, chaptersIds: Set<Long>?): List<IndexedValue<MangaChapter>> {
         val all = manga.chapters ?: error("Manga \"${manga.title}\" has no chapters")
-        val result = if (chaptersIds == null) all else all.filter { it.id in chaptersIds }
+        val result = if (chaptersIds == null) all.withIndex().toList() else all.withIndex().filter { it.value.id in chaptersIds }
         check(result.isNotEmpty()) { "No chapters selected for \"${manga.title}\"" }
         return result
-    }
-
-    private fun chapterDirName(chapter: MangaChapter, index: Int): String {
-        val safe = chapterDisplayName(chapter, index).toFileNameSafe()
-        return "%04d_%s".format(index + 1, safe)
     }
 
     private fun chapterDisplayName(chapter: MangaChapter, index: Int): String =
@@ -360,10 +434,6 @@ class DownloadManager(
         }
     }
 
-    private fun pageFileName(pageIndex: Int, source: File): String {
-        val ext = source.name.substringBeforeLast(".tmp").substringAfterLast('.', "jpg")
-        return "%04d.%s".format(pageIndex, ext)
-    }
 
     private suspend fun awaitResume(id: String, controller: Controller) {
         if (controller.paused.value) {

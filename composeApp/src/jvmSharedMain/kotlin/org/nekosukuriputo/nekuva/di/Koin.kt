@@ -20,7 +20,7 @@ val localModule = module {
         kotlinx.coroutines.flow.MutableSharedFlow(extraBufferCapacity = 16)
     }
     single { LocalMangaRepository(get(), get(), get(), get(), get()) }
-    factory { LocalListViewModel(get(), get()) }
+    factory { LocalListViewModel(get(), get(), get()) }
 }
 
 val exploreModule = module {
@@ -44,6 +44,7 @@ val detailsModule = module {
 	factory { parameters ->
 		org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(
 			parameters.get(),
+			get(),
 			get(),
 			get(),
 			get(),

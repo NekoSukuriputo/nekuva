@@ -1,4 +1,4 @@
-﻿package org.dokiteam.doki.core.util.ext
+package org.dokiteam.doki.core.util.ext
 
 import android.graphics.drawable.Drawable
 import androidx.annotation.CheckResult
@@ -70,7 +70,7 @@ suspend fun ImageLoader.fetch(data: Any, options: Options): FetchResult? {
 
 val mangaKey = Extras.Key<Manga?>(null)
 val bookmarkKey = Extras.Key<Bookmark?>(null)
-
+val mangaSourceKey = Extras.Key<MangaSource?>(null)
 
 @CheckResult
 fun SourceFetchResult.copyWithNewSource(): SourceFetchResult = SourceFetchResult(
@@ -82,6 +82,3 @@ fun SourceFetchResult.copyWithNewSource(): SourceFetchResult = SourceFetchResult
 	mimeType = mimeType,
 	dataSource = dataSource,
 )
-
-
-

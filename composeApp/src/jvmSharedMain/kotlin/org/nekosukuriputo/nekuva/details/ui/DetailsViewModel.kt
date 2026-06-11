@@ -13,6 +13,7 @@ import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
+import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
@@ -31,6 +32,7 @@ class DetailsViewModel(
     private val favouritesRepository: FavouritesRepository,
     private val historyRepository: org.nekosukuriputo.nekuva.history.data.HistoryRepository,
     private val bookmarksRepository: BookmarksRepository,
+    private val localMangaRepository: org.nekosukuriputo.nekuva.local.data.LocalMangaRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -74,13 +76,20 @@ class DetailsViewModel(
                     return@launch
                 }
                 
-                // 2. Fetch details if it's from a parser source
-                val source = MangaParserSource.entries.find { it.name == manga!!.source.name }
-                if (source != null) {
-                    val parserRepository = repositoryFactory.create(source)
-                    manga = parserRepository.getDetails(manga!!)
-                    // Save the fetched details and chapters to DB
+                // 2. Fetch details: local manga read their chapters from the file; remote from the parser.
+                if (manga!!.isLocal) {
+                    manga = localMangaRepository.getDetails(manga!!)
+                    // Persist the local chapters (real ids from index.json) so the reader can resolve
+                    // a chapter by id via findMangaById(withChapters = true).
                     mangaDataRepository.storeManga(manga!!, replaceExisting = true)
+                } else {
+                    val source = MangaParserSource.entries.find { it.name == manga!!.source.name }
+                    if (source != null) {
+                        val parserRepository = repositoryFactory.create(source)
+                        manga = parserRepository.getDetails(manga!!)
+                        // Save the fetched details and chapters to DB
+                        mangaDataRepository.storeManga(manga!!, replaceExisting = true)
+                    }
                 }
 
                 _uiState.value = DetailsUiState.Success(manga!!)
