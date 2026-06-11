@@ -416,9 +416,9 @@
     <string name="user_agent">UserAgent 標頭</string>
     <string name="sync_host_description">您可以使用自建同步伺服器或預設伺服器。如果您不確定您在做什麼，請勿變更此項。</string>
     <string name="reader_info_pattern">Ch. %1$d/%2$d Pg. %3$d/%4$d</string>
-    <string name="download_option_all_chapters">所有 %s 翻譯的章節</string>
-    <string name="download_option_next_unread_n_chapters">下一個未讀 %s</string>
-    <string name="download_option_first_n_chapters">最初 %s</string>
+    <string name="download_option_all_chapters">所有 %1$s 翻譯的章節</string>
+    <string name="download_option_next_unread_n_chapters">下一個未讀 %1$s</string>
+    <string name="download_option_first_n_chapters">最初 %1$s</string>
     <string name="memory_usage_pattern">%s - %s</string>
     <string name="allow_unstable_updates_summary">接收不穩定建置的更新通知</string>
     <string name="scrobbling_empty_hint">要追蹤閱讀進度，在漫畫詳細畫面選擇選單 → 追蹤。</string>

@@ -409,8 +409,8 @@
     <string name="reader_info_bar_summary">Die aktuelle Uhrzeit und den Lesefortschritt oben auf dem Bildschirm anzeigen</string>
     <string name="show_pages_numbers_summary">Seitenzahlen in der unteren Ecke anzeigen</string>
     <string name="download_option_whole_manga">Das ganze Manga</string>
-    <string name="download_option_first_n_chapters">Erste %s</string>
-    <string name="download_option_next_unread_n_chapters">Nächste ungelesene %s</string>
+    <string name="download_option_first_n_chapters">Erste %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Nächste ungelesene %1$s</string>
     <string name="download_option_all_unread">Alle ungelesenen Kapitel</string>
     <string name="download_option_all_unread_b">Alle ungelesenen Kapitel (%s)</string>
     <string name="download_option_manual_selection">Kapitel manuell auswählen</string>
@@ -421,7 +421,7 @@
     <string name="pick_custom_directory">Eigenes Verzeichnis wählen</string>
     <string name="no_access_to_file">Auf diese Datei oder dieses Verzeichnis kann nicht zugegriffen werden</string>
     <string name="local_manga_directories">Lokale Manga-Verzeichnisse</string>
-    <string name="download_option_all_chapters">Alle Kapitel mit Übersetzung %s</string>
+    <string name="download_option_all_chapters">Alle Kapitel mit Übersetzung %1$s</string>
     <string name="color_light">Hell</string>
     <string name="color_dark">Dunkel</string>
     <string name="color_white">Weiß</string>

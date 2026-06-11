@@ -61,6 +61,7 @@ fun ExploreScreen(
 	onSourceClick: (String) -> Unit,
 	onSearchSubmit: (String) -> Unit,
 	onBookmarksClick: () -> Unit,
+	onDownloadsClick: () -> Unit,
 ) {
 	val uiState by viewModel.uiState.collectAsState()
 	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
@@ -127,7 +128,7 @@ fun ExploreScreen(
                                 Spacer(modifier = Modifier.size(8.dp))
                                 Text(stringResource(Res.string.random))
                             }
-                            Button(onClick = { /* DITUNDA */ }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
+                            Button(onClick = onDownloadsClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.size(8.dp))
                                 Text(stringResource(Res.string.downloads))

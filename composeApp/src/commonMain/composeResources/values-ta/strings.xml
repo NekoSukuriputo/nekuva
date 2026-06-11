@@ -430,7 +430,7 @@
     <string name="theme_name_mion">விவரம்</string>
     <string name="theme_name_rikka">பணக்காரர்</string>
     <string name="nothing_here">இங்கே எதுவும் இல்லை</string>
-    <string name="download_option_next_unread_n_chapters">அடுத்து படிக்காத %s</string>
+    <string name="download_option_next_unread_n_chapters">அடுத்து படிக்காத %1$s</string>
     <string name="content_type_other">மற்றொன்று</string>
     <string name="scrobbling_empty_hint">வாசிப்பு முன்னேற்றத்தைக் கண்காணிக்க, மங்கா விவரங்கள் திரையில் பட்டியல் → தடத்தைத் தேர்ந்தெடுக்கவும்.</string>
     <string name="allow_unstable_updates">நிலையற்ற புதுப்பிப்புகளை அனுமதிக்கவும்</string>
@@ -484,9 +484,9 @@
     <string name="reader_info_bar_summary">திரையின் மேற்புறத்தில் தற்போதைய நேரத்தையும் வாசிப்பு முன்னேற்றத்தையும் காட்டுங்கள்</string>
     <string name="show_pages_numbers_summary">பக்க எண்களை கீழ் மூலையில் காண்பி</string>
     <string name="clear_source_cookies_summary">குறிப்பிட்ட டொமைனுக்கு மட்டுமே குக்கீகளை அழிக்கவும். பெரும்பாலான சந்தர்ப்பங்களில் அங்கீகாரத்தை செல்லாது</string>
-    <string name="download_option_all_chapters">மொழிபெயர்ப்பு %s உடன் அனைத்து அத்தியாயங்களும்</string>
+    <string name="download_option_all_chapters">மொழிபெயர்ப்பு %1$s உடன் அனைத்து அத்தியாயங்களும்</string>
     <string name="download_option_whole_manga">முழு மங்கா</string>
-    <string name="download_option_first_n_chapters">முதல் %s</string>
+    <string name="download_option_first_n_chapters">முதல் %1$s</string>
     <string name="restore">மீட்டெடுக்கவும்</string>
     <string name="download_option_all_unread_b">படிக்காத அனைத்து அத்தியாயங்களும் (%s)</string>
     <string name="download_option_manual_selection">அத்தியாயங்களை கைமுறையாகத் தேர்ந்தெடுக்கவும்</string>

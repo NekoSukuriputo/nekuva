@@ -37,7 +37,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `favourites`
 - [x] `history` (2 bug inti FIXED & run-verified Android+Desktop 2026-06-08: tampil di History + resume halaman. Item parity lanjutan tetap deferred — lihat ledger)
 - [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
-- [ ] `download`
+- [x] `download` (run-verified Android+Desktop: engine coroutine KMP + penulis CBZ asli (BUKAN WorkManager); dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail (ikon app bar + popup split-button), layar Downloads manager **card-based ala Doki** (per-manga card, daftar bab expandable+scroll dgn ✓/⚠, Jeda/Lanjut/Batal per-card + global di app bar, by-date sections), unduh→muncul di Local, folder kustom persist, lanjut-saat-gagal. **CATATAN: membuka/membaca manga lokal hasil unduh masih gagal (area local/details — deferred, prioritas berikutnya).** Notifikasi foreground, metered-network, settings download, save-page dll deferred — lihat ledger)
 - [ ] `tracker`
 - [ ] `scrobbling`
 - [ ] `sync`
@@ -219,6 +219,70 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 - [ ] **Fungsi lain bottom-sheet reader** (UI sudah dibuat, masih non-fungsional/redup): Save page, Mode baca
       (standard/RTL/vertical/webtoon), 2 halaman landscape, pull gesture, rotate, auto-scroll, koreksi warna,
       Settings. Reader-polish.
+
+### Area: Download (Unduhan)
+
+**Keputusan arsitektur:** Doki memakai **WorkManager** (foreground service, broadcast pause/resume,
+notifikasi sistem, constraint jaringan, tahan app-kill) — Android-only, tak bisa di Desktop. Nekuva
+memakai **engine coroutine `DownloadManager`** (jvmShared, in-process, jalan di Android + Desktop).
+Penulis CBZ asli mengisi `LocalMangaOutput`/`LocalMangaZipOutput`/`LocalMangaDirOutput` (sebelumnya stub
+kosong) — output dibaca balik oleh `LocalMangaParser` (berbasis struktur, tanpa index.json).
+
+**DONE (pending run-verify Android+Desktop):**
+- [x] Penulis output: `LocalMangaZipOutput` (SINGLE_CBZ: satu `.cbz` berisi folder-per-bab) +
+      `LocalMangaDirOutput` (MULTIPLE_CBZ: folder `<judul>/` berisi folder-per-bab) + `getOrCreate/get`.
+      Merge dengan arsip lama (zip) agar download bertahap tidak menimpa bab lama.
+- [x] Engine `DownloadManager`: antrean 1-per-waktu (Semaphore), halaman paralel terbatas (4),
+      pause/resume/cancel/removeCompleted, retry sederhana, ETA kasar, `StateFlow<List<DownloadState>>`.
+      Fetch via OkHttp + `ImageProxyInterceptor` (+ header parser). `Clock` = `kotlin.time` (Desktop-safe).
+- [x] Dialog "Save manga" (mirror `dialog_download.xml`): ringkasan, 4 makro (whole manga / all-branch /
+      first N / next-unread N) dgn picker jumlah & cabang, "More options" → format + tujuan, switch
+      "Start download", Cancel/Save. Hosted in-place di Detail (snackbar "Details" → Downloads).
+- [x] Trigger Detail: **ikon download di app bar** + **popup split-button** di tombol Lanjut/Baca
+      (Download fungsional; Remove-from-history fungsional; Incognito redup/deferred).
+- [x] Layar Downloads manager: section Queued/In-progress/by-date, item (cover, judul, status, progress,
+      %, ETA/error, jumlah bab), aksi per-item (pause/resume/cancel/remove) + menu (pause-all/resume-all/
+      cancel-all/remove-completed). Shortcut "Downloads" di Explore.
+
+**DEFERRED (UI dibuat tapi non-fungsional / N/A, masuk ledger):**
+- [ ] **Notifikasi foreground Android** (progress + aksi pause/cancel) — Android `actual`, follow-up.
+      Desktop = N/A (tak ada konsep). Engine jalan in-process tanpa notifikasi.
+- [ ] **Tahan app-kill** (gratis dari WorkManager) — engine in-process kehilangan antrean saat app dimatikan.
+- [ ] **Constraint jaringan metered + prompt "unduh via data seluler"** — butuh connectivity `actual`.
+- [ ] **Layar Settings Download** (format default, folder simpan, throttle/slowdown, allow-metered) →
+      area `settings`. (Dialog sudah pakai `preferredDownloadFormat` + spinner format/tujuan.)
+- [ ] **Save page** (reader sheet) — fitur TERPISAH (ekspor 1 gambar via SAF, `PageSaveHelper`), bukan
+      download → area image/picker. Tombol di reader tetap redup.
+- [ ] **Mode seleksi multi-item** di Downloads manager (pause/cancel/remove banyak sekaligus) — defer;
+      aksi per-item + menu all sudah ada.
+- [ ] **MULTIPLE_CBZ presisi** (Doki: satu `.cbz` PER bab) — sekarang folder-per-bab; refinement `local`.
+- [ ] **Skip bab yg sudah terunduh + dedupe by remote id** (butuh `getMangaInfo`/index.json di parser) → `local`.
+- [ ] **Pilih folder kustom di Android (SAF)** — Desktop sudah bisa pilih + **persist** folder (JFileChooser via
+      expect/actual `pickMangaDirectory`, disimpan ke `userSpecifiedMangaDirectories`). Android: SAF mengembalikan
+      `content://` tree yang tak bisa ditulis engine berbasis `File`; sementara hanya menampilkan dir writeable
+      dari `getWriteableDirs`. Butuh output berbasis DocumentFile → deferred.
+
+**DITAMBAHKAN setelah feedback run-1 (2026-06-11):**
+- [x] **Muncul di Local setelah unduh** — `localStorageChanges` (`MutableSharedFlow`) kini single Koin
+      bersama; engine emit `LocalManga` saat selesai, `LocalListViewModel` observe → reload otomatis.
+- [x] **Folder unduhan kustom persist** — folder yg dipilih disimpan ke `userSpecifiedMangaDirectories`;
+      `DesktopLocalStorageManager`/`AndroidLocalStorageManager` memasukkannya ke daftar dir (muncul lagi di
+      dropdown + manga di sana muncul di Local).
+- [x] **Daftar bab expandable + ✓ + lanjut-saat-gagal** (parity Doki): item Downloads bisa di-expand,
+      tiap bab tampil badge nomor + status (✓ selesai / spinner mengunduh / ⚠ gagal + pesan error). Bab yg
+      gagal TIDAK menghentikan unduhan — engine lanjut ke bab berikutnya & catat errornya (overall COMPLETED
+      selama ada ≥1 bab sukses, else FAILED).
+- [x] **Jeda/Lanjut** (per-card + app bar) FIXED: callback progres halaman in-flight tak lagi menimpa status
+      `PAUSED` jadi `RUNNING`, jadi tombol berubah ke "Lanjut" dan resume berfungsi.
+
+**DEFERRED → area `local`/`details` (BELUM, dari feedback run-2 2026-06-11):**
+- [ ] **Buka/ tampilkan manga lokal hasil unduh** — manga unduhan SUDAH muncul di tab Penyimpanan lokal,
+      TAPI (a) **cover gagal load** (tampil "Kesalahan") dan (b) **tap detail gagal**: "Manga with ID … not
+      found in local cache". Sebab: `DetailsViewModel.loadDetails` cari via `mangaDataRepository.findMangaById`
+      (DB Room), padahal manga lokal berbasis FILE (id = hash path, tak ada di DB). Perlu jalur khusus
+      `LocalMangaSource` di Details (baca via `LocalMangaRepository`/`LocalMangaParser`) + render cover dari
+      file. Ini pekerjaan area **local/details**, BUKAN bug engine download. Tanpa ini, manga terunduh belum
+      bisa dibaca offline. **Prioritas berikutnya setelah settings.**
 
 ### Area: Settings & Cross-cutting
 - [ ] Security (Biometric Lock / App Lock).

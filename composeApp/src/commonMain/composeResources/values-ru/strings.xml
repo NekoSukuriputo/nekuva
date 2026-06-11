@@ -413,11 +413,11 @@
     <string name="reader_info_bar_summary">Отображение текущего времени и прогресса чтения в верхней части экрана</string>
     <string name="show_pages_numbers_summary">Показывать номера страниц в нижнем углу</string>
     <string name="clear_source_cookies_summary">Очистить куки для указанного домена. В большинстве случаев это аннулирует авторизацию</string>
-    <string name="download_option_next_unread_n_chapters">Первые непрочитанные %s</string>
+    <string name="download_option_next_unread_n_chapters">Первые непрочитанные %1$s</string>
     <string name="download_option_all_unread">Все непрочитанные главы</string>
-    <string name="download_option_all_chapters">Все главы с переводом %s</string>
+    <string name="download_option_all_chapters">Все главы с переводом %1$s</string>
     <string name="download_option_whole_manga">Мангу целиком</string>
-    <string name="download_option_first_n_chapters">Первые %s</string>
+    <string name="download_option_first_n_chapters">Первые %1$s</string>
     <string name="download_option_all_unread_b">Все непрочитанные главы (%s)</string>
     <string name="download_option_manual_selection">Выбрать главы вручную</string>
     <string name="no_access_to_file">У вас нет доступа к этому файлу или каталогу</string>

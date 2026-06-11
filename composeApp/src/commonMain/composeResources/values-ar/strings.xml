@@ -399,11 +399,11 @@
     <string name="email_password_enter_hint">أدخل بريدك الإلكتروني وكلمة المرور للمتابعة</string>
     <string name="network">اتصال</string>
     <string name="data_and_privacy">البيانات والخصوصية</string>
-    <string name="download_option_first_n_chapters">أولاً%s</string>
+    <string name="download_option_first_n_chapters">أولاً%1$s</string>
     <string name="invalid_port_number">رقم المنفذ غير صالح</string>
     <string name="restore_summary">استعادة النسخة الاحتياطية التي تم إنشاؤها مسبقًا</string>
     <string name="download_option_all_unread_b">جميع الفصول غير المقروءة (%s)</string>
-    <string name="download_option_next_unread_n_chapters">التالي غير المقروء %s</string>
+    <string name="download_option_next_unread_n_chapters">التالي غير المقروء %1$s</string>
     <string name="no_access_to_file">ليس لديك حق الوصول إلى هذا الملف أو المجلد</string>
     <string name="pick_custom_directory">اختر مجلد مخصص</string>
     <string name="local_manga_directories">مجلدات المانجا المحلية</string>
@@ -446,7 +446,7 @@
     <string name="invalid_value_message">قيمة غير صالحة</string>
     <string name="port">منفذ</string>
     <string name="clear_source_cookies_summary">مسح ملفات تعريف الارتباط للمجال المحدد فقط. في معظم الحالات سوف يبطل الترخيص</string>
-    <string name="download_option_all_chapters">جميع الفصول مع الترجمة : %s</string>
+    <string name="download_option_all_chapters">جميع الفصول مع الترجمة : %1$s</string>
     <string name="download_option_whole_manga">المانجا كلها</string>
     <string name="download_option_all_unread">جميع الفصول غير المقروءة</string>
     <string name="manage_categories">إدارة القوائم</string>

@@ -411,10 +411,10 @@
     <string name="show_pages_numbers_summary">Ipakita ang mga numero ng pahina sa ibabang gilid</string>
     <string name="invalid_port_number">Imbalidong numero ng port</string>
     <string name="clear_source_cookies_summary">Linisin ang mga cookie para sa tinukoy na domain lamang. Sa karamihan ng mga kaso, magpapawalang-bisa ang awtorisasyon</string>
-    <string name="download_option_all_chapters">Lahat ng mga kabanata na may pagsasalin na %s</string>
+    <string name="download_option_all_chapters">Lahat ng mga kabanata na may pagsasalin na %1$s</string>
     <string name="download_option_whole_manga">Ang buong manga</string>
-    <string name="download_option_first_n_chapters">Unang %s</string>
-    <string name="download_option_next_unread_n_chapters">Susunod na di-nabasa %s</string>
+    <string name="download_option_first_n_chapters">Unang %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Susunod na di-nabasa %1$s</string>
     <string name="download_option_all_unread">Lahat ng di-nababasang kabanata</string>
     <string name="download_option_all_unread_b">Lahat ng di-nababasang kabanata (%s)</string>
     <string name="download_option_manual_selection">Manu-manong pumili ng mga kabanata</string>

@@ -89,6 +89,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onBookmarksClick = {
                             navController.navigate(BookmarksRoute)
+                        },
+                        onDownloadsClick = {
+                            navController.navigate(DownloadsRoute)
                         }
                     )
                 }
@@ -98,6 +101,11 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onOpenReader = { mangaId, chapterId, page ->
                             navController.navigate(ReaderRoute(mangaId, chapterId, page))
                         },
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+                composable<DownloadsRoute> {
+                    org.nekosukuriputo.nekuva.download.ui.list.DownloadsScreen(
                         onBackClick = { navController.popBackStack() }
                     )
                 }
@@ -126,6 +134,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onBookmarkClick = { mangaId, chapterId, page ->
                             navController.navigate(ReaderRoute(mangaId, chapterId, page))
                         },
+                        onOpenDownloads = { navController.navigate(DownloadsRoute) },
                         onBackClick = { navController.popBackStack() },
                         onManageCategoriesClick = {
                             navController.navigate(CategoriesRoute)

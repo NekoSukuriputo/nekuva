@@ -339,10 +339,10 @@
     <string name="restore_summary">Obnovit nedávno vytvořenou zálohu</string>
     <string name="reader_info_bar_summary">Zobrazovat aktuální čas a pokrok ve čtení na vršku displeje</string>
     <string name="show_pages_numbers_summary">Zobrazovat číslo strany ve spodním rohu</string>
-    <string name="download_option_all_chapters">Všechny kapitoly s překladem %s</string>
+    <string name="download_option_all_chapters">Všechny kapitoly s překladem %1$s</string>
     <string name="download_option_whole_manga">Celá manga</string>
-    <string name="download_option_first_n_chapters">První %s</string>
-    <string name="download_option_next_unread_n_chapters">Další nepřečtené %s</string>
+    <string name="download_option_first_n_chapters">První %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Další nepřečtené %1$s</string>
     <string name="download_option_all_unread">Všechny nepřečtené kapitoly</string>
     <string name="download_option_all_unread_b">Všechny nepřečtené kapitoly (%s)</string>
     <string name="pick_custom_directory">Vyberte vlastní adresář</string>

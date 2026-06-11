@@ -28,3 +28,6 @@ data class GlobalSearchRoute(val query: String)
 
 @Serializable
 data object BookmarksRoute
+
+@Serializable
+data object DownloadsRoute

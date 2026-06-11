@@ -67,7 +67,7 @@ class AndroidLocalStorageManager(
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {
         val set = getAvailableStorageDirs()
-        set.addAll(emptySet<File>())
+        settings.userSpecifiedMangaDirectories.forEach { set += File(it) }
         return set
     }
 

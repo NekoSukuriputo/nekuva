@@ -357,10 +357,10 @@
     <string name="disable_nsfw">Απενεργοποιήση NSFW</string>
     <string name="got_it">Έγινε</string>
     <string name="default_tab">Προεπιλεγμένη καρτέλα</string>
-    <string name="download_option_all_chapters">Όλα τα μεταφρασμένα κεφάλαια %s</string>
+    <string name="download_option_all_chapters">Όλα τα μεταφρασμένα κεφάλαια %1$s</string>
     <string name="download_option_whole_manga">Ολόκληρο το manga</string>
-    <string name="download_option_first_n_chapters">Πρώτα %s</string>
-    <string name="download_option_next_unread_n_chapters">Τα επόμενα μη αναγνωσμένα %s</string>
+    <string name="download_option_first_n_chapters">Πρώτα %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Τα επόμενα μη αναγνωσμένα %1$s</string>
     <string name="download_option_all_unread">Όλα τα μη αναγνωσμένα κεφάλαια</string>
     <string name="download_option_all_unread_b">Όλα τα μην αναγνωσμένα κεφάλαια (%s)</string>
     <string name="download_option_manual_selection">Χειροκίνητη επιλογή κεφαλαίων</string>

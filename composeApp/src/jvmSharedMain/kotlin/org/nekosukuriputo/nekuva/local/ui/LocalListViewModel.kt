@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
 import org.nekosukuriputo.nekuva.local.domain.model.LocalManga
 
 class LocalListViewModel(
-    private val localMangaRepository: LocalMangaRepository
+    private val localMangaRepository: LocalMangaRepository,
+    private val localStorageChanges: MutableSharedFlow<LocalManga?>,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LocalListUiState>(LocalListUiState.Loading)
@@ -20,6 +22,10 @@ class LocalListViewModel(
 
     init {
         loadManga()
+        // Refresh when storage changes (e.g. a download finished, or a manga was deleted).
+        viewModelScope.launch {
+            localStorageChanges.collect { loadManga() }
+        }
     }
 
     fun loadManga() {

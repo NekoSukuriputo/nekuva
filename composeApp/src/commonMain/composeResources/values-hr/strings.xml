@@ -322,7 +322,7 @@
 	<string name="show_pages_numbers_summary">Prikaži brojeve stranica u donjem kutu</string>
 	<string name="clear_source_cookies_summary">Brisanje kolačića samo za određenu domenu. U većini slučajeva poništit će autorizaciju</string>
 	<string name="download_option_whole_manga">Cijela manga</string>
-	<string name="download_option_first_n_chapters">Prvi %s</string>
+	<string name="download_option_first_n_chapters">Prvi %1$s</string>
 	<string name="description">Opis</string>
 	<string name="tracker_wifi_only_summary">Ne provjeravajte nova poglavlja pomoću mrežnih veza s ograničenim protokom</string>
 	<string name="search_hint">Unesite naslov mange, žanr ili naziv izvora</string>
@@ -551,7 +551,7 @@
 	<string name="address">Adresa</string>
 	<string name="images_proxy_title">Proxy za optimizaciju slika</string>
 	<string name="webtoon_zoom_summary">Dopusti gestu zumiranja u modusu webtoona</string>
-	<string name="download_option_all_chapters">Sva poglavlja s prijevodom %s</string>
+	<string name="download_option_all_chapters">Sva poglavlja s prijevodom %1$s</string>
 	<string name="this_month">Ovaj mjesec</string>
 	<string name="color_light">Svjetla</string>
 	<string name="color_white">Bijela</string>
@@ -581,7 +581,7 @@
 	<string name="tap_action">Radnja pri dodiru</string>
     <string name="long_tap_action">Radnja pri dugom dodiru</string>
     <string name="use_two_pages_landscape">Koristi raspored dviju stranice u poleženom položaju (beta)</string>
-	<string name="download_option_next_unread_n_chapters">Sljedeći nepročitani %s</string>
+	<string name="download_option_next_unread_n_chapters">Sljedeći nepročitani %1$s</string>
 	<string name="download_option_all_unread">Sva nepročitana poglavlja</string>
 	<string name="download_option_all_unread_b">Sva nepročitana poglavlja (%s)</string>
 	<string name="download_option_manual_selection">Odaberite poglavlja ručno</string>

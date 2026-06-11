@@ -416,9 +416,9 @@
     <string name="clear_source_cookies_summary">Limpa os cookies apenas para o domínio especificado. Na maioria dos casos, a autorização será invalidada</string>
     <string name="download_option_manual_selection">Selecionar os capítulos manualmente</string>
     <string name="download_option_all_unread_b">Todos os capítulos não lidos (%s)</string>
-    <string name="download_option_first_n_chapters">Primeiro %s</string>
-    <string name="download_option_next_unread_n_chapters">Próximo não lido %s</string>
-    <string name="download_option_all_chapters">Todos os capítulos com tradução %s</string>
+    <string name="download_option_first_n_chapters">Primeiro %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Próximo não lido %1$s</string>
+    <string name="download_option_all_chapters">Todos os capítulos com tradução %1$s</string>
     <string name="languages">Línguas</string>
     <string name="zoom_in">Aumentar o zoom</string>
     <string name="captcha_required_summary">%s requer que um captcha seja resolvido para funcionar corretamente</string>

@@ -422,10 +422,10 @@
 	<string name="reader_info_bar_summary">نمایش زمان و پیشرفت کنونی در بالای صفحه نمایش</string>
 	<string name="show_pages_numbers_summary">نمایش شماره صفحه در گوشیه پایین صفحه</string>
 	<string name="clear_source_cookies_summary">پاک کردن کوکی ها برای یک دامنه خاص. در بیشتر موارد، مجوز را باطل می‌کند</string>
-	<string name="download_option_all_chapters">تمام فصل ها ترجمه شده %s</string>
+	<string name="download_option_all_chapters">تمام فصل ها ترجمه شده %1$s</string>
 	<string name="download_option_whole_manga">تمام مانگا</string>
-	<string name="download_option_first_n_chapters">ابتدا %s</string>
-	<string name="download_option_next_unread_n_chapters">خوانده نشده بعدی %s</string>
+	<string name="download_option_first_n_chapters">ابتدا %1$s</string>
+	<string name="download_option_next_unread_n_chapters">خوانده نشده بعدی %1$s</string>
 	<string name="download_option_all_unread">تمام فصل های خوانده نشده</string>
 	<string name="download_option_all_unread_b">تمام فصل های خوانده نشده (%s)</string>
 	<string name="download_option_manual_selection">انتخاب فصل به صورت دستی</string>

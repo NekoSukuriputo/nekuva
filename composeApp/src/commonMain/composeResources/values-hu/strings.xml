@@ -438,10 +438,10 @@
     <string name="reader_info_bar_summary">Aktuális idő és az olvasási folyamat megjelenítése a képernyő tetején</string>
     <string name="show_pages_numbers_summary">Oldalszámok megjelenítése az alsó sarokban</string>
     <string name="clear_source_cookies_summary">Csak a kijelölt domain sütijeinek törlése. A legtöbb esetben érvényteleníti a hitelesítést</string>
-    <string name="download_option_all_chapters">Minden fejezet fordítással %s</string>
+    <string name="download_option_all_chapters">Minden fejezet fordítással %1$s</string>
     <string name="download_option_whole_manga">Az egész manga</string>
-    <string name="download_option_first_n_chapters">Első %s</string>
-    <string name="download_option_next_unread_n_chapters">Következő olvasatlan %s</string>
+    <string name="download_option_first_n_chapters">Első %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Következő olvasatlan %1$s</string>
     <string name="download_option_all_unread">Minden olvasatlan fejezet</string>
     <string name="download_option_all_unread_b">Minden olvasatlan fejezet (%s)</string>
     <string name="download_option_manual_selection">Fejezetek kézi kiválasztása</string>

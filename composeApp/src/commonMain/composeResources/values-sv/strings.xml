@@ -375,8 +375,8 @@
     <string name="username">Användarnamn</string>
     <string name="invalid_port_number">Ogiltigt portnummer</string>
     <string name="network">Nätverk</string>
-    <string name="download_option_first_n_chapters">%s första</string>
-    <string name="download_option_next_unread_n_chapters">Kommande %s olästa</string>
+    <string name="download_option_first_n_chapters">%1$s första</string>
+    <string name="download_option_next_unread_n_chapters">Kommande %1$s olästa</string>
     <string name="color_light">Ljus</string>
     <string name="search_hint">Skriv in en mangatitel, genre eller namn på källa</string>
     <string name="unknown">Okänd</string>
@@ -429,7 +429,7 @@
     <string name="email_password_enter_hint">Skriv in din email och lösenord för att fortsätta</string>
     <string name="images_procy_description">Använd tjänsten wsrv.nl för att minska på nätverkstrafiken och påskynda bildnedladdning om möjligt</string>
     <string name="show_pages_numbers_summary">Visa sidnummer i skärmens nedre hörn</string>
-    <string name="download_option_all_chapters">Alla kapitel med översättning %s</string>
+    <string name="download_option_all_chapters">Alla kapitel med översättning %1$s</string>
     <string name="voice_search">Röstsökning</string>
     <string name="related_manga">Relaterad manga</string>
     <string name="color_black">Svart</string>

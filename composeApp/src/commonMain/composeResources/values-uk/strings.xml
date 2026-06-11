@@ -416,13 +416,13 @@
     <string name="pick_custom_directory">Вибрати користувальницький каталог</string>
     <string name="no_access_to_file">Ви не маєте доступу до цього файлу чи каталогу</string>
     <string name="download_option_all_unread">Усі непрочитані розділи</string>
-    <string name="download_option_all_chapters">Усі розділи з перекладом %s</string>
+    <string name="download_option_all_chapters">Усі розділи з перекладом %1$s</string>
     <string name="download_option_whole_manga">Манґа цілком</string>
     <string name="download_option_all_unread_b">Усі непрочитані розділи (%s)</string>
     <string name="download_option_manual_selection">Виберіть розділи вручну</string>
     <string name="local_manga_directories">Локальні каталоги манґи</string>
-    <string name="download_option_first_n_chapters">Перші %s</string>
-    <string name="download_option_next_unread_n_chapters">Перші непрочитані %s</string>
+    <string name="download_option_first_n_chapters">Перші %1$s</string>
+    <string name="download_option_next_unread_n_chapters">Перші непрочитані %1$s</string>
     <string name="description">Опис</string>
     <string name="this_month">Цього місяця</string>
     <string name="color_dark">Темний</string>

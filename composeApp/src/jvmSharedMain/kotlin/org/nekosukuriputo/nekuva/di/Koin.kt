@@ -15,8 +15,12 @@ import org.nekosukuriputo.nekuva.local.ui.LocalListViewModel
 val localModule = module {
     single { LocalMangaIndex() }
     single { MangaLock() }
-    single { LocalMangaRepository(get(), get(), kotlinx.coroutines.flow.MutableSharedFlow(), get(), get()) }
-    factory { LocalListViewModel(get()) }
+    // Shared "local storage changed" bus: emitted on download finish / delete, observed by the Local list.
+    single<kotlinx.coroutines.flow.MutableSharedFlow<org.nekosukuriputo.nekuva.local.domain.model.LocalManga?>> {
+        kotlinx.coroutines.flow.MutableSharedFlow(extraBufferCapacity = 16)
+    }
+    single { LocalMangaRepository(get(), get(), get(), get(), get()) }
+    factory { LocalListViewModel(get(), get()) }
 }
 
 val exploreModule = module {
@@ -89,10 +93,35 @@ val historyModule = module {
     factory { org.nekosukuriputo.nekuva.history.ui.HistoryViewModel(get()) }
 }
 
+val downloadModule = module {
+    // Canonical binding for the page-image proxy (also used by the reader/Coil path when wired).
+    single<org.nekosukuriputo.nekuva.core.network.imageproxy.ImageProxyInterceptor> {
+        org.nekosukuriputo.nekuva.core.network.imageproxy.RealImageProxyInterceptor(get())
+    }
+    single {
+        org.nekosukuriputo.nekuva.download.domain.DownloadManager(
+            get(), // OkHttpClient
+            get(), // ImageProxyInterceptor
+            get(), // LocalMangaRepository
+            get(), // MangaLock
+            get(), // MangaDataRepository
+            get(), // MangaRepository.Factory
+            get(), // AppSettings
+            get(), // MutableSharedFlow<LocalManga?> (local storage changes)
+        )
+    }
+    factory { params ->
+        org.nekosukuriputo.nekuva.download.ui.dialog.DownloadDialogViewModel(
+            params.get(), get(), get(), get(), get(), get(), get(),
+        )
+    }
+    factory { org.nekosukuriputo.nekuva.download.ui.list.DownloadsViewModel(get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule)
     }
 
 

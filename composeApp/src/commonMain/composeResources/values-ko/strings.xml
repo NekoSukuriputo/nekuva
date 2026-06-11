@@ -322,7 +322,7 @@
     <string name="folder_with_images">이미지가 있는 폴더</string>
     <string name="download_option_all_unread_b">읽지 않은 모든 챕터(%s)</string>
     <string name="download_option_all_unread">읽지 않은 모든 챕터</string>
-    <string name="download_option_all_chapters">%s 번역이 있는 모든 챕터</string>
+    <string name="download_option_all_chapters">%1$s 번역이 있는 모든 챕터</string>
     <string name="color_correction">색보정</string>
     <string name="reader_control_ltr">인체공학적 리더 컨트롤</string>
     <string name="brightness">명도</string>

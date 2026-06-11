@@ -381,7 +381,7 @@
     <string name="downloads_removed">Đã xoá tải xuống</string>
     <string name="more">Thêm</string>
     <string name="no_thanks">Không, cảm ơn</string>
-    <string name="download_option_all_chapters">Số chương đã được dịch %s</string>
+    <string name="download_option_all_chapters">Số chương đã được dịch %1$s</string>
     <string name="auth_not_supported_by">Đăng nhập trên %s không được hỗ trợ</string>
 	<string name="logged_in_as">Đang đăng nhập với tư cách là %s</string>
     <string name="removal_completed">Xoá hoàn thành</string>
@@ -561,7 +561,7 @@
     <string name="reading_stats">Thống kê đọc</string>
     <string name="statistics">Thống kê</string>
     <string name="pages_read_s">Số trang đã đọc: %s</string>
-    <string name="download_option_first_n_chapters">Từ đầu đến %s</string>
+    <string name="download_option_first_n_chapters">Từ đầu đến %1$s</string>
     <string name="description">Mô tả</string>
     <string name="background">Nền</string>
     <string name="show_pages_thumbs">Hiển thị thumbnail trang</string>
@@ -605,7 +605,7 @@
     <string name="missing_storage_permission">Không có quyền để truy cập manga trên bộ nhớ ngoài</string>
     <string name="webtoon_gaps_summary">Hiển thị khoảng cách dọc giữa các trang trong chế độ webtoon</string>
     <string name="authorization_optional">Xác thực (tuỳ chọn)</string>
-    <string name="download_option_next_unread_n_chapters">Từ chưa đọc đến %s</string>
+    <string name="download_option_next_unread_n_chapters">Từ chưa đọc đến %1$s</string>
     <string name="welcome_text">Vui lòng chọn nguồn mà bạn muốn bật. Có thể thay đổi lại sau trong cài đặt</string>
     <string name="default_page_save_dir">Địa chỉ lưu trang mặc định</string>
     <string name="delete_read_chapters_summary">Xoá các chương mà bạn đã đọc khỏi bộ nhớ trong để giải phóng bộ nhớ</string>

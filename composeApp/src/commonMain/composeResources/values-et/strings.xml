@@ -424,7 +424,7 @@
     <string name="text_empty_holder_secondary_filtered">Sinu otsingutingimustele ei vasta ühtegi mangat</string>
     <string name="show_pages_numbers_summary">Näita alanurgas lehekülje numbreid</string>
     <string name="download_option_all_unread">Kõik lugemata peatükid</string>
-    <string name="download_option_next_unread_n_chapters">Järgmised lugemata %s</string>
+    <string name="download_option_next_unread_n_chapters">Järgmised lugemata %1$s</string>
     <string name="local_manga_directories">Kohalikud kaustad manga jaoks</string>
     <string name="description">Kirjeldus</string>
     <string name="this_month">Sel kuul</string>
@@ -449,7 +449,7 @@
 \nHoiatus: sellega kustub ka praeguseks salvestatud lugemise olek.</string>
     <string name="category_hidden_done">See kategooria on põhivaatest peidetud ja on leitav siit: Menüü → Halda kategooriaid</string>
     <string name="clear_source_cookies_summary">Kustuta vaid valitud domeenide küpsised. Enamusel juhtudel tähendab see ka autentimise katkemist vastavas saidis</string>
-    <string name="download_option_all_chapters">Kõik peatükid %s tõlkega</string>
+    <string name="download_option_all_chapters">Kõik peatükid %1$s tõlkega</string>
     <string name="download_option_manual_selection">Vali peatükid käsitsi</string>
     <string name="no_access_to_file">Sul puudub ligipääs sellele failile või kaustale</string>
     <string name="voice_search">Häälotsing</string>
@@ -470,7 +470,7 @@
     <string name="by_relevance">Olulisus</string>
     <string name="invalid_server_address_message">Vigane serveri aadress</string>
     <string name="download_option_whole_manga">Terve manga</string>
-    <string name="download_option_first_n_chapters">Esimesed %s</string>
+    <string name="download_option_first_n_chapters">Esimesed %1$s</string>
     <string name="download_option_all_unread_b">Kõik lugemata peatükid (%s)</string>
     <string name="data_not_restored">Andmed jäid taastamata</string>
     <string name="data_not_restored_text">Palun kontrolli, et oled valinud õige varundusfaili</string>

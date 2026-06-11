@@ -454,7 +454,7 @@
     <string name="by_relevance">Rilevanza</string>
     <string name="related_manga">Manga correlati</string>
     <string name="state_abandoned">Abbandonato</string>
-    <string name="download_option_first_n_chapters">Primo %s</string>
+    <string name="download_option_first_n_chapters">Primo %1$s</string>
     <string name="keep_screen_on">Tieni schermo acceso</string>
     <string name="paused">In pausa</string>
     <string name="text_downloads_list_holder">Non hai alcun download</string>
@@ -485,7 +485,7 @@
     <string name="show_pages_numbers_summary">Mostra numeri di pagina nell\'angolo inferiore</string>
     <string name="zoom_out">Rimpicciolire</string>
     <string name="keep_screen_on_summary">Non spegnere lo schermo durante la lettura di manga</string>
-    <string name="download_option_next_unread_n_chapters">Prossimo %s non letto</string>
+    <string name="download_option_next_unread_n_chapters">Prossimo %1$s non letto</string>
     <string name="clear_network_cache">Pulisci cache di rete</string>
     <string name="voice_search">Ricerca vocale</string>
     <string name="enable">Abilita</string>
@@ -511,7 +511,7 @@
     <string name="no_thanks">No grazie</string>
     <string name="suggest_new_sources_summary">Chiedi se aggiungere nuove fonti dopo aggiornamento dell\'applicazione</string>
     <string name="speed">Velocità</string>
-    <string name="download_option_all_chapters">Tutti i capitoli con traduzioni %s</string>
+    <string name="download_option_all_chapters">Tutti i capitoli con traduzioni %1$s</string>
     <string name="content_type_other">Altro</string>
     <string name="suggestion_manga">Consigliato: %s</string>
     <string name="color_black">Nero</string>

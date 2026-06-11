@@ -390,7 +390,7 @@
     <string name="state_abandoned">Тасталған</string>
     <string name="history_shortcuts_summary">Қолданба таңбасын ұзақ басып тұрғанда соңғы маңганы қолжетімді ету</string>
     <string name="automatic_scroll">Өздігінен парақтау</string>
-    <string name="download_option_first_n_chapters">Бірінші %s</string>
+    <string name="download_option_first_n_chapters">Бірінші %1$s</string>
     <string name="keep_screen_on">Экранды сөндірмеу</string>
     <string name="paused">Тоқтап тұр</string>
     <string name="text_downloads_list_holder">Жүктеп алғаныңыз жоқ</string>
@@ -432,7 +432,7 @@
     <string name="show_in_grid_view">Кесте қып көрсету</string>
     <string name="zoom_out">Кішірейту</string>
     <string name="keep_screen_on_summary">Маңга оқып отырғанда экранды сөндірмеу</string>
-    <string name="download_option_next_unread_n_chapters">Келесі оқылмаған %s</string>
+    <string name="download_option_next_unread_n_chapters">Келесі оқылмаған %1$s</string>
     <string name="clear_network_cache">Желі кәшін тазалау</string>
     <string name="voice_search">Дауыс іздеуі</string>
     <string name="enable">Қосу</string>
@@ -476,7 +476,7 @@
     <string name="suggest_new_sources_summary">Қолданбаның жаңа нұсқасында пайда болған дереккөзді ұсыну</string>
     <string name="share_logs">Логты бөлісу</string>
     <string name="speed">Жылдамдық</string>
-    <string name="download_option_all_chapters">%s аударған түгел тарау</string>
+    <string name="download_option_all_chapters">%1$s аударған түгел тарау</string>
     <string name="suggestion_manga">Ұсыныс: %s</string>
     <string name="color_black">Қара</string>
     <string name="removed_from_favourites">Таңдаулыдан жойылды</string>

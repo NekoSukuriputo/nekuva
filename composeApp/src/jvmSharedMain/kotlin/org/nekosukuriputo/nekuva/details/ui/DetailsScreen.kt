@@ -20,6 +20,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -46,6 +47,7 @@ fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel(),
     onChapterClick: (Long, Long) -> Unit,
     onBookmarkClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
+    onOpenDownloads: () -> Unit,
     onBackClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
 ) {
@@ -57,6 +59,12 @@ fun DetailsScreen(
     val bookmarks by viewModel.bookmarks.collectAsState()
 
     var showCategoryDialog by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    val downloadStartedMsg = stringResource(Res.string.download_started)
+    val downloadAddedMsg = stringResource(Res.string.download_added)
+    val detailsLabel = stringResource(Res.string.details)
 
     if (showCategoryDialog) {
         CategorySelectionDialog(
@@ -79,8 +87,30 @@ fun DetailsScreen(
         )
     )
 
+    val successForDialog = uiState as? DetailsUiState.Success
+    if (showDownloadDialog && successForDialog != null) {
+        val downloadVm = koinViewModel<org.nekosukuriputo.nekuva.download.ui.dialog.DownloadDialogViewModel>(
+            key = "download_${successForDialog.manga.id}",
+        ) { org.koin.core.parameter.parametersOf(successForDialog.manga.id) }
+        org.nekosukuriputo.nekuva.download.ui.dialog.DownloadDialog(
+            viewModel = downloadVm,
+            onDismiss = { showDownloadDialog = false },
+            onScheduled = { started ->
+                showDownloadDialog = false
+                scope.launch {
+                    val result = scaffoldState.snackbarHostState.showSnackbar(
+                        message = if (started) downloadStartedMsg else downloadAddedMsg,
+                        actionLabel = detailsLabel,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) onOpenDownloads()
+                }
+            },
+        )
+    }
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
+        snackbarHost = { SnackbarHost(scaffoldState.snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { }, // No title on TopAppBar as per Doki
@@ -94,8 +124,11 @@ fun DetailsScreen(
                     IconButton(onClick = { /* Deferred: Share */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
-                    IconButton(onClick = { /* Deferred: Download */ }) {
-                        Icon(Icons.Outlined.FileDownload, contentDescription = "Download")
+                    IconButton(
+                        onClick = { showDownloadDialog = true },
+                        enabled = uiState is DetailsUiState.Success,
+                    ) {
+                        Icon(Icons.Outlined.FileDownload, contentDescription = stringResource(Res.string.save_manga))
                     }
                     IconButton(onClick = { /* Deferred: Overflow */ }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More")
@@ -111,7 +144,9 @@ fun DetailsScreen(
                     history = history,
                     bookmarks = bookmarks,
                     onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) },
-                    onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) }
+                    onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) },
+                    onDownloadClick = { showDownloadDialog = true },
+                    onForget = { viewModel.removeFromHistory() }
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp))
@@ -352,8 +387,11 @@ fun ChaptersSheetContent(
     bookmarks: List<Bookmark>,
     onChapterClick: (MangaChapter) -> Unit,
     onBookmarkClick: (Bookmark) -> Unit,
+    onDownloadClick: () -> Unit,
+    onForget: () -> Unit,
 ) {
     var view by remember { mutableStateOf(SheetView.CHAPTERS) }
+    var readMenuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Toolbar (Drag handle is provided by BottomSheetScaffold automatically)
@@ -386,27 +424,69 @@ fun ChaptersSheetContent(
                 }
             }
 
-            Button(
-                onClick = {
-                    if (history != null) {
-                        val chapter = chapters.find { it.id == history.chapterId }
-                        if (chapter != null) onChapterClick(chapter)
-                    } else if (chapters.isNotEmpty()) {
-                        onChapterClick(chapters.first())
-                    }
-                },
-                contentPadding = PaddingValues(start = 16.dp, end = 8.dp)
+            // Doki-style split button: main = read/continue + a connected trailing segment opening the popup.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                val buttonText = if (history != null) {
-                    val chapter = chapters.find { it.id == history.chapterId }
-                    val chapterTitle = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name
-                    if (chapterTitle != null) "${stringResource(Res.string.resume)}: $chapterTitle" else stringResource(Res.string.read)
-                } else {
-                    stringResource(Res.string.read)
+                Button(
+                    onClick = {
+                        if (history != null) {
+                            val chapter = chapters.find { it.id == history.chapterId }
+                            if (chapter != null) onChapterClick(chapter)
+                        } else if (chapters.isNotEmpty()) {
+                            onChapterClick(chapters.first())
+                        }
+                    },
+                    shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 4.dp, bottomEnd = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
+                ) {
+                    val buttonText = if (history != null) {
+                        val chapter = chapters.find { it.id == history.chapterId }
+                        val chapterTitle = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name
+                        if (chapterTitle != null) "${stringResource(Res.string.resume)}: $chapterTitle" else stringResource(Res.string.read)
+                    } else {
+                        stringResource(Res.string.read)
+                    }
+                    Text(buttonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(buttonText)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                Box {
+                    Button(
+                        onClick = { readMenuExpanded = true },
+                        shape = RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp, topEnd = 20.dp, bottomEnd = 20.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = stringResource(Res.string.more_options),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    DropdownMenu(expanded = readMenuExpanded, onDismissRequest = { readMenuExpanded = false }) {
+                        // Incognito: deferred (own area) — present but disabled.
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.incognito_mode)) },
+                            enabled = false,
+                            onClick = {},
+                        )
+                        if (history != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.remove_from_history)) },
+                                onClick = {
+                                    readMenuExpanded = false
+                                    onForget()
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.download)) },
+                            onClick = {
+                                readMenuExpanded = false
+                                onDownloadClick()
+                            },
+                        )
+                    }
+                }
             }
         }
 

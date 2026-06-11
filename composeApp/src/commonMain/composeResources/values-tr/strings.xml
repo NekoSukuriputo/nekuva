@@ -449,7 +449,7 @@
     <string name="too_many_requests_message">Çok fazla istek. Daha sonra tekrar deneyin</string>
     <string name="related_manga">İlgili manga</string>
     <string name="state_abandoned">Bırakıldı</string>
-    <string name="download_option_first_n_chapters">Önce %s</string>
+    <string name="download_option_first_n_chapters">Önce %1$s</string>
     <string name="keep_screen_on">Ekranı açık tut</string>
     <string name="suggestions_wifi_only_summary">Tarifeli bağlantılarını kullanarak önerileri güncellemeyin</string>
     <string name="enhanced_colors">32-bit renk modu</string>
@@ -457,7 +457,7 @@
     <string name="no_access_to_file">Bu dosyaya veya konuma erişim izniniz yok</string>
     <string name="zoom_out">Uzaklaştır</string>
     <string name="keep_screen_on_summary">Manga okurken ekranı kapatmayın</string>
-    <string name="download_option_next_unread_n_chapters">Sonraki okunmamış %s</string>
+    <string name="download_option_next_unread_n_chapters">Sonraki okunmamış %1$s</string>
     <string name="voice_search">Sesli arama</string>
     <string name="manga_list">Manga listesi</string>
     <string name="disable_nsfw">NSFW\'yi devre dışı bırak</string>
@@ -465,7 +465,7 @@
     <string name="to_top">Üste</string>
     <string name="show">Göster</string>
     <string name="suggest_new_sources_summary">Uygulamayı güncelledikten sonra yeni eklenen kaynakları etkinleştirmeyi bildir</string>
-    <string name="download_option_all_chapters">%s çevirisi olan tüm bölümler</string>
+    <string name="download_option_all_chapters">%1$s çevirisi olan tüm bölümler</string>
     <string name="color_black">Siyah</string>
     <string name="this_month">Bu ay</string>
     <string name="categories">Kategoriler</string>

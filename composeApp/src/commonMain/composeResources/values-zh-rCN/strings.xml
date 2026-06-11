@@ -418,9 +418,9 @@
 	<string name="username">用户名</string>
 	<string name="download_option_all_unread_b">所有未读章节 (%s)</string>
 	<string name="authorization_optional">授权 (可选)</string>
-	<string name="download_option_first_n_chapters">前 %s</string>
+	<string name="download_option_first_n_chapters">前 %1$s</string>
 	<string name="downloaded">已下载</string>
-	<string name="download_option_next_unread_n_chapters">后续未读的 %s</string>
+	<string name="download_option_next_unread_n_chapters">后续未读的 %1$s</string>
 	<string name="images_procy_description">尽可能使用 wsrv.nl 代理服务减少流量使用并加快图片加载</string>
 	<string name="invert_colors">反色</string>
 	<string name="related_manga">相关漫画</string>
@@ -478,7 +478,7 @@
 	<string name="frequency_once_per_month">每月一次</string>
 	<string name="last_successful_backup">最近备份成功：%s</string>
 	<string name="backups_output_directory">备份文件保存目录</string>
-	<string name="download_option_all_chapters">已翻译的章节 (%s)</string>
+	<string name="download_option_all_chapters">已翻译的章节 (%1$s)</string>
 	<string name="state_upcoming">即将推出</string>
 	<string name="by_name_reverse">名称（降序）</string>
 	<string name="manage_sources">图源管理</string>

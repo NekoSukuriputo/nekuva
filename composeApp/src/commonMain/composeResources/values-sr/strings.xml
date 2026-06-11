@@ -329,7 +329,7 @@
 	<string name="not_available">Није доступно</string>
     <string name="history_shortcuts_summary">Учини недавну мангу доступном дугим притиском на икону апликације</string>
     <string name="automatic_scroll">Самостално померање</string>
-    <string name="download_option_first_n_chapters">Првих %s</string>
+    <string name="download_option_first_n_chapters">Првих %1$s</string>
     <string name="keep_screen_on">Задржи екран укљученим</string>
     <string name="reverse">Уназад</string>
     <string name="track_sources">Потражи ажурирања</string>
@@ -409,7 +409,7 @@
     <string name="reader_mode_hint">Изабрана конфигурација ће бити запамћена за ову мангу</string>
     <string name="keep_screen_on_summary">Не искључуј екран док читам мангу</string>
     <string name="default_s">Подразумевано: %s</string>
-    <string name="download_option_next_unread_n_chapters">Следеће непрочитано %s</string>
+    <string name="download_option_next_unread_n_chapters">Следеће непрочитано %1$s</string>
     <string name="confirm">Потврди</string>
     <string name="suggestions_updating">Предлози се ажурирају</string>
     <string name="clear_updates_feed">Избриши фид ажурирања</string>
@@ -490,7 +490,7 @@
     <string name="text_local_holder_secondary">Сачувај нешто из каталога или увези из датотеке.</string>
     <string name="speed">Брзина</string>
     <string name="silent">Тихо</string>
-    <string name="download_option_all_chapters">Сва поглавља са преводом %s</string>
+    <string name="download_option_all_chapters">Сва поглавља са преводом %1$s</string>
     <string name="content_type_other">Остало</string>
     <string name="suggestion_manga">Предлог: %s</string>
     <string name="color_black">Црна</string>

@@ -95,6 +95,13 @@ class DetailsViewModel(
         loadDetails()
     }
 
+    fun removeFromHistory() {
+        viewModelScope.launch {
+            val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
+            historyRepository.delete(m)
+        }
+    }
+
     fun toggleCategory(categoryId: Long, isSelected: Boolean) {
         viewModelScope.launch {
             val state = _uiState.value

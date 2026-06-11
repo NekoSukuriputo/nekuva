@@ -42,7 +42,8 @@ class DesktopLocalStorageManager(
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {
         val set = getAvailableStorageDirs()
-        set.addAll(emptySet<java.io.File>())
+        // User-picked download folders (persisted) so they show in the picker and their manga appear in Local.
+        settings.userSpecifiedMangaDirectories.forEach { set += File(it) }
         return set
     }
 

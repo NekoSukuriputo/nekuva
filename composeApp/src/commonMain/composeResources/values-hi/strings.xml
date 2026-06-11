@@ -332,7 +332,7 @@
     <string name="data_and_privacy">डेटा और गोपनीयता</string>
     <string name="email_password_enter_hint">जारी रखने के लिए अपना ईमेल और पासवर्ड डालें</string>
     <string name="clear_source_cookies_summary">केवल निर्दिष्ट डोमेन के लिए कुकीज़ साफ करें। अधिकांश मामलों में प्राधिकरण अमान्य हो जाएगा</string>
-    <string name="download_option_next_unread_n_chapters">अगला अपठित %s</string>
+    <string name="download_option_next_unread_n_chapters">अगला अपठित %1$s</string>
     <string name="no_access_to_file">आपके पास इस फाइल या निर्देशिका तक कोई पहुंच नहीं है</string>
     <string name="voice_search">ध्वनि खोज</string>
     <string name="related_manga">संबंधित मंगा</string>
@@ -417,9 +417,9 @@
     <string name="use_two_pages_landscape">परिदृश्य उन्मुखीकरण पर दो पृष्ठ अभिन्यास का उपयोग करें (बीटा)</string>
     <string name="got_it">समझ गया</string>
     <string name="default_tab">तयशुदा टैब</string>
-    <string name="download_option_all_chapters">अनुवाद सहित सभी अध्याय %s</string>
+    <string name="download_option_all_chapters">अनुवाद सहित सभी अध्याय %1$s</string>
     <string name="download_option_whole_manga">संपूर्ण मंगा</string>
-    <string name="download_option_first_n_chapters">प्रथम %s</string>
+    <string name="download_option_first_n_chapters">प्रथम %1$s</string>
     <string name="download_option_all_unread">सभी अपठित अध्याय</string>
     <string name="download_option_all_unread_b">सभी अपठित अध्याय (%s)</string>
     <string name="download_option_manual_selection">अध्यायों का चयन हस्तचालित रूप से करें</string>
