@@ -155,7 +155,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.settings.ui.SettingsRootScreen(
                         onAppearance = { navController.navigate(AppearanceSettingsRoute) },
                         onDownloads = { navController.navigate(DownloadsSettingsRoute) },
+                        onBackup = { navController.navigate(BackupSettingsRoute) },
                         onAbout = { navController.navigate(AboutSettingsRoute) },
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<BackupSettingsRoute> {
+                    org.nekosukuriputo.nekuva.backups.ui.BackupSettingsScreen(
                         onBackClick = { navController.popBackStack() },
                     )
                 }

@@ -44,6 +44,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 fun SettingsRootScreen(
     onAppearance: () -> Unit,
     onDownloads: () -> Unit,
+    onBackup: () -> Unit,
     onAbout: () -> Unit,
     onBackClick: () -> Unit,
 ) {
@@ -68,7 +69,7 @@ fun SettingsRootScreen(
             SettingsItem(title = stringResource(Res.string.downloads), icon = Icons.Outlined.Download, onClick = onDownloads)
             SettingsItem(title = stringResource(Res.string.check_for_new_chapters), icon = Icons.Outlined.Notifications, summary = soon, enabled = false)
             SettingsItem(title = stringResource(Res.string.services), icon = Icons.Outlined.Extension, summary = soon, enabled = false)
-            SettingsItem(title = stringResource(Res.string.backup_restore), icon = Icons.Outlined.Backup, summary = soon, enabled = false)
+            SettingsItem(title = stringResource(Res.string.backup_restore), icon = Icons.Outlined.Backup, onClick = onBackup)
             SettingsItem(title = stringResource(Res.string.about), icon = Icons.Outlined.Info, onClick = onAbout)
         }
     }

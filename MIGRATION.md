@@ -304,8 +304,15 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
       `mangaStorageDir`/`preferredDownloadFormat` (jadi `var`).
 - [x] **About**: versi + link **Source code (GitHub)** via `LocalUriHandler` (lintas-platform).
 
-**Phase S2 (berikutnya):**
-- [ ] **Backup & Restore** (ekspor/impor favorit, kategori, riwayat, bookmark, settings ke file) — area `backups`, standalone.
+**Phase S2:**
+- [x] **Backup & Restore** (pending run-verify): ekspor/impor **favorit + kategori + riwayat + bookmark**
+      (+ manga/tags) ke file **.zip berisi JSON per-section** (entry name = `index/history/categories/favourites/
+      bookmarks`, **format sama dgn Doki** → berpotensi cross-compatible). `BackupRepository` (kotlinx.serialization
+      + java.util.zip). File picker lintas-platform: **Desktop JFileChooser**, **Android SAF** (Create/Open
+      Document via `rememberLauncherForActivityResult` + CompletableDeferred bridge). Restore = upsert (manga dulu,
+      lalu row), lanjut-saat-gagal per item.
+      DEFERRED: backup **settings** (multiplatform-settings tak punya generic put), sources/scrobbling/stats/
+      saved-filters (belum dimigrasi), reader-grid, periodic/Telegram backup, pilih-section saat restore.
 - [ ] **Storage & Network**: data cleanup (clear cache/db/cookies/webview), proxy, DoH, image proxy, toggle SSL/offline/adblock.
 
 **Phase S3 — DEFERRED (UI bisa dibuat, fungsi tergantung area lain):**

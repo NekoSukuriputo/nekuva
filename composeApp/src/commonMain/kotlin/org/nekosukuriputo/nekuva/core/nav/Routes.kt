@@ -40,3 +40,6 @@ data object DownloadsSettingsRoute
 
 @Serializable
 data object AboutSettingsRoute
+
+@Serializable
+data object BackupSettingsRoute

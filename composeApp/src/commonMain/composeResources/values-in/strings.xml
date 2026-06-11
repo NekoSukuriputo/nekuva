@@ -459,6 +459,8 @@
     <string name="directories">Direktori</string>
     <string name="specify_directory">Pilih folder…</string>
     <string name="coming_soon">Segera hadir</string>
+    <string name="backup_done">Cadangan berhasil dibuat</string>
+    <string name="restore_done">%1$d entri dipulihkan</string>
     <string name="main_screen_sections">Bagian layar utama</string>
     <string name="to_top">Ke atas</string>
     <string name="zoom_in">Perbesar</string>
