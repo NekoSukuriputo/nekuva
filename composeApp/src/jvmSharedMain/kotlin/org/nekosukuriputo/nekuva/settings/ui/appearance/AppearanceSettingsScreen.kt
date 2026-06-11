@@ -14,31 +14,33 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import nekuva.composeapp.generated.resources.Res
-import nekuva.composeapp.generated.resources.appearance
-import nekuva.composeapp.generated.resources.black_dark_theme
-import nekuva.composeapp.generated.resources.black_dark_theme_summary
-import nekuva.composeapp.generated.resources.dark
-import nekuva.composeapp.generated.resources.follow_system
-import nekuva.composeapp.generated.resources.light
-import nekuva.composeapp.generated.resources.theme
+import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.core.prefs.ColorScheme
+import org.nekosukuriputo.nekuva.core.prefs.ListMode
+import org.nekosukuriputo.nekuva.settings.ui.components.BoolPref
+import org.nekosukuriputo.nekuva.settings.ui.components.IndexListPref
+import org.nekosukuriputo.nekuva.settings.ui.components.MultiPref
+import org.nekosukuriputo.nekuva.settings.ui.components.SettingsCategoryHeader
+import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSingleChoice
+import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSlider
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSwitch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceSettingsScreen(
-    viewModel: AppearanceViewModel = koinViewModel(),
     onBackClick: () -> Unit,
 ) {
-    val themeMode by viewModel.theme.collectAsState()
-    val amoled by viewModel.amoled.collectAsState()
-
+    val settings = koinInject<AppSettings>()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,6 +54,16 @@ fun AppearanceSettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            // Color scheme (persisted; applying non-default palettes is deferred — see MIGRATION.md)
+            var colorScheme by remember { mutableStateOf(settings.colorScheme) }
+            SettingsSingleChoice(
+                title = stringResource(Res.string.color_theme),
+                options = ColorScheme.getAvailableList().map { it.name.lowercase().replaceFirstChar(Char::uppercase) to it },
+                selected = colorScheme,
+                onSelect = { settings.colorScheme = it; colorScheme = it },
+            )
+            // Theme (live)
+            var theme by remember { mutableStateOf(settings.theme) }
             SettingsSingleChoice(
                 title = stringResource(Res.string.theme),
                 options = listOf(
@@ -59,14 +71,90 @@ fun AppearanceSettingsScreen(
                     stringResource(Res.string.light) to 1,
                     stringResource(Res.string.dark) to 2,
                 ),
-                selected = themeMode,
-                onSelect = { viewModel.setTheme(it) },
+                selected = theme,
+                onSelect = { settings.theme = it; theme = it },
             )
+            // AMOLED (live)
+            var amoled by remember { mutableStateOf(settings.isAmoledTheme) }
             SettingsSwitch(
                 title = stringResource(Res.string.black_dark_theme),
                 summary = stringResource(Res.string.black_dark_theme_summary),
                 checked = amoled,
-                onCheckedChange = { viewModel.setAmoled(it) },
+                onCheckedChange = { settings.isAmoledTheme = it; amoled = it },
+            )
+            // Language (persisted; in-app locale switching deferred)
+            var locale by remember { mutableStateOf(settings.appLocales) }
+            SettingsSingleChoice(
+                title = stringResource(Res.string.language),
+                options = listOf(
+                    stringResource(Res.string.follow_system) to "",
+                    "English" to "en",
+                    "Bahasa Indonesia" to "id",
+                ),
+                selected = locale,
+                onSelect = { settings.appLocales = it; locale = it },
+            )
+
+            SettingsCategoryHeader(stringResource(Res.string.manga_list))
+            var listMode by remember { mutableStateOf(settings.listMode) }
+            SettingsSingleChoice(
+                title = stringResource(Res.string.list_mode),
+                options = listOf(
+                    stringResource(Res.string.list) to ListMode.LIST,
+                    stringResource(Res.string.detailed_list) to ListMode.DETAILED_LIST,
+                    stringResource(Res.string.grid) to ListMode.GRID,
+                ),
+                selected = listMode,
+                onSelect = { settings.listMode = it; listMode = it },
+            )
+            var gridSize by remember { mutableStateOf(settings.gridSize) }
+            SettingsSlider(
+                title = stringResource(Res.string.grid_size),
+                value = gridSize,
+                valueRange = 50..150,
+                step = 5,
+                valueLabel = "$gridSize%",
+                onValueChange = { settings.gridSize = it; gridSize = it },
+            )
+            BoolPref(settings, AppSettings.KEY_QUICK_FILTER, stringResource(Res.string.show_quick_filters), stringResource(Res.string.show_quick_filters_summary), true)
+            IndexListPref(
+                settings, AppSettings.KEY_PROGRESS_INDICATORS, stringResource(Res.string.show_reading_indicators),
+                listOf(stringResource(Res.string.disabled), stringResource(Res.string.percent_read), stringResource(Res.string.percent_left), stringResource(Res.string.chapters_read), stringResource(Res.string.chapters_left)),
+                1,
+            )
+            MultiPref(
+                settings, AppSettings.KEY_MANGA_LIST_BADGES, stringResource(Res.string.badges_in_lists),
+                listOf(stringResource(Res.string.favourites) to "1", stringResource(Res.string.saved_manga) to "2"),
+                setOf("1", "2"),
+            )
+
+            SettingsCategoryHeader(stringResource(Res.string.details))
+            BoolPref(settings, AppSettings.KEY_COLLAPSE_DESCRIPTION, stringResource(Res.string.collapse_long_description), null, true)
+            BoolPref(settings, AppSettings.KEY_PAGES_TAB, stringResource(Res.string.show_pages_thumbs), stringResource(Res.string.show_pages_thumbs_summary), true)
+            IndexListPref(
+                settings, AppSettings.KEY_DETAILS_TAB, stringResource(Res.string.default_tab),
+                listOf(stringResource(Res.string.last_used), stringResource(Res.string.chapters), stringResource(Res.string.pages), stringResource(Res.string.bookmarks)),
+                0,
+            )
+
+            SettingsCategoryHeader(stringResource(Res.string.main_screen))
+            MultiPref(
+                settings, AppSettings.KEY_SEARCH_SUGGESTION_TYPES, stringResource(Res.string.search_suggestions),
+                emptyList(), emptySet(),
+            )
+            SettingsItem(title = stringResource(Res.string.main_screen_sections), summary = stringResource(Res.string.coming_soon), enabled = false)
+            BoolPref(settings, AppSettings.KEY_MAIN_FAB, stringResource(Res.string.main_screen_fab), stringResource(Res.string.main_screen_fab_summary), true)
+            BoolPref(settings, AppSettings.KEY_NAV_LABELS, stringResource(Res.string.show_labels_in_navbar), null, true)
+            BoolPref(settings, AppSettings.KEY_NAV_PINNED, stringResource(Res.string.pin_navigation_ui), null, false)
+            BoolPref(settings, AppSettings.KEY_EXIT_CONFIRM, stringResource(Res.string.exit_confirmation), null, false)
+            BoolPref(settings, AppSettings.KEY_SHORTCUTS, stringResource(Res.string.history_shortcuts), null, true)
+
+            SettingsCategoryHeader(stringResource(Res.string.privacy))
+            BoolPref(settings, AppSettings.KEY_PROTECT_APP, stringResource(Res.string.protect_application), stringResource(Res.string.protect_application_summary), false)
+            IndexListPref(
+                settings, AppSettings.KEY_SCREENSHOTS_POLICY, stringResource(Res.string.screenshots_policy),
+                listOf(stringResource(Res.string.screenshots_allow), stringResource(Res.string.screenshots_block_nsfw), stringResource(Res.string.screenshots_block_incognito), stringResource(Res.string.screenshots_block_all)),
+                0,
             )
         }
     }

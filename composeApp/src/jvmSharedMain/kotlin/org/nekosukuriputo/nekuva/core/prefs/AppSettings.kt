@@ -52,8 +52,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getStringOrNull(KEY_THEME)?.toIntOrNull() ?: -1
 		set(value) = prefs.putString(KEY_THEME, value.toString())
 
-	val colorScheme: ColorScheme
+	var colorScheme: ColorScheme
 		get() = prefs.getEnum(KEY_COLOR_THEME, ColorScheme.default)
+		set(value) = prefs.putEnum(KEY_COLOR_THEME, value)
 
 	var isAmoledTheme: Boolean
 		get() = prefs.getBoolean(KEY_THEME_AMOLED, false)
@@ -67,6 +68,22 @@ class AppSettings(private val prefs: ObservableSettings) {
 	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
 	fun observeAmoled(): kotlinx.coroutines.flow.Flow<Boolean> =
 		prefs.toFlowSettings().getBooleanFlow(KEY_THEME_AMOLED, false)
+
+	/** Emits each time the given (string-backed) preference key changes. Used by [observeAsStateFlow]. */
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun keyChangeFlow(key: String): kotlinx.coroutines.flow.Flow<Unit> =
+		prefs.toFlowSettings().getStringOrNullFlow(key).map { }
+
+	// --- Generic typed preference access for the settings UI (key constants are in the companion below) ---
+	fun prefBoolean(key: String, default: Boolean): Boolean = prefs.getBoolean(key, default)
+	fun prefInt(key: String, default: Int): Int = prefs.getInt(key, default)
+	fun prefString(key: String, default: String): String = prefs.getStringOrNull(key) ?: default
+	fun prefStringSet(key: String, default: Set<String>): Set<String> = prefs.getStringSet(key, default)
+
+	fun setPref(key: String, value: Boolean) = prefs.putBoolean(key, value)
+	fun setPref(key: String, value: Int) = prefs.putInt(key, value)
+	fun setPref(key: String, value: String) = prefs.putString(key, value)
+	fun setPref(key: String, value: Set<String>) = prefs.putStringSet(key, value)
 
 	var mainNavItems: List<NavItem>
 		get() {
@@ -420,11 +437,12 @@ class AppSettings(private val prefs: ObservableSettings) {
 	val isReaderKeepScreenOn: Boolean
 		get() = prefs.getBoolean(KEY_READER_SCREEN_ON, true)
 
-	val imagesProxy: Int
+	var imagesProxy: Int
 		get() {
 			val raw = prefs.getStringOrNull(KEY_IMAGES_PROXY)?.toIntOrNull()
 			return raw ?: if (prefs.getBoolean(KEY_IMAGES_PROXY_OLD, false)) 0 else -1
 		}
+		set(value) = prefs.putString(KEY_IMAGES_PROXY, value.toString())
 
 	var isSSLBypassEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SSL_BYPASS, false)

@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import nekuva.composeapp.generated.resources.Res
+import nekuva.composeapp.generated.resources.*
 import nekuva.composeapp.generated.resources.automatic
 import nekuva.composeapp.generated.resources.downloads
 import nekuva.composeapp.generated.resources.local_manga_directories
@@ -36,6 +37,10 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.prefs.DownloadFormat
 import org.nekosukuriputo.nekuva.download.ui.dialog.pickMangaDirectory
 import org.nekosukuriputo.nekuva.download.ui.dialog.supportsDirectoryPicker
+import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.settings.ui.components.BoolPref
+import org.nekosukuriputo.nekuva.settings.ui.components.IndexListPref
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsCategoryHeader
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSingleChoice
@@ -46,6 +51,7 @@ fun DownloadsSettingsScreen(
     viewModel: DownloadsSettingsViewModel = koinViewModel(),
     onBackClick: () -> Unit,
 ) {
+    val settings = koinInject<AppSettings>()
     val directories by viewModel.directories.collectAsState()
     val format by viewModel.format.collectAsState()
     val scope = rememberCoroutineScope()
@@ -101,6 +107,17 @@ fun DownloadsSettingsScreen(
                 selected = format,
                 onSelect = { viewModel.setFormat(it) },
             )
+            IndexListPref(
+                settings, AppSettings.KEY_DOWNLOADS_METERED_NETWORK, stringResource(Res.string.download_over_cellular),
+                listOf(stringResource(Res.string.allow_always), stringResource(Res.string.ask_every_time), stringResource(Res.string.dont_allow)), 1,
+            )
+            // Android battery-optimization exemption — platform-specific, deferred
+            SettingsItem(title = stringResource(Res.string.disable_battery_optimization), summary = stringResource(Res.string.coming_soon), enabled = false)
+
+            SettingsCategoryHeader(stringResource(Res.string.pages_saving))
+            // Save-page default dir belongs to the image-save area — deferred
+            SettingsItem(title = stringResource(Res.string.default_page_save_dir), summary = stringResource(Res.string.coming_soon), enabled = false)
+            BoolPref(settings, AppSettings.KEY_PAGES_SAVE_ASK, stringResource(Res.string.ask_for_dest_dir_every_time), null, true)
         }
     }
 }

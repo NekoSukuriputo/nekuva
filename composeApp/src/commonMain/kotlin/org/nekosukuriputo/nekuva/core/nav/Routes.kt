@@ -43,3 +43,15 @@ data object AboutSettingsRoute
 
 @Serializable
 data object BackupSettingsRoute
+
+@Serializable
+data object StorageNetworkSettingsRoute
+
+@Serializable
+data object ReaderSettingsRoute
+
+@Serializable
+data object ServicesSettingsRoute
+
+@Serializable
+data object TrackerSettingsRoute

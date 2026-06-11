@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.Flow
@@ -36,9 +37,7 @@ fun <T> AppSettings.observeAsStateFlow(
 	scope: CoroutineScope,
 	key: String,
 	valueProducer: AppSettings.() -> T,
-): StateFlow<T> = emptyFlow<String>().transform { changedKey ->
-	if (changedKey == key) {
-		emit(valueProducer())
-	}
-}.stateIn(scope, SharingStarted.Eagerly, valueProducer())
+): StateFlow<T> = keyChangeFlow(key)
+	.map { valueProducer() }
+	.stateIn(scope, SharingStarted.Eagerly, valueProducer())
 

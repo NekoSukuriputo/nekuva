@@ -154,9 +154,33 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<SettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.SettingsRootScreen(
                         onAppearance = { navController.navigate(AppearanceSettingsRoute) },
+                        onReader = { navController.navigate(ReaderSettingsRoute) },
+                        onStorageNetwork = { navController.navigate(StorageNetworkSettingsRoute) },
                         onDownloads = { navController.navigate(DownloadsSettingsRoute) },
+                        onTracker = { navController.navigate(TrackerSettingsRoute) },
+                        onServices = { navController.navigate(ServicesSettingsRoute) },
                         onBackup = { navController.navigate(BackupSettingsRoute) },
                         onAbout = { navController.navigate(AboutSettingsRoute) },
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<ReaderSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.reader.ReaderSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<ServicesSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.services.ServicesSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<TrackerSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.tracker.TrackerSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<StorageNetworkSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkScreen(
                         onBackClick = { navController.popBackStack() },
                     )
                 }

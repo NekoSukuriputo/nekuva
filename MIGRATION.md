@@ -41,7 +41,11 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [ ] `tracker`
 - [ ] `scrobbling`
 - [ ] `sync`
-- [~] `settings` (Phase S1 DONE pending run-verify: menu root 9 kategori + **Appearance** (tema sistem/terang/gelap + AMOLED, live re-theme) + **Downloads** (kelola direktori unduhan: list/tambah-via-picker/hapus/set-default + format) + **About** (versi + link GitHub). Storage 174 key sudah ada. Sisanya (Reader, Sources, Storage&Network, Tracker, Services, Backup) = Phase S2/S3, lihat ledger)
+- [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & dipersist**, sesuai
+      permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
+      Beberapa BEHAVIOR menunggu area konsumennya (reader-advanced, tracker, sync, stats, biometric, proxy/DoH);
+      nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen (nav config, proxy, suggestions, login
+      tracker, discord) = "Segera hadir". Lihat ledger)
 - [ ] `alternatives`
 - [ ] `browser`
 - [ ] `picker`
@@ -313,7 +317,13 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
       lalu row), lanjut-saat-gagal per item.
       DEFERRED: backup **settings** (multiplatform-settings tak punya generic put), sources/scrobbling/stats/
       saved-filters (belum dimigrasi), reader-grid, periodic/Telegram backup, pilih-section saat restore.
-- [ ] **Storage & Network**: data cleanup (clear cache/db/cookies/webview), proxy, DoH, image proxy, toggle SSL/offline/adblock.
+- [x] **Storage & Network** (pending run-verify): **Image proxy** (none/wsrv.nl/0ms.dev) — kini **live**
+      karena `observeAsStateFlow` yg sebelumnya STUB diperbaiki pakai `ObservableSettings.toFlowSettings`
+      (`keyChangeFlow`); `imagesProxy` jadi `var`. **Data removal**: Clear thumbnails cache (Coil memory+disk
+      via `SingletonImageLoader`/`LocalPlatformContext`) + Clear cookies (`MutableCookieJar.clear`, dgn konfirmasi).
+      DEFERRED (butuh wiring network-layer yg belum ada): proxy (type/addr/port/auth/test), DoH, SSL bypass,
+      connectivity check, adblock, prefetch/preload, clear pages-cache (LocalStorageCache belum di-DI/Context-coupled),
+      clear HTTP/DB/webview, storage-usage meter.
 
 **Phase S3 — DEFERRED (UI bisa dibuat, fungsi tergantung area lain):**
 - [ ] **Reader settings** (~30 pref) → butuh reader-advanced.
