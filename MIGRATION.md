@@ -29,7 +29,13 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `list`
 - [x] `remotelist`
 - [x] `details` (Done, resume + favorites integrated)
-- [x] `reader` (Done, history integrated)
+- [~] `reader` (reader-advanced sedang dikerjakan bertahap. **R1 DONE**: 4 mode baca fungsional
+      (Standard LTR / Kanan-ke-kiri / Vertical-paged / Webtoon-continuous) via HorizontalPager/VerticalPager +
+      pinch/double-tap zoom + pan + tap-zone navigasi; mode dipilih dari menu & **diingat** (default = WEBTOON).
+      **R2 DONE**: terapkan setting reader yang lintas-platform — background reader (DEFAULT/LIGHT/DARK/WHITE/BLACK),
+      info bar bawah (nama bab + halaman x/total), nomor halaman; setting "Mode baca default" di Settings kini
+      terhubung. **R3** (gambar lokal/offline → baca manga unduhan), **R4** (save-page, koreksi warna, auto-scroll,
+      double-page, keep-screen-on/fullscreen/orientasi/volume — platform Android) = berikutnya.)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [ ] `search`

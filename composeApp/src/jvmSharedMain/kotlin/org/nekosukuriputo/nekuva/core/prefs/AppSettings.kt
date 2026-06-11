@@ -237,8 +237,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 	val readerBackground: ReaderBackground
 		get() = prefs.getEnum(KEY_READER_BACKGROUND, ReaderBackground.DEFAULT)
 
-	val defaultReaderMode: ReaderMode
-		get() = prefs.getEnum(KEY_READER_MODE, ReaderMode.STANDARD)
+	var defaultReaderMode: ReaderMode
+		get() = prefs.getEnum(KEY_READER_MODE, ReaderMode.WEBTOON)
+		set(value) = prefs.putEnum(KEY_READER_MODE, value)
 
 	val isReaderModeDetectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_MODE_DETECT, true)

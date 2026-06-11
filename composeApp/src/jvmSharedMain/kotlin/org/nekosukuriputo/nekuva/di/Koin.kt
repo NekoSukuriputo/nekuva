@@ -72,7 +72,7 @@ val prefsModule = module {
 }
 
 val readerModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val bookmarksModule = module {

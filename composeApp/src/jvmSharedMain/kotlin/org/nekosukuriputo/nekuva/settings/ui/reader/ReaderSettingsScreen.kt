@@ -24,10 +24,12 @@ import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.core.prefs.ReaderMode
 import org.nekosukuriputo.nekuva.settings.ui.components.BoolPref
 import org.nekosukuriputo.nekuva.settings.ui.components.IndexListPref
 import org.nekosukuriputo.nekuva.settings.ui.components.MultiPref
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
+import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSingleChoice
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSlider
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,10 +51,20 @@ fun ReaderSettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
-            IndexListPref(
-                settings, "reader_mode", stringResource(Res.string.default_mode),
-                listOf(stringResource(Res.string.standard), stringResource(Res.string.right_to_left), stringResource(Res.string.vertical), stringResource(Res.string.webtoon)), 0,
-            )
+            run {
+                var readerMode by remember { mutableStateOf(settings.defaultReaderMode) }
+                SettingsSingleChoice(
+                    title = stringResource(Res.string.default_mode),
+                    options = listOf(
+                        stringResource(Res.string.standard) to ReaderMode.STANDARD,
+                        stringResource(Res.string.right_to_left) to ReaderMode.REVERSED,
+                        stringResource(Res.string.vertical) to ReaderMode.VERTICAL,
+                        stringResource(Res.string.webtoon) to ReaderMode.WEBTOON,
+                    ),
+                    selected = readerMode,
+                    onSelect = { settings.defaultReaderMode = it; readerMode = it },
+                )
+            }
             BoolPref(settings, "reader_mode_detect", stringResource(Res.string.detect_reader_mode), stringResource(Res.string.detect_reader_mode_summary), true)
             IndexListPref(
                 settings, "zoom_mode", stringResource(Res.string.scale_mode),
