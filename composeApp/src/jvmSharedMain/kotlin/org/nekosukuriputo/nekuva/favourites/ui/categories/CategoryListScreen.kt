@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -98,6 +100,21 @@ fun CategoryListScreen(
                                 }) {
                                     Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
                                 }
+                            }
+                            IconButton(onClick = { viewModel.toggleTracking(category) }) {
+                                Icon(
+                                    if (category.isTrackingEnabled) {
+                                        Icons.Default.Notifications
+                                    } else {
+                                        Icons.Default.NotificationsOff
+                                    },
+                                    contentDescription = stringResource(Res.string.check_for_new_chapters),
+                                    tint = if (category.isTrackingEnabled) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
                             }
                             IconButton(onClick = {
                                 editingCategory = category

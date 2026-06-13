@@ -128,6 +128,12 @@ val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkViewModel(get(), get()) }
 }
 
+val trackerModule = module {
+    single { org.nekosukuriputo.nekuva.tracker.domain.TrackingRepository(get(), get()) }
+    single { org.nekosukuriputo.nekuva.tracker.domain.CheckNewChaptersUseCase(get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get()) }
+}
+
 val backupsModule = module {
     single { org.nekosukuriputo.nekuva.backups.data.BackupRepository(get()) }
     factory { org.nekosukuriputo.nekuva.backups.ui.BackupViewModel(get()) }
@@ -136,7 +142,7 @@ val backupsModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule)
     }
 
 

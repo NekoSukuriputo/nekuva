@@ -33,7 +33,7 @@ class CategoryListViewModel(
             repository.createCategory(
                 title = title,
                 sortOrder = ListSortOrder.NEWEST,
-                isTrackerEnabled = false,
+                isTrackerEnabled = true, // track new chapters by default (Doki parity → Feed tab)
                 isVisibleOnShelf = true
             )
         }
@@ -47,6 +47,19 @@ class CategoryListViewModel(
                 sortOrder = ListSortOrder(category.sortKey.toString(), ListSortOrder.NEWEST), // we might not have the correct current order, but updating just title for now
                 isTrackerEnabled = category.isTrackingEnabled,
                 isVisibleOnShelf = category.isVisibleInLibrary
+            )
+        }
+    }
+
+    /** Toggle new-chapter tracking for a category (drives the Feed tab). */
+    fun toggleTracking(category: FavouriteCategory) {
+        viewModelScope.launch {
+            repository.updateCategory(
+                id = category.id,
+                title = category.title,
+                sortOrder = ListSortOrder(category.sortKey.toString(), ListSortOrder.NEWEST),
+                isTrackerEnabled = !category.isTrackingEnabled,
+                isVisibleOnShelf = category.isVisibleInLibrary,
             )
         }
     }

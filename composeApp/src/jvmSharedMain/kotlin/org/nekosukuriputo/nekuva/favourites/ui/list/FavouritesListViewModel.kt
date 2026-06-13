@@ -74,7 +74,7 @@ class FavouritesListViewModel(
 
     fun createCategory(title: String) {
         viewModelScope.launch {
-            repository.createCategory(title, ListSortOrder.NEWEST, false, true)
+            repository.createCategory(title, ListSortOrder.NEWEST, true, true)
         }
     }
 }

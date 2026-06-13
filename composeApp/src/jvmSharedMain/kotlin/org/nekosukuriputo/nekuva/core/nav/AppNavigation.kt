@@ -78,7 +78,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     )
                 }
                 composable<FeedTabRoute> {
-                    org.nekosukuriputo.nekuva.main.ui.EmptyTabScreen("Feed / Updates (Not implemented yet)")
+                    org.nekosukuriputo.nekuva.tracker.ui.feed.FeedScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                    )
                 }
                 composable<ExploreRoute> {
                     org.nekosukuriputo.nekuva.explore.ui.ExploreScreen(
