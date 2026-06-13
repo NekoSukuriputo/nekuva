@@ -45,6 +45,7 @@ fun GlobalSearchScreen(
     viewModel: GlobalSearchViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit,
     onSourceMore: (sourceId: String, query: String) -> Unit,
+    onOpenBrowser: (url: String) -> Unit,
     onBackClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -88,6 +89,7 @@ fun GlobalSearchScreen(
                             section = section,
                             onMangaClick = onMangaClick,
                             onMore = { sourceId -> onSourceMore(sourceId, viewModel.query) },
+                            onOpenBrowser = onOpenBrowser,
                         )
                     }
                     if (uiState.isLoading) {
@@ -117,6 +119,7 @@ private fun SearchSectionItem(
     section: SearchSection,
     onMangaClick: (Long) -> Unit,
     onMore: (sourceId: String) -> Unit,
+    onOpenBrowser: (url: String) -> Unit,
 ) {
     val title = when (section.kind) {
         SearchSectionKind.HISTORY -> stringResource(Res.string.history)
@@ -155,9 +158,8 @@ private fun SearchSectionItem(
                 // Many source errors are CloudFlare/JS walls (evaluateJs is stubbed) — let the user
                 // open the site directly, like Doki's "Open in browser" error action.
                 section.browserUrl?.let { url ->
-                    val uriHandler = LocalUriHandler.current
                     TextButton(
-                        onClick = { runCatching { uriHandler.openUri(url) } },
+                        onClick = { onOpenBrowser(url) },
                         contentPadding = PaddingValues(0.dp),
                     ) {
                         Text(stringResource(Res.string.open_in_browser))

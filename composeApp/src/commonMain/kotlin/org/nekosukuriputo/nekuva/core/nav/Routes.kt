@@ -27,6 +27,9 @@ data object HistoryRoute
 data class GlobalSearchRoute(val query: String)
 
 @Serializable
+data class BrowserRoute(val url: String, val title: String? = null)
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

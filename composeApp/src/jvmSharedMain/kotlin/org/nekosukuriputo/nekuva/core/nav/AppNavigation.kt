@@ -118,7 +118,16 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onSourceMore = { sourceId, query ->
                             navController.navigate(RemoteListRoute(sourceId, query))
                         },
+                        onOpenBrowser = { url -> navController.navigate(BrowserRoute(url)) },
                         onBackClick = { navController.popBackStack() }
+                    )
+                }
+                composable<BrowserRoute> { backStackEntry ->
+                    val args = backStackEntry.toRoute<BrowserRoute>()
+                    org.nekosukuriputo.nekuva.browser.ui.BrowserScreen(
+                        url = args.url,
+                        title = args.title,
+                        onBack = { navController.popBackStack() },
                     )
                 }
                 composable<HomeRoute> { // Represents Local tab
