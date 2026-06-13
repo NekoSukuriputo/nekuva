@@ -871,7 +871,7 @@
     <string name="rename">Переименовать</string>
     <string name="save_filter">Сохранить фильтр</string>
     <string name="overwrite">Перезаписать</string>
-    <string name="filter_overwrite_confirm">Фильтр с именем \"%s\" уже существует. Перезаписать?</string>
+    <string name="filter_overwrite_confirm">Фильтр с именем \"%1$s\" уже существует. Перезаписать?</string>
     <string name="storage_and_network">Хранилище и сеть</string>
     <string name="create_or_restore_backup">Создать или восстановить резервную копию</string>
     <string name="data_removal">Удаление данных</string>

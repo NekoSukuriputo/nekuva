@@ -31,11 +31,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -50,7 +52,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -77,11 +81,11 @@ import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
-import org.nekosukuriputo.nekuva.parsers.model.ContentRating
-import org.nekosukuriputo.nekuva.parsers.model.ContentType
-import org.nekosukuriputo.nekuva.parsers.model.MangaState
 import org.nekosukuriputo.nekuva.parsers.model.MangaTag
-import org.nekosukuriputo.nekuva.parsers.model.SortOrder
+import org.nekosukuriputo.nekuva.parsers.model.YEAR_MIN
+import org.nekosukuriputo.nekuva.parsers.model.YEAR_UNKNOWN
+import java.util.Calendar
+import java.util.Locale
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,10 +176,9 @@ fun RemoteListScreen(
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             QuickFilterRow(
                 state = filterState,
+                viewModel = viewModel,
                 searchActive = searchActive,
                 onOpenSheet = { showFilterSheet = true },
-                onToggleTag = { viewModel.toggleTag(it) },
-                onClearSearch = { viewModel.clearSearch() },
                 onEditSearch = { searchActive = true },
             )
             Box(modifier = Modifier.fillMaxSize()) {
@@ -240,15 +243,18 @@ fun RemoteListScreen(
     }
 }
 
-/** Doki-style quick-filter chip row under the toolbar: Genre entry, active search chip, quick genres. */
+/**
+ * Doki-style quick-filter chip row under the toolbar (FilterHeaderProducer parity): Genre entry,
+ * active search chip, then a closeable chip for every applied non-genre filter (author, language,
+ * type, demographic, rating, state), then quick genre chips.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuickFilterRow(
     state: FilterUiState,
+    viewModel: RemoteListViewModel,
     searchActive: Boolean,
     onOpenSheet: () -> Unit,
-    onToggleTag: (MangaTag) -> Unit,
-    onClearSearch: () -> Unit,
     onEditSearch: () -> Unit,
 ) {
     val quickTags = remember(state.selectedTags, state.availableTags) {
@@ -266,31 +272,77 @@ private fun QuickFilterRow(
                 leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
         }
+        items(state.savedFilters) { preset ->
+            FilterChip(
+                selected = preset.id == state.selectedSavedFilterId,
+                onClick = { viewModel.toggleSavedFilter(preset.id) },
+                label = { Text(preset.name) },
+            )
+        }
         if (!state.query.isNullOrBlank() && !searchActive) {
             item {
-                InputChip(
-                    selected = true,
+                ActiveFilterChip(
+                    label = state.query,
                     onClick = onEditSearch,
-                    label = { Text(state.query) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    trailingIcon = {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = stringResource(Res.string.cancel),
-                            modifier = Modifier.size(18.dp).clickable(onClick = onClearSearch),
-                        )
-                    },
+                    onClose = { viewModel.clearSearch() },
+                    leadingIcon = Icons.Default.Search,
                 )
             }
+        }
+        if (!state.author.isNullOrBlank()) {
+            item { ActiveFilterChip(label = state.author, onClose = { viewModel.setAuthor(null) }) }
+        }
+        state.selectedLocale?.let { locale ->
+            item { ActiveFilterChip(label = localeTitle(locale), onClose = { viewModel.setLocale(null) }) }
+        }
+        state.selectedOriginalLocale?.let { locale ->
+            item { ActiveFilterChip(label = localeTitle(locale), onClose = { viewModel.setOriginalLocale(null) }) }
+        }
+        items(state.selectedTypes.toList()) { type ->
+            ActiveFilterChip(label = contentTypeTitle(type), onClose = { viewModel.toggleType(type) })
+        }
+        items(state.selectedDemographics.toList()) { d ->
+            ActiveFilterChip(label = demographicTitle(d), onClose = { viewModel.toggleDemographic(d) })
+        }
+        items(state.selectedContentRating.toList()) { cr ->
+            ActiveFilterChip(label = contentRatingTitle(cr), onClose = { viewModel.toggleContentRating(cr) })
+        }
+        items(state.selectedStates.toList()) { st ->
+            ActiveFilterChip(label = mangaStateTitle(st), onClose = { viewModel.toggleState(st) })
         }
         items(quickTags) { tag ->
             FilterChip(
                 selected = tag in state.selectedTags,
-                onClick = { onToggleTag(tag) },
+                onClick = { viewModel.toggleTag(tag) },
                 label = { Text(tag.title) },
             )
         }
     }
+}
+
+/** A selected (active) filter shown as a checked chip with a ✕ to remove it — Doki's header chips. */
+@Composable
+private fun ActiveFilterChip(
+    label: String,
+    onClose: () -> Unit,
+    onClick: () -> Unit = onClose,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+) {
+    InputChip(
+        selected = true,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = leadingIcon?.let {
+            { Icon(it, contentDescription = null, modifier = Modifier.size(18.dp)) }
+        },
+        trailingIcon = {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringResource(Res.string.remove),
+                modifier = Modifier.size(18.dp).clickable(onClick = onClose),
+            )
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -303,6 +355,8 @@ private fun FilterSheet(
     // LIVE: no draft. Every toggle calls the ViewModel directly, which re-queries immediately
     // (mirrors Doki). Closing the sheet keeps the applied filter (no revert), like Doki.
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<org.nekosukuriputo.nekuva.filter.data.PersistableFilter?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -346,10 +400,63 @@ private fun FilterSheet(
                 }
             }
 
+            // Filter tersimpan (saved presets) — Doki shows them right after sort.
+            if (state.savedFilters.isNotEmpty()) {
+                FilterSection(title = stringResource(Res.string.saved_filters)) {
+                    state.savedFilters.forEach { preset ->
+                        var menuOpen by remember(preset.id) { mutableStateOf(false) }
+                        Box {
+                            FilterChip(
+                                selected = preset.id == state.selectedSavedFilterId,
+                                onClick = { viewModel.toggleSavedFilter(preset.id) },
+                                label = { Text(preset.name) },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Default.MoreVert,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp).clickable { menuOpen = true },
+                                    )
+                                },
+                            )
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.rename)) },
+                                    onClick = { menuOpen = false; renameTarget = preset },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.delete)) },
+                                    onClick = { menuOpen = false; viewModel.deleteSavedFilter(preset.id) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if (state.isOptionsLoading && state.availableTags.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
+            }
+
+            // Bahasa (locale) — Doki shows it right after sort; null = any.
+            if (state.availableLocales.isNotEmpty()) {
+                LocaleDropdown(
+                    title = stringResource(Res.string.language),
+                    locales = state.availableLocales,
+                    selected = state.selectedLocale,
+                    onSelect = { viewModel.setLocale(it) },
+                )
+            }
+
+            // Bahasa asli (original locale) — only if the source supports it.
+            if (state.isOriginalLocaleSupported && state.availableLocales.isNotEmpty()) {
+                LocaleDropdown(
+                    title = stringResource(Res.string.original_language),
+                    locales = state.availableLocales,
+                    selected = state.selectedOriginalLocale,
+                    onSelect = { viewModel.setOriginalLocale(it) },
+                )
             }
 
             // Genre (include)
@@ -376,6 +483,28 @@ private fun FilterSheet(
                         )
                     }
                 }
+            }
+
+            // Penulis (author search) — only if the source supports it. Doki places it after genres.
+            if (state.isAuthorSearchSupported) {
+                Text(stringResource(Res.string.author), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                var authorText by remember(state.author) { mutableStateOf(state.author.orEmpty()) }
+                OutlinedTextField(
+                    value = authorText,
+                    onValueChange = { authorText = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(Res.string.author)) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { viewModel.setAuthor(authorText) }),
+                    trailingIcon = {
+                        if (authorText.isNotEmpty()) {
+                            IconButton(onClick = { authorText = ""; viewModel.setAuthor(null) }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.cancel))
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             // Tipe (content type)
@@ -417,13 +546,76 @@ private fun FilterSheet(
                 }
             }
 
+            // Demografi
+            if (state.availableDemographics.isNotEmpty()) {
+                FilterSection(title = stringResource(Res.string.demographics)) {
+                    state.availableDemographics.forEach { d ->
+                        FilterChip(
+                            selected = d in state.selectedDemographics,
+                            onClick = { viewModel.toggleDemographic(d) },
+                            label = { Text(demographicTitle(d)) },
+                        )
+                    }
+                }
+            }
+
+            // Tahun (single year slider) — dragging to the minimum clears the filter, like Doki.
+            if (state.isYearSupported) {
+                val maxYear = remember { Calendar.getInstance()[Calendar.YEAR] + 1 }
+                var yearValue by remember(state.selectedYear) {
+                    mutableStateOf(if (state.selectedYear == YEAR_UNKNOWN) YEAR_MIN else state.selectedYear)
+                }
+                Text(
+                    text = stringResource(Res.string.year) + ": " +
+                        if (yearValue <= YEAR_MIN) stringResource(Res.string.any) else yearValue.toString(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Slider(
+                    value = yearValue.toFloat(),
+                    valueRange = YEAR_MIN.toFloat()..maxYear.toFloat(),
+                    onValueChange = { yearValue = it.toInt() },
+                    onValueChangeFinished = {
+                        viewModel.setYear(if (yearValue <= YEAR_MIN) YEAR_UNKNOWN else yearValue)
+                    },
+                )
+            }
+
+            // Rentang tahun (range slider) — endpoints at the extremes mean "unbounded", like Doki.
+            if (state.isYearRangeSupported) {
+                val maxYear = remember { Calendar.getInstance()[Calendar.YEAR] + 1 }
+                var range by remember(state.selectedYearFrom, state.selectedYearTo) {
+                    val from = if (state.selectedYearFrom == YEAR_UNKNOWN) YEAR_MIN else state.selectedYearFrom
+                    val to = if (state.selectedYearTo == YEAR_UNKNOWN) maxYear else state.selectedYearTo
+                    mutableStateOf(from.toFloat()..to.toFloat())
+                }
+                Text(
+                    text = stringResource(Res.string.years) + ": " +
+                        (if (range.start.toInt() <= YEAR_MIN) stringResource(Res.string.any) else range.start.toInt().toString()) +
+                        " – " +
+                        (if (range.endInclusive.toInt() >= maxYear) stringResource(Res.string.any) else range.endInclusive.toInt().toString()),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                RangeSlider(
+                    value = range,
+                    valueRange = YEAR_MIN.toFloat()..maxYear.toFloat(),
+                    onValueChange = { range = it },
+                    onValueChangeFinished = {
+                        val from = range.start.toInt().let { if (it <= YEAR_MIN) YEAR_UNKNOWN else it }
+                        val to = range.endInclusive.toInt().let { if (it >= maxYear) YEAR_UNKNOWN else it }
+                        viewModel.setYearRange(from, to)
+                    },
+                )
+            }
+
             Spacer(Modifier.height(8.dp))
-            // Bottom bar mirrors Doki: "Simpan" (save preset) + "Selesai" (close — apply is already live).
-            // Save-as-named-preset (SavedFilters) is DEFERRED, so "Simpan" is shown but disabled (no fake action).
+            // Bottom bar mirrors Doki: "Simpan" (save preset, enabled when a filter is applied and
+            // not already saved) + "Selesai" (close — apply is already live).
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
-                    onClick = { /* Deferred: SavedFilters preset — see MIGRATION.md */ },
-                    enabled = false,
+                    onClick = { showSaveDialog = true },
+                    enabled = state.isFilterApplied && state.selectedSavedFilterId == null,
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(stringResource(Res.string.save))
@@ -431,6 +623,107 @@ private fun FilterSheet(
                 FilledTonalButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
                     Text(stringResource(Res.string.done))
                 }
+            }
+        }
+    }
+
+    if (showSaveDialog) {
+        FilterNameDialog(
+            title = stringResource(Res.string.save_filter),
+            initialName = "",
+            existingNames = state.savedFilters.map { it.name },
+            onConfirm = { name ->
+                viewModel.saveCurrentFilter(name)
+                showSaveDialog = false
+            },
+            onDismiss = { showSaveDialog = false },
+        )
+    }
+    renameTarget?.let { target ->
+        FilterNameDialog(
+            title = stringResource(Res.string.rename),
+            initialName = target.name,
+            existingNames = state.savedFilters.map { it.name } - target.name,
+            onConfirm = { name ->
+                viewModel.renameSavedFilter(target.id, name)
+                renameTarget = null
+            },
+            onDismiss = { renameTarget = null },
+        )
+    }
+}
+
+/** Name-input dialog for saving/renaming a filter preset; warns before overwriting an existing name. */
+@Composable
+private fun FilterNameDialog(
+    title: String,
+    initialName: String,
+    existingNames: List<String>,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    val trimmed = name.trim()
+    val collides = trimmed in existingNames
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { if (it.length <= org.nekosukuriputo.nekuva.filter.data.PersistableFilter.MAX_TITLE_LENGTH) name = it },
+                    singleLine = true,
+                    placeholder = { Text(stringResource(Res.string.enter_name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (collides) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(Res.string.filter_overwrite_confirm, trimmed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = trimmed.isNotEmpty(), onClick = { onConfirm(trimmed) }) {
+                Text(stringResource(if (collides) Res.string.overwrite else Res.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
+        },
+    )
+}
+
+/** Dropdown for the language / original-language filter; the first entry (null) means "any". */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LocaleDropdown(
+    title: String,
+    locales: List<Locale>,
+    selected: Locale?,
+    onSelect: (Locale?) -> Unit,
+) {
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = localeTitle(selected),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            (listOf<Locale?>(null) + locales).forEach { locale ->
+                DropdownMenuItem(
+                    text = { Text(localeTitle(locale)) },
+                    onClick = { onSelect(locale); expanded = false },
+                )
             }
         }
     }

@@ -873,7 +873,7 @@
     <string name="rename">Yeniden adlandır</string>
     <string name="save_filter">Filtreyi kaydet</string>
     <string name="overwrite">Üzerine yaz</string>
-    <string name="filter_overwrite_confirm">\"%s\" adında bir filtre zaten var. Üzerine yazmak istiyor musunuz?</string>
+    <string name="filter_overwrite_confirm">\"%1$s\" adında bir filtre zaten var. Üzerine yazmak istiyor musunuz?</string>
     <string name="storage_and_network">Depolama ve ağ</string>
     <string name="create_or_restore_backup">Yedekleme oluştur veya geri yükle</string>
     <string name="data_removal">Verilerin silinmesi</string>

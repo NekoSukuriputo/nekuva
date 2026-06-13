@@ -4,8 +4,11 @@ import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.stringResource
 import org.nekosukuriputo.nekuva.parsers.model.ContentRating
 import org.nekosukuriputo.nekuva.parsers.model.ContentType
+import org.nekosukuriputo.nekuva.parsers.model.Demographic
 import org.nekosukuriputo.nekuva.parsers.model.MangaState
 import org.nekosukuriputo.nekuva.parsers.model.SortOrder
+import org.nekosukuriputo.nekuva.parsers.util.toTitleCase
+import java.util.Locale
 import nekuva.composeapp.generated.resources.*
 
 /**
@@ -52,6 +55,22 @@ fun contentRatingTitle(rating: ContentRating): String = when (rating) {
     ContentRating.SUGGESTIVE -> stringResource(Res.string.rating_suggestive)
     ContentRating.ADULT -> stringResource(Res.string.rating_adult)
 }
+
+/** Localized label for a [Demographic] (Doki "Demografi"). */
+@Composable
+fun demographicTitle(demographic: Demographic): String = when (demographic) {
+    Demographic.SHOUNEN -> stringResource(Res.string.demographic_shounen)
+    Demographic.SHOUJO -> stringResource(Res.string.demographic_shoujo)
+    Demographic.SEINEN -> stringResource(Res.string.demographic_seinen)
+    Demographic.JOSEI -> stringResource(Res.string.demographic_josei)
+    Demographic.KODOMO -> stringResource(Res.string.demographic_kodomo)
+    Demographic.NONE -> stringResource(Res.string.none)
+}
+
+/** Display name of a locale in its own language ("Bahasa Indonesia"), or "Any" for null — like Doki. */
+@Composable
+fun localeTitle(locale: Locale?): String =
+    locale?.getDisplayName(locale)?.toTitleCase(locale) ?: stringResource(Res.string.any)
 
 /** Localized label for a [ContentType] (Doki "Tipe"). */
 @Composable

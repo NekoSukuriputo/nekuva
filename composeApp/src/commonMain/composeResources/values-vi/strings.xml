@@ -871,7 +871,7 @@
     <string name="rename">Đặt tên</string>
     <string name="save_filter">Lưu bộ lọc</string>
     <string name="overwrite">Đè lên</string>
-    <string name="filter_overwrite_confirm">Một bộ lộc có tên là \"%s\" đã tồn tại trước đó. Bạn có muốn ghi đè nó lên không?</string>
+    <string name="filter_overwrite_confirm">Một bộ lộc có tên là \"%1$s\" đã tồn tại trước đó. Bạn có muốn ghi đè nó lên không?</string>
     <string name="storage_and_network">Lưu trữ và mạng</string>
     <string name="create_or_restore_backup">Tạo hoặc khôi phục từ một bản sao lưu</string>
     <string name="data_removal">Xoá dữ liệu</string>

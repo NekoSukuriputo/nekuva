@@ -879,7 +879,7 @@
     <string name="rename">Ganti nama</string>
     <string name="save_filter">Simpan filter</string>
     <string name="overwrite">Timpa</string>
-    <string name="filter_overwrite_confirm">Filter bernama \"%s\" sudah ada. Ingin menimpanya?</string>
+    <string name="filter_overwrite_confirm">Filter bernama \"%1$s\" sudah ada. Ingin menimpanya?</string>
     <string name="storage_and_network">Penyimpanan dan jaringan</string>
     <string name="create_or_restore_backup">Buat atau pulihkan cadangan</string>
     <string name="data_removal">Penghapusan data</string>

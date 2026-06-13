@@ -873,7 +873,7 @@
     <string name="rename">Rinomina</string>
     <string name="save_filter">Salva filtro</string>
     <string name="overwrite">Sovrascrivi</string>
-    <string name="filter_overwrite_confirm">Un filtro di nome \"%s\" esiste già. Vuoi sovrascriverlo?</string>
+    <string name="filter_overwrite_confirm">Un filtro di nome \"%1$s\" esiste già. Vuoi sovrascriverlo?</string>
     <string name="storage_and_network">Memoria e rete</string>
     <string name="create_or_restore_backup">Crea o ripristina un backup</string>
     <string name="data_removal">Rimozione dei dati</string>

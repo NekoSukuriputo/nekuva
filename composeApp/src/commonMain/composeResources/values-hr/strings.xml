@@ -869,7 +869,7 @@
     <string name="two_page_scroll_sensitivity">Osjetljivost pomicanja dviju stranica</string>
     <string name="frequency_every_6_hours">Svakih 6 sati</string>
     <string name="overwrite">Prepiši</string>
-    <string name="filter_overwrite_confirm">Filtar s imenom „%s” već postoji. Želiš li ga prepisati?</string>
+    <string name="filter_overwrite_confirm">Filtar s imenom „%1$s” već postoji. Želiš li ga prepisati?</string>
     <string name="storage_and_network">Spremište i mreža</string>
     <string name="create_or_restore_backup">Stvori ili obnovi sigurnosnu kopiju</string>
     <string name="data_removal">Uklanjanje podataka</string>

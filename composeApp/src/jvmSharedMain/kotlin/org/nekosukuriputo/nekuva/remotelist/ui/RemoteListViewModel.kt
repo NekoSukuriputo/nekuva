@@ -12,19 +12,26 @@ import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.core.nav.RemoteListRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.filter.data.FilterSnapshot
+import org.nekosukuriputo.nekuva.filter.data.PersistableFilter
+import org.nekosukuriputo.nekuva.filter.data.SavedFiltersRepository
 import org.nekosukuriputo.nekuva.parsers.model.ContentRating
 import org.nekosukuriputo.nekuva.parsers.model.ContentType
+import org.nekosukuriputo.nekuva.parsers.model.Demographic
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaListFilter
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 import org.nekosukuriputo.nekuva.parsers.model.MangaState
 import org.nekosukuriputo.nekuva.parsers.model.MangaTag
 import org.nekosukuriputo.nekuva.parsers.model.SortOrder
+import org.nekosukuriputo.nekuva.parsers.model.YEAR_UNKNOWN
+import java.util.Locale
 
 class RemoteListViewModel(
     savedStateHandle: SavedStateHandle,
     private val repositoryFactory: MangaRepository.Factory,
     private val mangaDataRepository: MangaDataRepository,
+    private val savedFiltersRepository: SavedFiltersRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<RemoteListRoute>()
@@ -42,7 +49,15 @@ class RemoteListViewModel(
     private val _filterState = MutableStateFlow(FilterUiState())
     val filterState: StateFlow<FilterUiState> = _filterState.asStateFlow()
 
-    private val isTagsExclusionSupported: Boolean = repository?.filterCapabilities?.isTagsExclusionSupported == true
+    // Source capabilities (gate which filter fields are shown — Doki's FilterCoordinator.capabilities).
+    private val capabilities = repository?.filterCapabilities
+    private val isTagsExclusionSupported: Boolean = capabilities?.isTagsExclusionSupported == true
+    private val isMultipleTagsSupported: Boolean = capabilities?.isMultipleTagsSupported != false
+    private val isSearchWithFiltersSupported: Boolean = capabilities?.isSearchWithFiltersSupported == true
+    private val isYearSupported: Boolean = capabilities?.isYearSupported == true
+    private val isYearRangeSupported: Boolean = capabilities?.isYearRangeSupported == true
+    private val isOriginalLocaleSupported: Boolean = capabilities?.isOriginalLocaleSupported == true
+    private val isAuthorSearchSupported: Boolean = capabilities?.isAuthorSearchSupported == true
 
     // Current applied filter selection (the source of truth for queries).
     private var query: String? = null
@@ -52,6 +67,13 @@ class RemoteListViewModel(
     private var selectedStates: Set<MangaState> = emptySet()
     private var selectedContentRating: Set<ContentRating> = emptySet()
     private var selectedTypes: Set<ContentType> = emptySet()
+    private var selectedDemographics: Set<Demographic> = emptySet()
+    private var selectedLocale: Locale? = null
+    private var selectedOriginalLocale: Locale? = null
+    private var selectedYear: Int = YEAR_UNKNOWN
+    private var selectedYearFrom: Int = YEAR_UNKNOWN
+    private var selectedYearTo: Int = YEAR_UNKNOWN
+    private var author: String? = null
 
     // Available options (from getFilterOptions + repository.sortOrders), for the filter sheet.
     private var availableSortOrders: List<SortOrder> = emptyList()
@@ -59,6 +81,9 @@ class RemoteListViewModel(
     private var availableStates: List<MangaState> = emptyList()
     private var availableContentRating: List<ContentRating> = emptyList()
     private var availableTypes: List<ContentType> = emptyList()
+    private var availableDemographics: List<Demographic> = emptyList()
+    private var availableLocales: List<Locale> = emptyList()
+    private var savedFilters: List<PersistableFilter> = emptyList()
 
     private var loadingJob: Job? = null
 
@@ -72,6 +97,12 @@ class RemoteListViewModel(
         emitFilterState(optionsLoading = true)
         loadFilterOptions()
         loadMangaList(append = false)
+        viewModelScope.launch {
+            savedFiltersRepository.observeAll(sourceId).collect {
+                savedFilters = it
+                emitFilterState()
+            }
+        }
     }
 
     private fun loadFilterOptions() {
@@ -83,6 +114,8 @@ class RemoteListViewModel(
                 availableStates = opts.availableStates.toList()
                 availableContentRating = opts.availableContentRating.toList()
                 availableTypes = opts.availableContentTypes.toList()
+                availableDemographics = opts.availableDemographics.toList()
+                availableLocales = opts.availableLocales.toList()
             } catch (_: Exception) {
                 // Options unavailable for this source — the sheet shows whatever resolved.
             } finally {
@@ -99,17 +132,44 @@ class RemoteListViewModel(
             states = selectedStates,
             contentRating = selectedContentRating,
             types = selectedTypes,
+            demographics = selectedDemographics,
+            locale = selectedLocale,
+            originalLocale = selectedOriginalLocale,
+            year = selectedYear,
+            yearFrom = selectedYearFrom,
+            yearTo = selectedYearTo,
+            author = author,
         )
         return filter.takeIf { it.isNotEmpty() }
     }
 
-    private fun isFilterApplied(): Boolean =
-        !query.isNullOrBlank() || selectedTags.isNotEmpty() || selectedTagsExclude.isNotEmpty() ||
-            selectedStates.isNotEmpty() || selectedContentRating.isNotEmpty() || selectedTypes.isNotEmpty()
+    private fun hasNonSearchSelection(): Boolean =
+        selectedTags.isNotEmpty() || selectedTagsExclude.isNotEmpty() ||
+            selectedStates.isNotEmpty() || selectedContentRating.isNotEmpty() ||
+            selectedTypes.isNotEmpty() || selectedDemographics.isNotEmpty() ||
+            selectedLocale != null || selectedOriginalLocale != null ||
+            selectedYear != YEAR_UNKNOWN || selectedYearFrom != YEAR_UNKNOWN ||
+            selectedYearTo != YEAR_UNKNOWN || !author.isNullOrBlank()
+
+    private fun isFilterApplied(): Boolean = !query.isNullOrBlank() || hasNonSearchSelection()
+
+    /**
+     * Doki's `takeQueryIfSupported`: if the source cannot combine a text query with other filters,
+     * applying any non-search filter drops the active query (and vice versa in [submitSearch]).
+     */
+    private fun dropQueryIfUnsupported() {
+        if (!isSearchWithFiltersSupported && !query.isNullOrBlank() && hasNonSearchSelection()) {
+            query = null
+            _searchQuery.value = ""
+        }
+    }
 
     private fun emitFilterState(optionsLoading: Boolean = _filterState.value.isOptionsLoading) {
+        val currentSnapshot = FilterSnapshot.of(buildFilter() ?: MangaListFilter.EMPTY)
         _filterState.value = FilterUiState(
             query = query,
+            savedFilters = savedFilters,
+            selectedSavedFilterId = savedFilters.find { it.snapshot == currentSnapshot }?.id,
             availableSortOrders = availableSortOrders,
             sortOrder = sortOrder,
             availableTags = availableTags,
@@ -122,6 +182,19 @@ class RemoteListViewModel(
             selectedContentRating = selectedContentRating,
             availableTypes = availableTypes,
             selectedTypes = selectedTypes,
+            availableDemographics = availableDemographics,
+            selectedDemographics = selectedDemographics,
+            availableLocales = availableLocales,
+            selectedLocale = selectedLocale,
+            selectedOriginalLocale = selectedOriginalLocale,
+            isOriginalLocaleSupported = isOriginalLocaleSupported,
+            isYearSupported = isYearSupported,
+            isYearRangeSupported = isYearRangeSupported,
+            selectedYear = selectedYear,
+            selectedYearFrom = selectedYearFrom,
+            selectedYearTo = selectedYearTo,
+            isAuthorSearchSupported = isAuthorSearchSupported,
+            author = author,
             isOptionsLoading = optionsLoading,
             isFilterApplied = isFilterApplied(),
         )
@@ -175,6 +248,7 @@ class RemoteListViewModel(
 
     /** Reload from offset 0 with the current filter selection. */
     private fun reload() {
+        dropQueryIfUnsupported()
         emitFilterState()
         loadMangaList(append = false)
     }
@@ -197,14 +271,20 @@ class RemoteListViewModel(
     /** Submit the search field (IME action). */
     fun submitSearch() {
         query = _searchQuery.value.trim().takeIf { it.isNotBlank() }
-        reload()
+        // Doki: a source that cannot search WITH filters resets the other filters on a new query.
+        if (!isSearchWithFiltersSupported && query != null) {
+            clearSelections()
+        }
+        emitFilterState()
+        loadMangaList(append = false)
     }
 
     fun clearSearch() {
         _searchQuery.value = ""
         if (query != null) {
             query = null
-            reload()
+            emitFilterState()
+            loadMangaList(append = false)
         }
     }
 
@@ -212,19 +292,30 @@ class RemoteListViewModel(
 
     fun setSortOrder(value: SortOrder) {
         sortOrder = value
-        reload()
+        // Doki persists the chosen order as the source's default.
+        repository?.defaultSortOrder = value
+        emitFilterState()
+        loadMangaList(append = false)
     }
 
     /** Live toggle of an include genre (quick-filter chip row + sheet). */
     fun toggleTag(tag: MangaTag) {
-        selectedTags = if (tag in selectedTags) selectedTags - tag else selectedTags + tag
-        selectedTagsExclude = selectedTagsExclude - tag
+        selectedTags = when {
+            tag in selectedTags -> selectedTags - tag
+            isMultipleTagsSupported -> selectedTags + tag
+            else -> setOf(tag) // single-tag sources replace the selection
+        }
+        selectedTagsExclude = selectedTagsExclude - selectedTags
         reload()
     }
 
     fun toggleTagExclude(tag: MangaTag) {
-        selectedTagsExclude = if (tag in selectedTagsExclude) selectedTagsExclude - tag else selectedTagsExclude + tag
-        selectedTags = selectedTags - tag
+        selectedTagsExclude = when {
+            tag in selectedTagsExclude -> selectedTagsExclude - tag
+            isMultipleTagsSupported -> selectedTagsExclude + tag
+            else -> setOf(tag)
+        }
+        selectedTags = selectedTags - selectedTagsExclude
         reload()
     }
 
@@ -243,21 +334,109 @@ class RemoteListViewModel(
         reload()
     }
 
-    fun resetFilter() {
-        query = null
-        _searchQuery.value = ""
-        sortOrder = repository?.defaultSortOrder
+    fun toggleDemographic(demographic: Demographic) {
+        selectedDemographics =
+            if (demographic in selectedDemographics) selectedDemographics - demographic else selectedDemographics + demographic
+        reload()
+    }
+
+    fun setLocale(value: Locale?) {
+        selectedLocale = value
+        reload()
+    }
+
+    fun setOriginalLocale(value: Locale?) {
+        selectedOriginalLocale = value
+        reload()
+    }
+
+    /** [YEAR_UNKNOWN] clears the year filter (slider dragged to its minimum, like Doki). */
+    fun setYear(value: Int) {
+        selectedYear = value
+        reload()
+    }
+
+    fun setYearRange(from: Int, to: Int) {
+        selectedYearFrom = from
+        selectedYearTo = to
+        reload()
+    }
+
+    fun setAuthor(value: String?) {
+        author = value?.trim()?.takeIf { it.isNotBlank() }
+        reload()
+    }
+
+    private fun clearSelections() {
         selectedTags = emptySet()
         selectedTagsExclude = emptySet()
         selectedStates = emptySet()
         selectedContentRating = emptySet()
         selectedTypes = emptySet()
-        reload()
+        selectedDemographics = emptySet()
+        selectedLocale = null
+        selectedOriginalLocale = null
+        selectedYear = YEAR_UNKNOWN
+        selectedYearFrom = YEAR_UNKNOWN
+        selectedYearTo = YEAR_UNKNOWN
+        author = null
+    }
+
+    fun resetFilter() {
+        query = null
+        _searchQuery.value = ""
+        sortOrder = repository?.defaultSortOrder
+        clearSelections()
+        emitFilterState()
+        loadMangaList(append = false)
+    }
+
+    // --- Saved filters (Doki presets: save / apply / rename / delete) ---
+
+    fun saveCurrentFilter(name: String) {
+        val filter = buildFilter() ?: return
+        savedFiltersRepository.save(sourceId, name.trim().take(PersistableFilter.MAX_TITLE_LENGTH), filter)
+    }
+
+    fun renameSavedFilter(id: Int, newName: String) {
+        savedFiltersRepository.rename(sourceId, id, newName.trim().take(PersistableFilter.MAX_TITLE_LENGTH))
+    }
+
+    fun deleteSavedFilter(id: Int) {
+        savedFiltersRepository.delete(sourceId, id)
+    }
+
+    /** Apply a saved preset; tapping the currently-applied one clears the filter (Doki toggle). */
+    fun toggleSavedFilter(id: Int) {
+        val preset = savedFilters.find { it.id == id } ?: return
+        if (_filterState.value.selectedSavedFilterId == id) {
+            resetFilter()
+            return
+        }
+        val filter = preset.snapshot.toFilter(sourceId)
+        query = filter.query
+        _searchQuery.value = filter.query.orEmpty()
+        selectedTags = filter.tags
+        selectedTagsExclude = filter.tagsExclude
+        selectedStates = filter.states
+        selectedContentRating = filter.contentRating
+        selectedTypes = filter.types
+        selectedDemographics = filter.demographics
+        selectedLocale = filter.locale
+        selectedOriginalLocale = filter.originalLocale
+        selectedYear = filter.year
+        selectedYearFrom = filter.yearFrom
+        selectedYearTo = filter.yearTo
+        author = filter.author
+        emitFilterState()
+        loadMangaList(append = false)
     }
 }
 
 data class FilterUiState(
     val query: String? = null,
+    val savedFilters: List<PersistableFilter> = emptyList(),
+    val selectedSavedFilterId: Int? = null,
     val availableSortOrders: List<SortOrder> = emptyList(),
     val sortOrder: SortOrder? = null,
     val availableTags: List<MangaTag> = emptyList(),
@@ -270,6 +449,19 @@ data class FilterUiState(
     val selectedContentRating: Set<ContentRating> = emptySet(),
     val availableTypes: List<ContentType> = emptyList(),
     val selectedTypes: Set<ContentType> = emptySet(),
+    val availableDemographics: List<Demographic> = emptyList(),
+    val selectedDemographics: Set<Demographic> = emptySet(),
+    val availableLocales: List<Locale> = emptyList(),
+    val selectedLocale: Locale? = null,
+    val selectedOriginalLocale: Locale? = null,
+    val isOriginalLocaleSupported: Boolean = false,
+    val isYearSupported: Boolean = false,
+    val isYearRangeSupported: Boolean = false,
+    val selectedYear: Int = 0,
+    val selectedYearFrom: Int = 0,
+    val selectedYearTo: Int = 0,
+    val isAuthorSearchSupported: Boolean = false,
+    val author: String? = null,
     val isOptionsLoading: Boolean = false,
     val isFilterApplied: Boolean = false,
 )
