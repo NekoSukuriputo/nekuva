@@ -104,13 +104,13 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
       (Semaphore 4) + streaming; section **Riwayat/Disukai/Lokal** (DB/lokal, read-only) di atas; error
       per-source tanpa crash (source JS-stub → error state); tap item → detail, "Lebih" (source nyata) →
       RemoteList(source, query). Empty global = `nothing_found` + `text_search_holder_secondary`.
-- [ ] Footer **"Cari sumber nonaktif"** (continueSearch / `getDisabledSources()`) — DEFERRED.
-      GATING: dibangun bersama saat **"Source active/inactive toggle"** (lihat Area Explore & List)
-      diimplementasikan, karena prasyaratnya = source enable/disable. Sampai itu, search hanya enabled
-      sources dan TIDAK menampilkan tombol footer (hindari UI mati).
+- [x] **Footer "Cari sumber nonaktif" (S2) — DONE & run-verified.** `continueSearch()` +
+      `getDisabledSources()`: tombol footer muncul setelah search sumber-aktif selesai → menelusuri
+      sumber nonaktif on-demand (Semaphore 4, streaming), lalu footer hilang. Di-unblock oleh perbaikan
+      toggle enable/disable sumber (sesi S1).
 - [ ] "Lebih" untuk section **Lokal** di global search (Doki punya): ditunda — `RemoteList` hanya
       mendukung `MangaParserSource`, bukan LOCAL; perlu jalur ke daftar lokal dengan query.
-- [~] **Search suggestions (S1) — DIBANGUN, pending run-verify (kompilasi OK kedua platform).**
+- [x] **Search suggestions (S1) — DONE & run-verified (Android + Desktop).**
       Panel as-you-type di bawah search bar utama
       (`SearchSuggestionViewModel` + `SearchSuggestionPanel`, debounce 300ms): chip tag (DB),
       thumbnail manga (DB, urut levenshtein), **riwayat query** (simpan/hapus-satu/hapus-semua,
@@ -134,7 +134,12 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
 - [x] **Full tags catalog (F2) — DONE & run-verified.** Chip genre inline dibatasi 24 + chip "Lainnya"
       → `TagsCatalogSheet`: search field live + daftar checkbox SEMUA tag (opsi source + tag cache DB,
       dedup judul, urut alfabet — `buildList` Doki), mode include & exclude.
-- [ ] Footer "Global search" pada hasil per-source; "Open in browser" pada error. (S2)
+- [x] **"Open in browser" pada error (S2) — DONE & run-verified.** Section sumber yang error
+      menampilkan tombol **Buka di browser** → membuka `https://<domain>` via `LocalUriHandler`
+      (Desktop = browser sistem, Android = Custom Tab/browser). Berguna untuk error CloudFlare/JS
+      (evaluateJs masih stub).
+- [ ] **DEFER:** "Lebih"/see-all untuk section **Lokal** (perlu layar daftar-lokal-ber-query;
+      `RemoteList` hanya `MangaParserSource`) + footer "Global search" per-source.
 
 ### Area: Details
 - [ ] Interactive actions untuk "Favorite this" (sekarang placeholder). Akan dikerjakan di sesi `favourites`.

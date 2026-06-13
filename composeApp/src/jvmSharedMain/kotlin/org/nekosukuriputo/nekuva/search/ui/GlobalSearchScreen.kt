@@ -19,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
@@ -94,6 +96,15 @@ fun GlobalSearchScreen(
                                 CircularProgressIndicator()
                             }
                         }
+                    } else if (uiState.canSearchDisabled) {
+                        // Doki's ButtonFooter: search the sources the user hasn't enabled, on demand.
+                        item(key = "search-disabled-footer") {
+                            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                OutlinedButton(onClick = { viewModel.continueSearch() }) {
+                                    Text(stringResource(Res.string.search_disabled_sources))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -135,12 +146,24 @@ private fun SearchSectionItem(
             }
         }
         if (section.error != null) {
-            Text(
-                text = section.error.message ?: stringResource(Res.string.error),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = section.error.message ?: stringResource(Res.string.error),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                // Many source errors are CloudFlare/JS walls (evaluateJs is stubbed) — let the user
+                // open the site directly, like Doki's "Open in browser" error action.
+                section.browserUrl?.let { url ->
+                    val uriHandler = LocalUriHandler.current
+                    TextButton(
+                        onClick = { runCatching { uriHandler.openUri(url) } },
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Text(stringResource(Res.string.open_in_browser))
+                    }
+                }
+            }
         } else {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),

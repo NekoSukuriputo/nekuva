@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,7 @@ import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.nav.GlobalSearchRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.core.parser.ParserMangaRepository
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.explore.data.MangaSourcesRepository
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
@@ -44,11 +46,15 @@ data class SearchSection(
     val sourceId: String?,
     val manga: List<Manga>,
     val error: Throwable?,
+    /** For an errored SOURCE section: the source's site URL, for the "Open in browser" action. */
+    val browserUrl: String? = null,
 )
 
 data class GlobalSearchUiState(
     val sections: List<SearchSection> = emptyList(),
     val isLoading: Boolean = true,
+    /** Footer "Search disabled sources" is offered once the enabled-source search has settled. */
+    val canSearchDisabled: Boolean = false,
 )
 
 /**
@@ -77,12 +83,16 @@ class GlobalSearchViewModel(
     private val sections = LinkedHashMap<String, SearchSection>()
     private val mutex = Mutex()
     private var searchJob: Job? = null
+    private var includeDisabled = false
 
     init {
         doSearch()
     }
 
-    fun retry() = doSearch()
+    fun retry() {
+        includeDisabled = false
+        doSearch()
+    }
 
     private fun doSearch() {
         searchJob?.cancel()
@@ -100,19 +110,42 @@ class GlobalSearchViewModel(
 
             // Enabled parser sources, in parallel with a concurrency limit; stream as each finishes.
             val sources = runCatchingCancellable { sourcesRepository.getEnabledSources() }.getOrDefault(emptyList())
-            val semaphore = Semaphore(MAX_PARALLELISM)
-            sources.map { source ->
-                launch {
-                    semaphore.withPermit {
-                        appendSection(searchSource(source, skipNsfw))
-                    }
-                }
-            }.joinAll()
+            searchSources(sources, skipNsfw)
 
             mutex.withLock {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.value = _uiState.value.copy(isLoading = false, canSearchDisabled = !includeDisabled)
             }
         }
+    }
+
+    /** Doki's continueSearch: search the sources the user hasn't enabled, on demand, appending sections. */
+    fun continueSearch() {
+        if (includeDisabled) return
+        includeDisabled = true
+        viewModelScope.launch {
+            searchJob?.join()
+            mutex.withLock {
+                _uiState.value = _uiState.value.copy(isLoading = true, canSearchDisabled = false)
+            }
+            val skipNsfw = settings.isNsfwContentDisabled
+            val disabled = runCatchingCancellable { sourcesRepository.getDisabledSources().toList() }
+                .getOrDefault(emptyList())
+            searchSources(disabled, skipNsfw)
+            mutex.withLock {
+                _uiState.value = _uiState.value.copy(isLoading = false, canSearchDisabled = false)
+            }
+        }
+    }
+
+    private suspend fun searchSources(sources: List<MangaSource>, skipNsfw: Boolean) = coroutineScope {
+        val semaphore = Semaphore(MAX_PARALLELISM)
+        sources.map { source ->
+            launch {
+                semaphore.withPermit {
+                    appendSection(searchSource(source, skipNsfw))
+                }
+            }
+        }.joinAll()
     }
 
     private suspend fun appendSection(section: SearchSection?) {
@@ -124,8 +157,13 @@ class GlobalSearchViewModel(
     }
 
     private suspend fun searchSource(source: MangaSource, skipNsfw: Boolean): SearchSection? {
+        val repo = runCatchingCancellable { repositoryFactory.create(source) }.getOrNull()
+        // The source's site URL, used by "Open in browser" on an error section.
+        val browserUrl = (repo as? ParserMangaRepository)?.let {
+            runCatching { "https://${it.domain}" }.getOrNull()
+        }
         return runCatchingCancellable {
-            val repo = repositoryFactory.create(source)
+            requireNotNull(repo) { "No repository for ${source.name}" }
             if (!repo.filterCapabilities.isSearchSupported) return null
             val sortOrder = if (SortOrder.RELEVANCE in repo.sortOrders) SortOrder.RELEVANCE else repo.defaultSortOrder
             repo.getList(0, sortOrder, MangaListFilter(query = query))
@@ -156,6 +194,7 @@ class GlobalSearchViewModel(
                     sourceId = source.name,
                     manga = emptyList(),
                     error = error,
+                    browserUrl = browserUrl,
                 )
             },
         )
