@@ -95,6 +95,7 @@ import nekuva.composeapp.generated.resources.*
 fun RemoteListScreen(
     viewModel: RemoteListViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit,
+    onResolveCloudFlare: (url: String) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -200,7 +201,29 @@ fun RemoteListScreen(
                             }
                         }
                     }
-                    is RemoteListUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() })
+                    is RemoteListUiState.Error -> {
+                        val ex = state.exception
+                        if (ex is org.nekosukuriputo.nekuva.core.exceptions.CloudFlareException) {
+                            // CloudFlare wall: offer to solve it in the embedded browser, then retry.
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.captcha_required),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                Button(onClick = { onResolveCloudFlare(ex.url) }) {
+                                    Text(stringResource(Res.string.captcha_solve))
+                                }
+                            }
+                        } else {
+                            ErrorState(error = ex, onRetry = { viewModel.retry() })
+                        }
+                    }
                     is RemoteListUiState.Success -> {
                         val gridState = rememberLazyGridState()
                         LazyVerticalGrid(

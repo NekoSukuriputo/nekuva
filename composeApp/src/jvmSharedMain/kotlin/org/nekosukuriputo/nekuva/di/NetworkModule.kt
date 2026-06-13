@@ -1,40 +1,17 @@
 package org.nekosukuriputo.nekuva.di
 
-import okhttp3.Cookie
-import okhttp3.CookieJar
-import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import org.koin.dsl.module
 import org.nekosukuriputo.nekuva.core.network.CloudFlareInterceptor
 import org.nekosukuriputo.nekuva.core.network.GZipInterceptor
 import org.nekosukuriputo.nekuva.core.network.RateLimitInterceptor
 import org.nekosukuriputo.nekuva.core.network.cookies.MutableCookieJar
+import org.nekosukuriputo.nekuva.core.network.cookies.createCookieJar
 import java.util.concurrent.TimeUnit
-import java.util.Collections
-
-class MemoryCookieJar : MutableCookieJar {
-    private val cookies = mutableListOf<Cookie>()
-
-    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        this.cookies.addAll(cookies)
-    }
-
-    override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        return cookies.filter { it.matches(url) }
-    }
-
-    override fun removeCookies(url: HttpUrl, predicate: ((Cookie) -> Boolean)?) {
-        cookies.removeAll { it.matches(url) && (predicate?.invoke(it) ?: true) }
-    }
-
-    override suspend fun clear(): Boolean {
-        cookies.clear()
-        return true
-    }
-}
 
 val networkModule = module {
-    single<MutableCookieJar> { MemoryCookieJar() }
+    // Platform-specific so WebView/KCEF and OkHttp share cookies (CloudFlare clearance).
+    single<MutableCookieJar> { createCookieJar() }
     
     single<OkHttpClient> {
         OkHttpClient.Builder()

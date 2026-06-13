@@ -14,6 +14,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 
 @Serializable object HistoryTabRoute
 @Serializable object FavoritesTabRoute
@@ -213,14 +214,39 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onBackClick = { navController.popBackStack() },
                     )
                 }
-                composable<RemoteListRoute> {
+                composable<RemoteListRoute> { entry ->
+                    // Retry the source list after a CloudFlare challenge was solved (result set on pop).
+                    val cfResolved by entry.savedStateHandle
+                        .getStateFlow("cf_resolved", false)
+                        .collectAsState()
+                    val remoteVm: org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel =
+                        org.koin.compose.viewmodel.koinViewModel()
+                    androidx.compose.runtime.LaunchedEffect(cfResolved) {
+                        if (cfResolved) {
+                            remoteVm.retry()
+                            entry.savedStateHandle["cf_resolved"] = false
+                        }
+                    }
                     org.nekosukuriputo.nekuva.remotelist.ui.RemoteListScreen(
+                        viewModel = remoteVm,
                         onMangaClick = { id ->
                             navController.navigate(MangaDetailsRoute(id))
                         },
+                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
                         onBackClick = {
                             navController.popBackStack()
                         }
+                    )
+                }
+                composable<CloudFlareRoute> { backStackEntry ->
+                    val args = backStackEntry.toRoute<CloudFlareRoute>()
+                    org.nekosukuriputo.nekuva.browser.ui.CloudFlareScreen(
+                        url = args.url,
+                        onResolved = {
+                            navController.previousBackStackEntry?.savedStateHandle?.set("cf_resolved", true)
+                            navController.popBackStack()
+                        },
+                        onCancel = { navController.popBackStack() },
                     )
                 }
             }

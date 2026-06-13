@@ -30,6 +30,9 @@ data class GlobalSearchRoute(val query: String)
 data class BrowserRoute(val url: String, val title: String? = null)
 
 @Serializable
+data class CloudFlareRoute(val url: String)
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable
