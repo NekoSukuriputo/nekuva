@@ -165,6 +165,21 @@ class MangaSourcesRepository(
 		result
 	}.onStart { assimilateNewSources() }
 
+	suspend fun setSourcesEnabled(sources: Collection<MangaSource>, isEnabled: Boolean) {
+		if (!isEnabled && settings.isAllSourcesEnabled) {
+			// In "all sources enabled" mode the per-source `enabled` column is ignored, so a single
+			// disable would silently do nothing. Materialize the blanket mode into per-source rows
+			// (everything on except the ones being disabled), then turn the blanket mode off.
+			assimilateNewSources()
+			for (s in allMangaSources) {
+				dao.setEnabled(s.name, s !in sources)
+			}
+			settings.isAllSourcesEnabled = false
+			return
+		}
+		setSourcesEnabledImpl(sources, isEnabled)
+	}
+
 	suspend fun setSourcesEnabledExclusive(sources: Set<MangaSource>) {
 		
 			assimilateNewSources()

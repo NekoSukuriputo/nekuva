@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,9 @@ fun MainTopBar(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     overflowItems: List<OverflowItem>,
+    searchActive: Boolean = false,
+    onSearchFocusChanged: (Boolean) -> Unit = {},
+    onCloseSearch: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -55,9 +60,20 @@ fun MainTopBar(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { onSearchFocusChanged(it.isFocused) },
             placeholder = { Text(stringResource(Res.string.search_manga)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = {
+                if (searchActive) {
+                    // Search session open: the icon becomes a back arrow that closes the panel.
+                    IconButton(onClick = onCloseSearch) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                } else {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                }
+            },
             singleLine = true,
             shape = MaterialTheme.shapes.extraLarge,
             colors = TextFieldDefaults.colors(

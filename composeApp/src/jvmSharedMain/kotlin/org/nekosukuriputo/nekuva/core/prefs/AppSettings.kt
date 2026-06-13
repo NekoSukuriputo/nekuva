@@ -293,11 +293,17 @@ class AppSettings(private val prefs: ObservableSettings) {
 		set(value) = prefs.putBoolean(KEY_APP_PASSWORD_NUMERIC, value)
 
 	val searchSuggestionTypes: Set<SearchSuggestionType>
-		get() = prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, emptySet()).let { stringSet ->
-			stringSet.mapNotNullTo(mutableSetOf<SearchSuggestionType>()) { x ->
-				enumValueOf<SearchSuggestionType>(x)
+		get() {
+			// Absent key = ALL types enabled (Doki default). The old `?:` fallback never fired
+			// because mapNotNullTo never returns null, which silently disabled every suggestion type.
+			if (prefs.getStringOrNull(KEY_SEARCH_SUGGESTION_TYPES) == null) {
+				return SearchSuggestionType.entries.toSet()
 			}
-		} ?: SearchSuggestionType.entries.toSet()
+			return prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, emptySet())
+				.mapNotNullTo(mutableSetOf()) { x ->
+					SearchSuggestionType.entries.find { it.name == x }
+				}
+		}
 
 	var isBiometricProtectionEnabled: Boolean
 		get() = prefs.getBoolean(KEY_PROTECT_APP_BIOMETRIC, true)

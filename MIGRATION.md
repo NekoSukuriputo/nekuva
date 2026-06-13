@@ -110,16 +110,31 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
       sources dan TIDAK menampilkan tombol footer (hindari UI mati).
 - [ ] "Lebih" untuk section **Lokal** di global search (Doki punya): ditunda — `RemoteList` hanya
       mendukung `MangaParserSource`, bukan LOCAL; perlu jalur ke daftar lokal dengan query.
-- [ ] Search suggestions (query/author/tag/source) + riwayat pencarian (recent queries) + hint.
+- [~] **Search suggestions (S1) — DIBANGUN, pending run-verify (kompilasi OK kedua platform).**
+      Panel as-you-type di bawah search bar utama
+      (`SearchSuggestionViewModel` + `SearchSuggestionPanel`, debounce 300ms): chip tag (DB),
+      thumbnail manga (DB, urut levenshtein), **riwayat query** (simpan/hapus-satu/hapus-semua,
+      disimpan JSON di ObservableSettings — padanan KMP SearchRecentSuggestions; TIDAK dicatat saat
+      incognito), sumber (judul cocok ≥3 huruf + top-sources saat query kosong, dengan **switch
+      enable/disable**), penulis (DB). Tiap section dihormati `searchSuggestionTypes` (bugfix: getter
+      lama selalu balik set kosong → semua tipe mati; kini absen = SEMUA aktif, default Doki).
+      DEVIASI/DEFER: (a) hint judul dari tabel suggestions (`QUERIES_SUGGEST`) + top-manga saat query
+      kosong → menunggu area `suggestions`; (b) tap tag membuka global-search dgn judul tag sebagai
+      query (Doki membuka daftar terfilter tag lintas-source — perlu layar list-by-tag, ditunda).
 - [ ] **Parity item grid (lintas-layar, sesi terpisah)**: overlay di cover — ikon hati favorit +
       badge progres baca (%/centang) — seperti Doki (Explore/Favourites/History/RemoteList).
-- [ ] Field filter lain: Demographics, Locale & Original locale, Year / Year range, Author search.
-- [ ] **SavedFilters preset** (tombol "Simpan"): serialisasi `MangaListFilter`, simpan/rename/hapus
-      preset bernama per-source (`SavedFiltersRepository`), chip preset di atas sheet. Tombol "Simpan"
-      SUDAH ditampilkan di posisi/label Doki tapi **DISABLED** (deviasi sadar) sampai subsistem ini dibuat.
-- [ ] "Lebih"/full tags catalog sheet (TagsCatalogSheet) dengan search tag (kini sheet tampilkan
-      semua tag tersedia sebagai chip).
-- [ ] Footer "Global search" pada hasil per-source; "Open in browser" pada error.
+- [x] **Field filter F1 — DONE & run-verified.** Bahasa (locale) + Bahasa asli + Penulis (author
+      search) + Demografi + Tahun (slider) + Rentang tahun (range slider), semua capability-gated,
+      urutan sheet = Doki. Chip filter aktif (closeable) di header; `takeQueryIfSupported`;
+      single-tag source; sort dipersisten per source (`repository.defaultSortOrder`).
+- [x] **SavedFilters preset (F2) — DONE & run-verified.** `SavedFiltersRepository` (JSON per-source
+      di ObservableSettings via DTO `FilterSnapshot`), tombol **Simpan** aktif → dialog nama (maks 18,
+      konfirmasi timpa), section "Filter tersimpan" di sheet + chip di header (klik=terapkan/lepas,
+      menu ⋮=rename/hapus), deteksi preset-aktif via perbandingan snapshot.
+- [x] **Full tags catalog (F2) — DONE & run-verified.** Chip genre inline dibatasi 24 + chip "Lainnya"
+      → `TagsCatalogSheet`: search field live + daftar checkbox SEMUA tag (opsi source + tag cache DB,
+      dedup judul, urut alfabet — `buildList` Doki), mode include & exclude.
+- [ ] Footer "Global search" pada hasil per-source; "Open in browser" pada error. (S2)
 
 ### Area: Details
 - [ ] Interactive actions untuk "Favorite this" (sekarang placeholder). Akan dikerjakan di sesi `favourites`.

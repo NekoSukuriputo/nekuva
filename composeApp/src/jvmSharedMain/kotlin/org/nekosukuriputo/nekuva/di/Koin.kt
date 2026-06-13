@@ -34,6 +34,8 @@ val remoteListModule = module {
 }
 
 val searchModule = module {
+    single { org.nekosukuriputo.nekuva.search.domain.MangaSearchRepository(get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.search.ui.suggestion.SearchSuggestionViewModel(get(), get(), get()) }
     factory { params ->
         org.nekosukuriputo.nekuva.search.ui.GlobalSearchViewModel(
             params.get(), get(), get(), get(), get(), get(), get(), get(),
