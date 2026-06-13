@@ -41,8 +41,8 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       platform Android) = berikutnya.)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
-- [ ] `search`
-- [ ] `filter`
+- [x] `search` (run-verified Android+Desktop: global multi-source search streaming (Riwayat/Disukai/Lokal + sumber paralel), saran as-you-type S1 (tag/manga/riwayat-query/sumber+switch/penulis, hormati `searchSuggestionTypes`, tak dicatat saat incognito), footer "Cari sumber nonaktif" + "Buka di browser" pada error. Lihat ledger Area Search & Filter)
+- [x] `filter` (run-verified Android+Desktop: sheet filter parity Doki — Urutkan + Bahasa/Bahasa-asli + Penulis + Genre (+ katalog tag lengkap berpencarian) + Kecualikan + Tipe + Status + Content-rating + Demografi + Tahun/Rentang-tahun, capability-gated; chip filter aktif di header; **Saved Filters** (simpan/terapkan/rename/hapus per-source). Lihat ledger Area Search & Filter)
 - [x] `favourites`
 - [x] `history` (2 bug inti FIXED & run-verified Android+Desktop 2026-06-08: tampil di History + resume halaman. Item parity lanjutan tetap deferred — lihat ledger)
 - [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
@@ -56,7 +56,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen (nav config, proxy, suggestions, login
       tracker, discord) = "Segera hadir". Lihat ledger)
 - [ ] `alternatives`
-- [ ] `browser`
+- [~] `browser` / `webview` / `evaluateJs` (run-verified Android+Desktop: **B1** evaluateJs Android via WebView (`WebViewExecutor`), **B3** evaluateJs Desktop via **KCEF** (embedded Chromium, unduh ~150MB sekali ke `~/.nekuva/kcef`, init JCEF terverifikasi), **B2a** browser in-app (`PlatformWebView` expect/actual: WebView/`AndroidView` + KCEF/`SwingPanel`; `BrowserScreen` toolbar ala Doki; route + "Buka di browser" dari error pencarian). **SISA B2b (deferred, prioritas):** deteksi CloudFlare → layar solve-captcha → **sinkron cookie** (Android: bind `AndroidCookieJar`; Desktop: CEF cookie store→OkHttp) → retry otomatis request yang gagal. Lihat catatan di bawah)
 - [ ] `picker`
 - [ ] `widget`
 - [ ] `backups`
