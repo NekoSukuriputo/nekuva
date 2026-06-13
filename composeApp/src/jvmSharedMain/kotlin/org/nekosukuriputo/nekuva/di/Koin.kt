@@ -134,6 +134,27 @@ val trackerModule = module {
     factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get()) }
 }
 
+val scrobblingModule = module {
+    // Shikimori reference service: dedicated OkHttp (token interceptor) + per-service token storage.
+    single {
+        val storage = org.nekosukuriputo.nekuva.scrobbling.common.data.ScrobblerStorage(
+            get(), org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.SHIKIMORI,
+        )
+        val client = get<okhttp3.OkHttpClient>().newBuilder()
+            .addInterceptor(org.nekosukuriputo.nekuva.scrobbling.shikimori.data.ShikimoriInterceptor(storage))
+            .build()
+        org.nekosukuriputo.nekuva.scrobbling.shikimori.data.ShikimoriRepository(client, storage, get())
+    }
+    single { org.nekosukuriputo.nekuva.scrobbling.shikimori.domain.ShikimoriScrobbler(get(), get(), get()) }
+    single {
+        org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager(
+            listOf(get<org.nekosukuriputo.nekuva.scrobbling.shikimori.domain.ShikimoriScrobbler>()),
+        )
+    }
+    // Shared (single) so the Services screen + the OAuth screen see the same login state.
+    single { org.nekosukuriputo.nekuva.settings.ui.services.ScrobblerConfigViewModel(get()) }
+}
+
 val backupsModule = module {
     single { org.nekosukuriputo.nekuva.backups.data.BackupRepository(get()) }
     factory { org.nekosukuriputo.nekuva.backups.ui.BackupViewModel(get()) }
@@ -142,7 +163,7 @@ val backupsModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule)
     }
 
 

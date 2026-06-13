@@ -33,6 +33,9 @@ data class BrowserRoute(val url: String, val title: String? = null)
 data class CloudFlareRoute(val url: String)
 
 @Serializable
+data class OAuthRoute(val serviceId: Int)
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

@@ -14,6 +14,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
@@ -28,9 +30,14 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 @Composable
 fun ServicesSettingsScreen(
     onBackClick: () -> Unit,
+    onScrobblerLogin: (serviceId: Int) -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     val soon = stringResource(Res.string.coming_soon)
+    val scrobblerVm = koinInject<ScrobblerConfigViewModel>()
+    val scrobblerItems by scrobblerVm.items.collectAsState()
+    val signInLabel = stringResource(Res.string.sign_in)
+    val logoutLabel = stringResource(Res.string.logout)
     Scaffold(
         topBar = {
             TopAppBar(
@@ -51,10 +58,27 @@ fun ServicesSettingsScreen(
             BoolPref(settings, AppSettings.KEY_READING_TIME, stringResource(Res.string.reading_time_estimation), stringResource(Res.string.reading_time_estimation_summary), true)
 
             SettingsCategoryHeader(stringResource(Res.string.tracking))
+            // Migrated scrobblers (currently Shikimori). Functional once a client id is set in
+            // ScrobblerConfig; until then shown disabled. Logged-in = tap to log out, else tap to sign in.
+            scrobblerItems.forEach { item ->
+                val title = stringResource(
+                    when (item.service) {
+                        org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.SHIKIMORI -> Res.string.shikimori
+                        org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.ANILIST -> Res.string.anilist
+                        org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.MAL -> Res.string.mal
+                        org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.KITSU -> Res.string.kitsu
+                    },
+                )
+                when {
+                    !item.isConfigured -> SettingsItem(title = title, summary = soon, enabled = false)
+                    item.isEnabled -> SettingsItem(title = title, summary = logoutLabel, onClick = { scrobblerVm.logout(item.service) })
+                    else -> SettingsItem(title = title, summary = signInLabel, onClick = { onScrobblerLogin(item.service.id) })
+                }
+            }
+            // Not yet migrated (separate increments).
             SettingsItem(title = stringResource(Res.string.anilist), summary = soon, enabled = false)
             SettingsItem(title = stringResource(Res.string.kitsu), summary = soon, enabled = false)
             SettingsItem(title = stringResource(Res.string.mal), summary = soon, enabled = false)
-            SettingsItem(title = stringResource(Res.string.shikimori), summary = soon, enabled = false)
             SettingsItem(title = stringResource(Res.string.discord_rpc), summary = stringResource(Res.string.discord_rpc_summary), enabled = false)
         }
     }

@@ -184,6 +184,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<ServicesSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.services.ServicesSettingsScreen(
                         onBackClick = { navController.popBackStack() },
+                        onScrobblerLogin = { serviceId -> navController.navigate(OAuthRoute(serviceId)) },
                     )
                 }
                 composable<TrackerSettingsRoute> {
@@ -239,6 +240,26 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.popBackStack()
                         }
                     )
+                }
+                composable<OAuthRoute> { backStackEntry ->
+                    val args = backStackEntry.toRoute<OAuthRoute>()
+                    val manager = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager>()
+                    val configVm = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.settings.ui.services.ScrobblerConfigViewModel>()
+                    val service = org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.entries
+                        .find { it.id == args.serviceId }
+                    val scrobbler = service?.let { manager[it] }
+                    if (scrobbler == null) {
+                        androidx.compose.runtime.LaunchedEffect(Unit) { navController.popBackStack() }
+                    } else {
+                        org.nekosukuriputo.nekuva.browser.ui.OAuthScreen(
+                            authUrl = scrobbler.oauthUrl,
+                            onCode = { code ->
+                                configVm.completeAuth(service, code)
+                                navController.popBackStack()
+                            },
+                            onCancel = { navController.popBackStack() },
+                        )
+                    }
                 }
                 composable<CloudFlareRoute> { backStackEntry ->
                     val args = backStackEntry.toRoute<CloudFlareRoute>()
