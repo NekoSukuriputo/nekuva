@@ -22,6 +22,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven(url = "https://jitpack.io")
+        // KCEF (Desktop embedded Chromium) pulls JOGL (org.jogamp:*) which lives on jogamp's repo.
+        maven(url = "https://jogamp.org/deployment/maven")
     }
 }
 

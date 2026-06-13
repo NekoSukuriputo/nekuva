@@ -94,6 +94,8 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.json)
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.1")
+                // Embedded Chromium (JCEF) for Desktop evaluateJs + in-app browser / CloudFlare.
+                implementation(libs.kcef)
             }
         }
     }
@@ -159,6 +161,14 @@ android {
 compose.desktop {
     application {
         mainClass = "org.nekosukuriputo.nekuva.MainKt"
+        // JVM args required by KCEF/JCEF (embedded Chromium) on JDK 17+. The platform-specific
+        // --add-opens that don't match the host JVM are harmless (logged as a warning, then ignored).
+        jvmArgs += listOf(
+            "--add-opens", "java.desktop/sun.awt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.lwawt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.lwawt.macosx=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+        )
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "org.nekosukuriputo.nekuva"

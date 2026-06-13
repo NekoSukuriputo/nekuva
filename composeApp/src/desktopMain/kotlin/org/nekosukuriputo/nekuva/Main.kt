@@ -14,6 +14,9 @@ fun main() {
     // user create new folders — the cross-platform Metal L&F fails ("Error creating new folder") there.
     runCatching { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) }
     initKoin()
+    // Kick off the embedded-Chromium (KCEF) download/init in the background so JS-based sources and the
+    // in-app browser are ready when needed. First run downloads ~150 MB into ~/.nekuva/kcef.
+    runCatching { org.nekosukuriputo.nekuva.core.network.webview.KcefManager.start() }
     // Apply the user's chosen app language BEFORE Compose initialises, so Compose Resources picks the
     // right `values-<lang>` folder. On Desktop the JVM default locale is the OS *regional format* (which
     // can be English even when the display language is not), so an explicit choice is the reliable fix.
