@@ -83,6 +83,7 @@ class RemoteListViewModel(
     private var availableTypes: List<ContentType> = emptyList()
     private var availableDemographics: List<Demographic> = emptyList()
     private var availableLocales: List<Locale> = emptyList()
+    private var catalogTags: List<MangaTag> = emptyList()
     private var savedFilters: List<PersistableFilter> = emptyList()
 
     private var loadingJob: Job? = null
@@ -118,9 +119,19 @@ class RemoteListViewModel(
                 availableLocales = opts.availableLocales.toList()
             } catch (_: Exception) {
                 // Options unavailable for this source — the sheet shows whatever resolved.
-            } finally {
-                emitFilterState(optionsLoading = false)
             }
+            // Full tags catalog (Doki TagsCatalogViewModel.buildList): source options + tags already
+            // cached in the DB, deduplicated by title, title-sorted.
+            try {
+                val dbTags = mangaDataRepository.findTags(repo.source)
+                val seen = HashSet<String>(availableTags.size + dbTags.size)
+                catalogTags = (availableTags + dbTags)
+                    .filter { seen.add(it.title) }
+                    .sortedBy { it.title.lowercase() }
+            } catch (_: Exception) {
+                catalogTags = availableTags.sortedBy { it.title.lowercase() }
+            }
+            emitFilterState(optionsLoading = false)
         }
     }
 
@@ -173,6 +184,7 @@ class RemoteListViewModel(
             availableSortOrders = availableSortOrders,
             sortOrder = sortOrder,
             availableTags = availableTags,
+            catalogTags = catalogTags,
             selectedTags = selectedTags,
             selectedTagsExclude = selectedTagsExclude,
             isTagsExclusionSupported = isTagsExclusionSupported,
@@ -440,6 +452,7 @@ data class FilterUiState(
     val availableSortOrders: List<SortOrder> = emptyList(),
     val sortOrder: SortOrder? = null,
     val availableTags: List<MangaTag> = emptyList(),
+    val catalogTags: List<MangaTag> = emptyList(),
     val selectedTags: Set<MangaTag> = emptySet(),
     val selectedTagsExclude: Set<MangaTag> = emptySet(),
     val isTagsExclusionSupported: Boolean = false,

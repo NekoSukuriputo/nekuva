@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -357,6 +359,8 @@ private fun FilterSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSaveDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<org.nekosukuriputo.nekuva.filter.data.PersistableFilter?>(null) }
+    // null = closed; false = include-mode; true = exclude-mode (Doki TagsCatalogSheet excludeMode).
+    var tagsCatalogExcludeMode by remember { mutableStateOf<Boolean?>(null) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -459,14 +463,25 @@ private fun FilterSheet(
                 )
             }
 
-            // Genre (include)
+            // Genre (include) — a limited chip set; "Lebih banyak" opens the full searchable catalog
+            // (Doki: FilterFieldLayout "more" button → TagsCatalogSheet).
             if (state.availableTags.isNotEmpty()) {
+                val inlineTags = remember(state.selectedTags, state.availableTags) {
+                    (state.selectedTags.toList() + state.availableTags.sortedBy { it.title }.filter { it !in state.selectedTags })
+                        .take(INLINE_TAGS_LIMIT)
+                }
                 FilterSection(title = stringResource(Res.string.genres)) {
-                    state.availableTags.sortedBy { it.title }.forEach { tag ->
+                    inlineTags.forEach { tag ->
                         FilterChip(
                             selected = tag in state.selectedTags,
                             onClick = { viewModel.toggleTag(tag) },
                             label = { Text(tag.title) },
+                        )
+                    }
+                    if (state.catalogTags.size > inlineTags.size) {
+                        AssistChip(
+                            onClick = { tagsCatalogExcludeMode = false },
+                            label = { Text(stringResource(Res.string.more)) },
                         )
                     }
                 }
@@ -474,12 +489,22 @@ private fun FilterSheet(
 
             // Kecualikan genre (exclude) — only if the source supports it
             if (state.isTagsExclusionSupported && state.availableTags.isNotEmpty()) {
+                val inlineExclude = remember(state.selectedTagsExclude, state.availableTags) {
+                    (state.selectedTagsExclude.toList() + state.availableTags.sortedBy { it.title }.filter { it !in state.selectedTagsExclude })
+                        .take(INLINE_TAGS_LIMIT)
+                }
                 FilterSection(title = stringResource(Res.string.genres_exclude)) {
-                    state.availableTags.sortedBy { it.title }.forEach { tag ->
+                    inlineExclude.forEach { tag ->
                         FilterChip(
                             selected = tag in state.selectedTagsExclude,
                             onClick = { viewModel.toggleTagExclude(tag) },
                             label = { Text(tag.title) },
+                        )
+                    }
+                    if (state.catalogTags.size > inlineExclude.size) {
+                        AssistChip(
+                            onClick = { tagsCatalogExcludeMode = true },
+                            label = { Text(stringResource(Res.string.more)) },
                         )
                     }
                 }
@@ -650,6 +675,72 @@ private fun FilterSheet(
             },
             onDismiss = { renameTarget = null },
         )
+    }
+    tagsCatalogExcludeMode?.let { excludeMode ->
+        TagsCatalogSheet(
+            tags = state.catalogTags,
+            selected = if (excludeMode) state.selectedTagsExclude else state.selectedTags,
+            title = stringResource(if (excludeMode) Res.string.genres_exclude else Res.string.genres),
+            onToggle = { tag ->
+                if (excludeMode) viewModel.toggleTagExclude(tag) else viewModel.toggleTag(tag)
+            },
+            onDismiss = { tagsCatalogExcludeMode = null },
+        )
+    }
+}
+
+private const val INLINE_TAGS_LIMIT = 24
+
+/** Full searchable tags catalog (Doki TagsCatalogSheet): search field + checkbox list, live toggle. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TagsCatalogSheet(
+    tags: List<MangaTag>,
+    selected: Set<MangaTag>,
+    title: String,
+    onToggle: (MangaTag) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(tags, query) {
+        if (query.isBlank()) tags else tags.filter { it.title.contains(query.trim(), ignoreCase = true) }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(Res.string.search)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.cancel))
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f, fill = false)) {
+                items(filtered, key = { it.key + it.title }) { tag ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggle(tag) }
+                            .padding(vertical = 2.dp),
+                    ) {
+                        Checkbox(checked = tag in selected, onCheckedChange = { onToggle(tag) })
+                        Text(tag.title, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        }
     }
 }
 
