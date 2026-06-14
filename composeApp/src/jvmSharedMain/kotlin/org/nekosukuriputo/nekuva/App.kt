@@ -81,6 +81,17 @@ fun App() {
         }
     }
 
+    // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
+    // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
+    val screenshotsPolicy by settings.observeScreenshotsPolicy()
+        .collectAsState(initial = settings.screenshotsPolicy)
+    val globalIncognito by settings.observeBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_INCOGNITO_MODE, false)
+        .collectAsState(initial = settings.isIncognitoModeEnabled)
+    org.nekosukuriputo.nekuva.core.ui.SecureScreenEffect(
+        secure = screenshotsPolicy == org.nekosukuriputo.nekuva.core.prefs.ScreenshotsPolicy.BLOCK_ALL ||
+            (screenshotsPolicy == org.nekosukuriputo.nekuva.core.prefs.ScreenshotsPolicy.BLOCK_INCOGNITO && globalIncognito),
+    )
+
     // In-app language (Doki app_locale). Re-key on the locale so Compose Resources re-resolve; the
     // remember applies the JVM/Desktop default before children compose (Android uses the Activity config).
     val localeTag by settings.observeAppLocale().collectAsState(initial = settings.appLocales)

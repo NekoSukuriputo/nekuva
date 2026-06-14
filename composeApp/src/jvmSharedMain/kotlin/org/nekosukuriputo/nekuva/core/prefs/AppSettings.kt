@@ -122,6 +122,11 @@ class AppSettings(private val prefs: ObservableSettings) {
 	fun observeNavItems(): kotlinx.coroutines.flow.Flow<List<NavItem>> =
 		prefs.toFlowSettings().getStringOrNullFlow(KEY_NAV_MAIN).map { parseNavItems(it) }
 
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeScreenshotsPolicy(): kotlinx.coroutines.flow.Flow<ScreenshotsPolicy> =
+		prefs.toFlowSettings().getStringOrNullFlow(KEY_SCREENSHOTS_POLICY)
+			.map { name -> name?.let { runCatching { ScreenshotsPolicy.valueOf(it) }.getOrNull() } ?: ScreenshotsPolicy.ALLOW }
+
 	private fun parseNavItems(raw: String?): List<NavItem> {
 		val parsed = raw?.split(',')?.mapNotNull { x -> NavItem.entries.find { it.name == x } }
 		return parsed?.ifEmpty { null } ?: NAV_ITEMS_DEFAULT

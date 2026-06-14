@@ -101,6 +101,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.parsers.model.MangaPage
+import org.nekosukuriputo.nekuva.core.model.isNsfw
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -181,6 +182,14 @@ fun ReaderScreen(
     // Preferred image server / mirror (Doki's ImageServerDelegate) — shown only when the source has it.
     val imageServer by viewModel.imageServer.collectAsState()
     var showImageServerDialog by remember { mutableStateOf(false) }
+
+    // Screenshots policy (Doki): block screenshots in the reader for NSFW content / incognito sessions.
+    val screenshotsPolicy = remember { settings.screenshotsPolicy }
+    val mangaIsNsfw = (uiState as? ReaderUiState.Success)?.manga?.isNsfw() == true
+    org.nekosukuriputo.nekuva.core.ui.SecureScreenEffect(
+        secure = (screenshotsPolicy == org.nekosukuriputo.nekuva.core.prefs.ScreenshotsPolicy.BLOCK_NSFW && mangaIsNsfw) ||
+            (screenshotsPolicy == org.nekosukuriputo.nekuva.core.prefs.ScreenshotsPolicy.BLOCK_INCOGNITO && isIncognito),
+    )
 
     // Doki-style reader overlay: tap toggles the app bar + the bottom actions bar.
     var controlsVisible by remember { mutableStateOf(true) }
