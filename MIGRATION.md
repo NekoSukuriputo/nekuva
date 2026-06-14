@@ -269,36 +269,42 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
 - [ ] Context menus: Share, overflow options, and chapter multi-select.
 
 ### Area: Reader
-- [ ] Paged Mode (LTR / Standard) dengan Pager.
-- [ ] Reversed Mode (RTL).
-- [ ] Vertical Mode dengan margin/gaps spesifik (saat ini vertical biasa menggunakan LazyColumn).
-- [ ] Double-page Mode untuk Tablet/Foldable.
-- [ ] Page navigation controls (tap zones, next/prev chapter buttons).
-- [ ] Top App Bar Overlay (Auto-hide).
-- [ ] Bottom Actions Overlay (Slider halaman, Next/Prev Chapter).
-- [ ] Reader Info Bar (Jam, Baterai, Nomor Halaman di Header).
-- [ ] Tap Grid Overlay (Ketuk kiri/kanan untuk navigasi, tengah untuk UI).
-- [ ] Reader Settings overlay (Brightness, keep screen on, color filter).
-- [ ] Zoom / Pan / Pinch-to-zoom Controls.
-- [x] Navigasi antar-chapter (DONE & run-verified Android + Desktop — subset reader-advanced):
-      - Forward continuous-append (muat chapter berikutnya saat mendekati ujung) untuk mode vertikal.
-      - Tombol Next/Prev chapter eksplisit di toolbar (Prev = ganti konten ke chapter sebelumnya).
-      - Update history saat pindah chapter (chapter baru + reset halaman) via jalur history yang ada.
-      - Boundary aman: chapter terakhir tanpa Next, pertama tanpa Prev (tidak crash).
-      DEFERRED dari sub-fitur ini:
-      - [ ] Backward continuous-prepend (scroll ke atas masuk chapter sebelumnya di list yang sama;
-            ditunda karena masalah "prepend jump" pada LazyColumn — sementara pakai tombol Prev).
-      - [ ] Pemilihan branch/translasi (`manga.chapters[branch]`); sementara pakai urutan
-            `manga.chapters` apa adanya.
-      - [x] Page trimming memori (Doki trim >120 halaman) — DONE untuk **webtoon** (`trimLoadedPages`,
-            stable-key LazyColumn jaga posisi); paged di-skip (front-removal akan loncat index Pager). Lihat A#trim.
-- [ ] Keep Screen On.
-- [ ] RegionBitmapDecoder (untuk gambar sangat panjang/subsampling).
-- [ ] Page Save & Share.
-- [ ] Bookmarks per halaman.
-- [ ] Scroll Timer / Auto-scroll.
-- [ ] CloudFlare/JS evaluation (evaluateJs) on Desktop and Android WebView (Currently stubbed).
-- [ ] Update read progress/history setelah membaca (Discord RPC / Trackers Update & Reading History).
+> STATUS RINGKAS (per sesi "Final polish reader"): hampir seluruh reader Doki sudah dimigrasi &
+> compile-green Android+Desktop. Detail teknis tiap item ada di entri `[~] reader` (A#1..A#imgserver,
+> bagian B/C) di atas. Checklist di bawah disinkronkan ke kondisi sebenarnya (sebelumnya banyak `[ ]` basi).
+
+**DONE (compile-green; sebagian sudah run-verified — lihat catatan tiap entri di atas):**
+- [x] Paged Mode (LTR / Standard) dengan Pager.
+- [x] Reversed Mode (RTL) — via flip LayoutDirection.
+- [x] Vertical Mode (VerticalPager satu-halaman; webtoon = LazyColumn kontinu).
+- [x] Double-page Mode (landscape, cover solo, RTL) + **zoom per-spread** (A#3 / A#3b).
+- [x] Page navigation controls — tap-grid 9-zona configurable + tombol next/prev chapter.
+- [x] Top App Bar Overlay (auto-hide; tap toggle).
+- [x] Bottom Actions Overlay (slider halaman + next/prev chapter, `reader_controls`).
+- [x] Reader Info Bar (jam + baterai + nomor halaman) + transparansi.
+- [x] Tap Grid Overlay (9-zona, configurable, + layar konfig di Settings→Reader).
+- [x] Reader Settings overlay (config sheet: mode, koreksi warna, crop, 32-bit, image-server, dll).
+- [x] Zoom / Pan / Pinch-to-zoom (paged + webtoon + double-page spread).
+- [x] Navigasi antar-chapter (run-verified): forward-append + backward-prepend (webtoon) + tombol Next/Prev + update history + boundary aman.
+- [x] Pemilihan branch/translasi (selector branch; navigasi pakai list penuh).
+- [x] Page trimming memori (Doki >120 halaman) — **webtoon** (`trimLoadedPages`); paged di-skip (Pager index jump).
+- [x] Keep Screen On (Android `FLAG_KEEP_SCREEN_ON`, expect/actual).
+- [x] Page Save & Share (+ toast lokasi simpan).
+- [x] Bookmarks per halaman (toggle + tab bookmarks di sheet).
+- [x] Scroll Timer / Auto-scroll (slider kecepatan, chip TIMER).
+- [x] Crop pages · 32-bit color · Image-server/mirror switch (A#crop/A#32bit/A#imgserver).
+- [x] Auto-detect mode · navigasi tombol volume · fullscreen/immersive · rotate/orientation lock (Android).
+- [x] Incognito (global/NSFW + **paksa saat buka dari bookmark** + toast) · auto-scrobble saat baca.
+- [x] Update read progress/history setelah membaca (jalur history + scrobble).
+
+**MASIH DEFERRED untuk Reader (BUKAN drop — butuh perangkat/dependency atau ini area lain):**
+- [ ] **Double-page wide-page→solo** (deteksi halaman lebar lalu tampil solo + `reader_double_pages_sensitivity`)
+      — butuh dimensi SEMUA halaman + reflow spread; pre-decode tiap halaman terlalu mahal. (refinement)
+- [ ] **Double-foldable** (`reader_double_foldable`) — butuh `androidx.window` fold-state + perangkat foldable.
+- [ ] **RegionBitmapDecoder / SSIV subsampling** (gambar sangat panjang) — Coil sudah auto-downsample; SSIV-spesifik, tak ada padanan langsung.
+- [ ] **CloudFlare/JS evaluation (`evaluateJs`)** di Desktop & Android WebView (masih stub) — ini **area `browser`**, defer terpisah.
+- [ ] **Vertical Mode "margin/gaps spesifik"** ala Doki (kosmetik kecil; webtoon gaps sudah ada).
+- N/A: **`reader_optimize`** (Coil sudah kelola memory/downsample).
 
 ### Area: Main Shell
 - [ ] Global Search Entry (SearchView) dengan integrasi Suggestions & Incognito.
