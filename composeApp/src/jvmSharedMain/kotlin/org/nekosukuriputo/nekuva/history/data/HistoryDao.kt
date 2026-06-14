@@ -21,12 +21,19 @@ import org.nekosukuriputo.nekuva.list.domain.ListFilterOption
 import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
 import org.nekosukuriputo.nekuva.list.domain.ReadingProgress.Companion.PROGRESS_COMPLETED
 
+/** Lightweight (mangaId, percent) projection for cross-list reading indicators (Doki parity). */
+data class MangaProgressRow(val mangaId: Long, val percent: Float)
+
 @Dao
 abstract class HistoryDao : MangaQueryBuilder.ConditionCallback {
 
 	@Transaction
 	@Query("SELECT * FROM history WHERE deleted_at = 0 ORDER BY updated_at DESC LIMIT :limit OFFSET :offset")
 	abstract suspend fun findAll(offset: Int, limit: Int): List<HistoryWithManga>
+
+	/** Reading-progress per manga for "reading indicators" shown on any manga list. */
+	@Query("SELECT manga_id AS mangaId, percent FROM history WHERE deleted_at = 0")
+	abstract fun observeProgress(): Flow<List<MangaProgressRow>>
 
 	@Transaction
 	@Query("SELECT manga.* FROM history LEFT JOIN manga ON manga.manga_id = history.manga_id WHERE history.deleted_at = 0 AND (manga.title LIKE :query OR manga.alt_title LIKE :query) LIMIT :limit")

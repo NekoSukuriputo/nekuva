@@ -22,6 +22,7 @@ import org.nekosukuriputo.nekuva.core.ui.components.MangaBadges
 import org.nekosukuriputo.nekuva.core.ui.components.MangaListContent
 import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
 import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
+import org.nekosukuriputo.nekuva.list.ui.rememberMangaListDecorations
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
@@ -37,6 +38,7 @@ fun LocalListScreen(
     val listMode = rememberMangaListMode(settings)          // Local follows the global list mode
     val gridSize = rememberGridSize(settings)
     val showSavedBadge = (settings.getMangaListBadges() and 2) != 0 // downloaded == "saved"
+    val deco = rememberMangaListDecorations() // reading progress + favourite badge (Doki indicators)
 
     Scaffold { paddingValues ->
         when (val state = uiState) {
@@ -51,7 +53,8 @@ fun LocalListScreen(
                     modifier = Modifier.padding(paddingValues),
                     onClick = { onMangaClick(it.id) },
                     onLongClick = { mangaToDelete = it },
-                    badgesOf = { MangaBadges(saved = showSavedBadge) },
+                    progressOf = { deco.progressOf(it) },
+                    badgesOf = { MangaBadges(saved = showSavedBadge, favourite = deco.badgesOf(it).favourite) },
                 )
             }
         }

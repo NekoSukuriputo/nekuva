@@ -17,6 +17,7 @@ import org.nekosukuriputo.nekuva.core.ui.components.MangaBadges
 import org.nekosukuriputo.nekuva.core.ui.components.MangaListContent
 import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
 import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
+import org.nekosukuriputo.nekuva.list.ui.rememberMangaListDecorations
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
 
@@ -31,6 +32,8 @@ fun FavouritesListScreen(
     val listMode = rememberMangaListMode(settings, AppSettings.KEY_LIST_MODE_FAVORITES)
     val gridSize = rememberGridSize(settings)
     val showFavBadge = (settings.getMangaListBadges() and 1) != 0 // everything here is a favourite
+    // Favourites are all favourited (badge handled above), so only borrow the progress indicator.
+    val deco = rememberMangaListDecorations(includeFavouriteBadge = false)
 
     Scaffold { paddingValues ->
         when (val state = uiState) {
@@ -44,6 +47,7 @@ fun FavouritesListScreen(
                     gridSize = gridSize,
                     modifier = Modifier.padding(paddingValues),
                     onClick = { onMangaClick(it.id) },
+                    progressOf = { deco.progressOf(it) },
                     badgesOf = { MangaBadges(favourite = showFavBadge) },
                 )
             }

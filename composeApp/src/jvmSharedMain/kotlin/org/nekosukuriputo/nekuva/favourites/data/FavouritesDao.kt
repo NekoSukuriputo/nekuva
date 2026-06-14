@@ -60,6 +60,10 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	@Query("SELECT DISTINCT manga_id FROM favourites WHERE deleted_at = 0 AND category_id IN (SELECT category_id FROM favourite_categories WHERE track = 1 AND deleted_at = 0)")
 	abstract suspend fun findIdsWithTrack(): LongArray
 
+	/** All favourited manga ids (for the favourite badge shown on any manga list — Doki parity). */
+	@Query("SELECT DISTINCT manga_id FROM favourites WHERE deleted_at = 0")
+	abstract fun observeFavouriteIds(): Flow<List<Long>>
+
 	@Transaction
 	@Query(
 		"SELECT * FROM favourites WHERE category_id = :categoryId AND deleted_at = 0 " +

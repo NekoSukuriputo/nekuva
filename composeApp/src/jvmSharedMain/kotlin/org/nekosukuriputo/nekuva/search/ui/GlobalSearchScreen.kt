@@ -37,6 +37,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.core.ui.components.MangaGridItem
+import org.nekosukuriputo.nekuva.list.ui.MangaListDecorations
+import org.nekosukuriputo.nekuva.list.ui.rememberMangaListDecorations
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +51,7 @@ fun GlobalSearchScreen(
     onBackClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val deco = rememberMangaListDecorations() // favourite badge + reading progress on results
 
     Scaffold(
         topBar = {
@@ -87,6 +90,7 @@ fun GlobalSearchScreen(
                     items(uiState.sections, key = { it.id }) { section ->
                         SearchSectionItem(
                             section = section,
+                            deco = deco,
                             onMangaClick = onMangaClick,
                             onMore = { sourceId -> onSourceMore(sourceId, viewModel.query) },
                             onOpenBrowser = onOpenBrowser,
@@ -117,6 +121,7 @@ fun GlobalSearchScreen(
 @Composable
 private fun SearchSectionItem(
     section: SearchSection,
+    deco: MangaListDecorations,
     onMangaClick: (Long) -> Unit,
     onMore: (sourceId: String) -> Unit,
     onOpenBrowser: (url: String) -> Unit,
@@ -173,7 +178,12 @@ private fun SearchSectionItem(
             ) {
                 items(section.manga, key = { it.id }) { manga ->
                     Box(modifier = Modifier.width(120.dp)) {
-                        MangaGridItem(manga = manga, onClick = { onMangaClick(manga.id) })
+                        MangaGridItem(
+                            manga = manga,
+                            onClick = { onMangaClick(manga.id) },
+                            progress = deco.progressOf(manga),
+                            badges = deco.badgesOf(manga),
+                        )
                     }
                 }
             }

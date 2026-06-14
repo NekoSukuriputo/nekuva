@@ -567,9 +567,16 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     horizontal ala Doki — list-mode N/A, pakai item bersama). Live via `observeListModeOrNull`/`observeGridSize`.
   - [x] `manga_list_badges` → badge **saved** di Local, **favourite** di Favourites (`getMangaListBadges()` bitmask).
   - [x] `quick_filter` → RemoteList: baris chip quick-filter digate `isQuickFilterEnabled` (filter tetap di toolbar).
-  - [ ] **SISA 1C:** `historyListMode` (History masih grup-tanggal + item khusus resume/hapus → perlu varian
-    grid+progres+aksi), `progress_indicators` lintas-daftar (butuh lookup progres history per-manga di tiap
-    ViewModel: Explore/Favourites/RemoteList/Search), badge favorit/saved di RemoteList/Search (butuh lookup).
+  - [x] **1C bagian 2:** `historyListMode` → History kini hormati mode (GRID = grid + header tanggal +
+    bar progres + long-press menu Resume/Hapus; LIST/DETAILED = baris lama dgn aksi resume/hapus) + grid_size;
+    teks/bar progres digate `progress_indicators` (NONE = sembunyi).
+  - [x] **`progress_indicators` lintas-daftar + badge favorit:** provider bersama `list/ui/MangaListDecorations`
+    (observe `HistoryRepository.observeProgressMap` + `FavouritesRepository.observeFavouriteIds` via DAO baru
+    `observeProgress`/`observeFavouriteIds`) → bar progres + badge hati di **Local/Favourites/RemoteList/Search**
+    (gated setting). Favourites pakai badge favorit konstan (semua item favorit).
+  - [ ] **SISA kecil 1C:** badge **saved** lintas-daftar di RemoteList/Search (butuh lookup id manga lokal/unduh;
+    saat ini badge saved hanya di Local). Override list-mode per-layar (Favourites) belum punya UI "Opsi daftar"
+    (fallback ke global) — masuk fitur overflow "list options" (ditunda).
 - **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.
 - **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
   `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).

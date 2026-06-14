@@ -113,6 +113,7 @@ fun RemoteListScreen(
     val settings = koinInject<AppSettings>()
     val listMode = rememberMangaListMode(settings)
     val gridSize = rememberGridSize(settings)
+    val deco = org.nekosukuriputo.nekuva.list.ui.rememberMangaListDecorations() // progress + favourite badge
 
     var searchActive by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -252,7 +253,12 @@ fun RemoteListScreen(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(state.mangaList) { manga ->
-                                    MangaGridItem(manga = manga, onClick = { onMangaClick(manga.id) })
+                                    MangaGridItem(
+                                        manga = manga,
+                                        onClick = { onMangaClick(manga.id) },
+                                        progress = deco.progressOf(manga),
+                                        badges = deco.badgesOf(manga),
+                                    )
                                 }
                                 if (state.isAppending) {
                                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -279,7 +285,13 @@ fun RemoteListScreen(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(state.mangaList) { manga ->
-                                    MangaListRow(manga = manga, onClick = { onMangaClick(manga.id) }, detailed = detailed)
+                                    MangaListRow(
+                                        manga = manga,
+                                        onClick = { onMangaClick(manga.id) },
+                                        detailed = detailed,
+                                        progress = deco.progressOf(manga),
+                                        badges = deco.badgesOf(manga),
+                                    )
                                 }
                                 if (state.isAppending) {
                                     item {

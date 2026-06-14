@@ -96,6 +96,10 @@ class HistoryRepository(
 		}
 	}
 
+	/** mangaId -> read percent, for reading indicators on any manga list (Doki parity). */
+	fun observeProgressMap(): Flow<Map<Long, Float>> =
+		db.getHistoryDao().observeProgress().map { rows -> rows.associate { it.mangaId to it.percent } }
+
 	suspend fun addOrUpdate(manga: Manga, chapterId: Long, page: Int, scroll: Int, percent: Float, force: Boolean) {
 		if (!force && shouldSkip(manga)) {
 			return

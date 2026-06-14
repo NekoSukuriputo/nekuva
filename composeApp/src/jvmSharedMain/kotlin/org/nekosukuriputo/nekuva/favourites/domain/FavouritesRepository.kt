@@ -89,6 +89,10 @@ class FavouritesRepository(
 		return db.getFavouritesDao().findCategoriesCount(mangaId) != 0
 	}
 
+	/** All favourited manga ids — for the favourite badge on any manga list (Doki parity). */
+	fun observeFavouriteIds(): Flow<Set<Long>> =
+		db.getFavouritesDao().observeFavouriteIds().map { it.toSet() }
+
 	/** Read-only title search over favourites (for global search). */
 	suspend fun search(query: String, limit: Int): List<Manga> {
 		return db.getFavouritesDao().searchByTitle("%$query%", limit).toMangaListWithTags()
