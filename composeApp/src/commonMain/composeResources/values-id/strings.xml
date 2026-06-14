@@ -892,4 +892,8 @@
     <string name="available_pattern">%1$s tersedia</string>
     <string name="pinned_sources_only">Hanya sumber yang disematkan</string>
     <string name="hide_empty_sources">Sembunyikan sumber kosong</string>
+    <string name="ask">Tanya</string>
+    <string name="content_type">Tipe konten</string>
+    <string name="new_sources">Sumber baru</string>
+    <string name="all_sources">Semua sumber</string>
 </resources>

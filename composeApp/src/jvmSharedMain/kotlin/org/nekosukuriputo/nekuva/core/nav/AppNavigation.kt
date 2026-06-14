@@ -182,6 +182,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<SettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.SettingsRootScreen(
                         onAppearance = { navController.navigate(AppearanceSettingsRoute) },
+                        onRemoteSources = { navController.navigate(SourcesSettingsRoute) },
                         onReader = { navController.navigate(ReaderSettingsRoute) },
                         onStorageNetwork = { navController.navigate(StorageNetworkSettingsRoute) },
                         onDownloads = { navController.navigate(DownloadsSettingsRoute) },
@@ -240,6 +241,23 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<ProtectSetupRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.protect.ProtectSetupScreen(
                         onDone = { navController.popBackStack() },
+                    )
+                }
+                composable<SourcesSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.sources.SourcesSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onManageSources = { navController.navigate(SourcesManageRoute) },
+                        onCatalog = { navController.navigate(SourcesCatalogRoute) },
+                    )
+                }
+                composable<SourcesManageRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<SourcesCatalogRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<NavConfigRoute> {

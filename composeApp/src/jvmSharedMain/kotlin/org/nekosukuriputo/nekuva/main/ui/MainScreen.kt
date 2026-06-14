@@ -308,6 +308,7 @@ private fun rememberOverflowItems(
     val showUpdated = stringResource(Res.string.show_updated)
     val clearFeed = stringResource(Res.string.clear_feed)
     val manageSources = stringResource(Res.string.manage_sources)
+    val sourcesCatalog = stringResource(Res.string.sources_catalog)
     val incognito = stringResource(Res.string.incognito_mode)
     val settingsLabel = stringResource(Res.string.settings)
 
@@ -319,7 +320,10 @@ private fun rememberOverflowItems(
     val tabItems = when {
         has(HistoryTabRoute) -> listOf(disabled(clearHistory), listOpt(AppSettings.KEY_LIST_MODE_HISTORY), disabled(statistics))
         has(FavoritesTabRoute) -> listOf(listOpt(AppSettings.KEY_LIST_MODE_FAVORITES), disabled(favCategories))
-        has(ExploreRoute) -> listOf(disabled(manageSources))
+        has(ExploreRoute) -> listOf(
+            OverflowItem(manageSources, enabled = true, onClick = { navController.navigate(SourcesSettingsRoute) }),
+            OverflowItem(sourcesCatalog, enabled = true, onClick = { navController.navigate(SourcesCatalogRoute) }),
+        )
         has(FeedTabRoute) -> listOf(disabled(update), disabled(showUpdated), disabled(clearFeed))
         has(HomeRoute) -> listOf(disabled(filter), listOpt(AppSettings.KEY_LIST_MODE), disabled(directories))
         else -> emptyList()

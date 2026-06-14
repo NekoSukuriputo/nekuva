@@ -1,6 +1,8 @@
 package org.nekosukuriputo.nekuva.explore.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -129,7 +131,8 @@ fun ExploreScreen(
                             onClick = {
                                 val id = (source.mangaSource as? MangaParserSource)?.name ?: ""
                                 onSourceClick(id)
-                            }
+                            },
+                            onLongClick = { viewModel.togglePin(source) },
                         )
                     }
                 }
@@ -142,10 +145,12 @@ fun ExploreScreen(
 	}
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SourceGridItem(
 	source: MangaSourceInfo,
 	onClick: () -> Unit,
+	onLongClick: () -> Unit = {},
 ) {
     val iconUrl = "favicon://${source.mangaSource.name}"
 
@@ -153,29 +158,40 @@ private fun SourceGridItem(
 		modifier = Modifier
 			.fillMaxWidth()
 			.clip(RoundedCornerShape(8.dp))
-			.clickable(onClick = onClick)
+			.combinedClickable(onClick = onClick, onLongClick = onLongClick)
 			.padding(8.dp),
 		horizontalAlignment = Alignment.CenterHorizontally
 	) {
-        SubcomposeAsyncImage(
-            model = iconUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)),
-            loading = {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        Box(contentAlignment = Alignment.TopEnd) {
+            SubcomposeAsyncImage(
+                model = iconUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)),
+                loading = {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+                },
+                error = {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            },
-            error = {
+            )
+            // Pinned indicator (Doki) — toggled via long-press.
+            if (source.isPinned) {
                 Icon(
-                    imageVector = Icons.Default.Image,
+                    imageVector = Icons.Filled.PushPin,
                     contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp),
                 )
             }
-        )
+        }
         Spacer(modifier = Modifier.height(8.dp))
 		Text(
             text = source.mangaSource.name,

@@ -43,6 +43,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 @Composable
 fun SettingsRootScreen(
     onAppearance: () -> Unit,
+    onRemoteSources: () -> Unit = {},
     onReader: () -> Unit,
     onStorageNetwork: () -> Unit,
     onDownloads: () -> Unit,
@@ -67,7 +68,7 @@ fun SettingsRootScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SettingsItem(title = stringResource(Res.string.appearance), icon = Icons.Outlined.Palette, onClick = onAppearance)
-            SettingsItem(title = stringResource(Res.string.remote_sources), icon = Icons.Outlined.Public, summary = soon, enabled = false)
+            SettingsItem(title = stringResource(Res.string.remote_sources), icon = Icons.Outlined.Public, onClick = onRemoteSources)
             SettingsItem(title = stringResource(Res.string.reader_settings), icon = Icons.AutoMirrored.Outlined.MenuBook, onClick = onReader)
             SettingsItem(title = stringResource(Res.string.storage_and_network), icon = Icons.Outlined.Storage, onClick = onStorageNetwork)
             SettingsItem(title = stringResource(Res.string.downloads), icon = Icons.Outlined.Download, onClick = onDownloads)

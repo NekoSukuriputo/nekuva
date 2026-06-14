@@ -608,7 +608,7 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     expect/actual (Android set/clear, Desktop no-op); App() observe 4 history terbaru → set shortcut (kalau setting ON,
     else clear). Tap shortcut → intent ke MainActivity (`EXTRA_MANGA_ID`) → `DeepLinkBus` → AppNavigation buka
     `MangaDetailsRoute`. Ikon = launcher app. **FASE 1E SELESAI.**
-- **1F ✅ DONE (compile-green, belum run-verify) — Privasi:**
+- **1F ✅ DONE & RUN-VERIFIED — Privasi:**
   - [x] `screenshots_policy` → `SecureScreenEffect` expect/actual (Android `FLAG_SECURE` ref-counted; Desktop N/A).
     Diterapkan: App-level (BLOCK_ALL; BLOCK_INCOGNITO saat incognito global), Reader (BLOCK_NSFW manga NSFW;
     BLOCK_INCOGNITO sesi incognito). Doki ref: `ScreenshotPolicyHelper`.
@@ -620,16 +620,31 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     (expect/actual, TANPA dep androidx.biometric / FragmentActivity; Desktop password-only). Doki ref:
     `ProtectSetupActivity` + `ProtectActivity`. md5/isNumeric helper `core/util/Hashing.kt`.
 
-### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)
-- **Fase 2 Remote sources:** layar Sources (sort/grid/enable-all/no_nsfw/incognito_nsfw/tags_warnings/mirror_switching/handle_links)
-  → Manage sources (aktif/urut) → **Sources Catalog** (tambah sumber, filter locale/tipe, cari) → per-source (sign-in/cookies/domain).
+### FASE 2 — Remote sources (+ Catalog) — parity checklist + impact
+> Data layer SUDAH lengkap (`MangaSourcesRepository`: enabled/pinned/order/NSFW/`queryParserSources`/
+> `allMangaSources`/`setSourcesEnabled`/`setPositions`/`setPinned` + DAO). Fase 2 = UI + impact. Ref Doki:
+> `settings/sources/*` (SourcesSettings/Manage/Catalog/SourceSettings) + `explore/`.
+- **2A ✅ DONE (compile-green) — Sources settings screen** (`SourcesSettingsScreen`): sort order, grid, enable-all,
+  no_nsfw, incognito_nsfw (TriState), tags_warnings, mirror_switching, handle_links + entri Manage & Catalog.
+  Root "Remote sources" diaktifkan (`SourcesSettingsRoute`).
+- **2B ✅ DONE (compile-green) — Manage sources** (`SourcesManageScreen`/VM): **pin/unpin** (`setSourcesPinned`
+  baru), **reorder** (up/down → `setPositions`, auto-MANUAL), disable (Switch off → balik ke Catalog).
+- **2C ✅ DONE (compile-green) — Sources Catalog** (`SourcesCatalogScreen`/VM): jelajah disabled-only via
+  `queryParserSources`, **cari**, **filter** bahasa (dropdown locale) + content-type (chips) + new-only,
+  **tambah** (+ → enable, refresh). Empty-state.
+- **2D ✅ DONE (compile-green) — Impact Explore:** overflow ⋮ Explore aktif → **Manage** + **Catalog**;
+  **pin/unpin dari Explore** (long-press → `togglePin`, indikator pin); sumber off hilang dari Explore.
+- **2E — Per-source settings** (`SourceSettings`): domain/mirror, hapus cookies, sign-in (sebagian butuh
+  evaluateJs/WebView). **Berikutnya.**
+
+### FASE 3–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 3 Reader:** audit sisa vs `pref_reader` (mayoritas sudah; cek `pages_preload`, `reader_multitask`, dll).
-- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
-- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android).
+- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
+- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom location download in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
-- **Fase 9 About:** changelog + app-update checker + sisa link.
+- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

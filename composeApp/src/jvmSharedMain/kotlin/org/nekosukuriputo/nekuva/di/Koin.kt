@@ -130,6 +130,8 @@ val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.appearance.AppearanceViewModel(get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.downloads.DownloadsSettingsViewModel(get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkViewModel(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogViewModel(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageViewModel(get(), get()) }
 }
 
 val trackerModule = module {

@@ -2,6 +2,7 @@ package org.nekosukuriputo.nekuva.explore.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,13 @@ class ExploreViewModel(
 			started = SharingStarted.WhileSubscribed(5000),
 			initialValue = ExploreUiState.Loading,
 		)
+
+	/** Pin/unpin a source from Explore (long-press) — pinned sources sort first (Doki parity). */
+	fun togglePin(source: MangaSourceInfo) {
+		viewModelScope.launch {
+			sourcesRepository.setSourcesPinned(setOf(source.mangaSource), !source.isPinned)
+		}
+	}
 }
 
 sealed interface ExploreUiState {

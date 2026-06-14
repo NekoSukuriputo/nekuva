@@ -279,6 +279,10 @@ class MangaSourcesRepository(
 		return result
 	}
 
+	/** Pin/unpin sources (Manage + Explore long-press). Pinned sources sort first in the lists. */
+	suspend fun setSourcesPinned(sources: Collection<MangaSource>, isPinned: Boolean) =
+		setSourcesPinnedImpl(sources, isPinned)
+
 	private suspend fun setSourcesPinnedImpl(sources: Collection<MangaSource>, isPinned: Boolean) {
 		if (sources.size == 1) { // fast path
 			dao.setPinned(sources.first().name, isPinned)
