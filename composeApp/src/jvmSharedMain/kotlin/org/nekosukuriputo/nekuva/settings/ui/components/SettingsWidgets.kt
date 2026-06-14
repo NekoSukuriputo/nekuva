@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -123,7 +126,9 @@ fun <T> SettingsSingleChoice(
             onDismissRequest = { showDialog = false },
             title = { Text(title) },
             text = {
-                Column {
+                // Scrollable + height-capped so long lists (e.g. 9 color themes) don't overflow the
+                // dialog and leave the bottom options unreachable.
+                Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                     for ((label, value) in options) {
                         Row(
                             modifier = Modifier
@@ -196,7 +201,9 @@ fun <T> SettingsMultiChoice(
             onDismissRequest = { showDialog = false },
             title = { Text(title) },
             text = {
-                Column {
+                // Scrollable + height-capped so long lists (e.g. 9 color themes) don't overflow the
+                // dialog and leave the bottom options unreachable.
+                Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                     for ((label, value) in options) {
                         val checked = value in working
                         Row(

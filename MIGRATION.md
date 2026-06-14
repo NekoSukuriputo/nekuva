@@ -492,16 +492,17 @@ Sumber Doki: `pref_appearance.xml`, `AppearanceSettingsFragment`, `ColorScheme.k
 ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPreference`, `nav/NavConfigFragment`,
 `protect/ProtectSetupActivity`.
 
-**Sub-fase 1A — Color scheme + perbaikan widget (PRIORITAS, ini yang rusak):**
-- [ ] Port 11 palet Doki (DEFAULT/Totoro, MONET, EXPRESSIVE, MIKU/…, ITSUKA) sebagai **`ColorScheme` Compose statis
-      light+dark** di `commonMain` (ekstrak nilai dari `colors_themed.xml` + `values-night`). MONET/EXPRESSIVE
-      = palet statis (bukan dynamic) sesuai keputusan.
-- [ ] `Theme.kt`: pilih palet dari `settings.colorScheme` (saat ini DIABAIKAN — cuma light/dark/amoled) ×
-      theme(system/light/dark) × AMOLED. **Live** (observe `colorScheme`).
-- [ ] Label tema **terlokalisasi** (`theme_name_totoro/miku/sakura/…`) + tambahkan string-nya; bukan nama enum mentah.
-      Idealnya tiru UI Doki `item_color_scheme` (swatch warna), minimal radio berlabel benar.
-- [ ] **FIX bug `SettingsSingleChoice`** (widget list-option) — reproduksi & perbaiki.
-- IMPACT: seluruh app (NekuvaTheme di root).
+**Sub-fase 1A — Color scheme + perbaikan widget (PRIORITAS, ini yang rusak) — ✅ DONE (compile-green, belum run-verify):**
+- [x] Port **9 palet statis** Doki (Totoro=DEFAULT, Miku, Asuka=RENA, Mion=FROG, Rikka=BLUEBERRY, Sakura, Mamimi,
+      Kanade, Itsuka) sebagai `ColorScheme` Compose light+dark di `commonMain/.../theme/ColorSchemes.kt`
+      (auto-generate dari `colors_themed.xml` + `values-night` via `scripts/gen_color_schemes.py`). MONET/EXPRESSIVE
+      = dynamic-only → dikecualikan dari daftar (fallback Totoro) sesuai keputusan palet-statis.
+- [x] `Theme.kt`: `appColorScheme(name, dark)` pilih palet dari `settings.colorScheme` × theme × AMOLED
+      (`toAmoled()` override hitam). **Live** via `observeColorScheme()`. (Color.kt palet lama dihapus.)
+- [x] Label tema **terlokalisasi** (`theme_name_*`) di Appearance (bukan nama enum mentah).
+- [x] **FIX bug widget list-option** (`SettingsSingleChoice` + multi-dialog): opsi kini **scrollable + height-capped**
+      (sebelumnya daftar panjang spt 9 tema meluber & opsi bawah tak terjangkau).
+- IMPACT: seluruh app (NekuvaTheme di root). **Sisa 1A (opsional):** swatch warna ala Doki `item_color_scheme`.
 
 **Sub-fase 1B — Main screen sections (NavConfig) + FAB:**
 - [ ] `nav_main` → layar konfigurasi urutan/aktif section bottom-nav (Doki `NavConfigFragment`: drag reorder +

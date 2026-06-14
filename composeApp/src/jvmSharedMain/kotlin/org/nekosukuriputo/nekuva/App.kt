@@ -60,13 +60,14 @@ fun App() {
     val settings = koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val themeMode by settings.observeTheme().collectAsState(initial = settings.theme)
     val amoled by settings.observeAmoled().collectAsState(initial = settings.isAmoledTheme)
+    val colorSchemeName by settings.observeColorScheme().collectAsState(initial = settings.colorScheme.name)
     val darkTheme = when (themeMode) {
         1 -> false // light
         2 -> true // dark
         else -> androidx.compose.foundation.isSystemInDarkTheme() // -1 = follow system
     }
 
-    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme(darkTheme = darkTheme, amoled = amoled) {
+    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme(darkTheme = darkTheme, amoled = amoled, colorSchemeName = colorSchemeName) {
         androidx.compose.material3.Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

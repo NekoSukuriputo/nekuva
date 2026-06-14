@@ -69,6 +69,10 @@ class AppSettings(private val prefs: ObservableSettings) {
 	fun observeAmoled(): kotlinx.coroutines.flow.Flow<Boolean> =
 		prefs.toFlowSettings().getBooleanFlow(KEY_THEME_AMOLED, false)
 
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeColorScheme(): kotlinx.coroutines.flow.Flow<String> =
+		prefs.toFlowSettings().getStringOrNullFlow(KEY_COLOR_THEME).map { it ?: ColorScheme.default.name }
+
 	/** Emits each time the given (string-backed) preference key changes. Used by [observeAsStateFlow]. */
 	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
 	fun keyChangeFlow(key: String): kotlinx.coroutines.flow.Flow<Unit> =

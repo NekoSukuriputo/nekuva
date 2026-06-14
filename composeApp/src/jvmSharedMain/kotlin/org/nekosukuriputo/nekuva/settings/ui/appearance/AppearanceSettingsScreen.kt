@@ -54,11 +54,22 @@ fun AppearanceSettingsScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
-            // Color scheme (persisted; applying non-default palettes is deferred — see MIGRATION.md)
+            // Color scheme (live — drives NekuvaTheme via the 9 static Doki palettes). Labels localized.
             var colorScheme by remember { mutableStateOf(settings.colorScheme) }
+            val schemeLabels = mapOf(
+                ColorScheme.DEFAULT to stringResource(Res.string.theme_name_totoro),
+                ColorScheme.MIKU to stringResource(Res.string.theme_name_miku),
+                ColorScheme.RENA to stringResource(Res.string.theme_name_asuka),
+                ColorScheme.FROG to stringResource(Res.string.theme_name_mion),
+                ColorScheme.BLUEBERRY to stringResource(Res.string.theme_name_rikka),
+                ColorScheme.SAKURA to stringResource(Res.string.theme_name_sakura),
+                ColorScheme.MAMIMI to stringResource(Res.string.theme_name_mamimi),
+                ColorScheme.KANADE to stringResource(Res.string.theme_name_kanade),
+                ColorScheme.ITSUKA to stringResource(Res.string.theme_name_itsuka),
+            )
             SettingsSingleChoice(
                 title = stringResource(Res.string.color_theme),
-                options = ColorScheme.getAvailableList().map { it.name.lowercase().replaceFirstChar(Char::uppercase) to it },
+                options = ColorScheme.getAvailableList().map { (schemeLabels[it] ?: it.name) to it },
                 selected = colorScheme,
                 onSelect = { settings.colorScheme = it; colorScheme = it },
             )
