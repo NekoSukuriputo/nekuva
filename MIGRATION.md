@@ -553,9 +553,12 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 
 #### Sub-fase Fase 1 (revisi — fokus "menerapkan" yang setengah jalan)
 - **1A ✅ DONE** — Tema warna (9 palet) + perbaikan widget list-option.
-- **1B — Bahasa (`app_locale`)** [PRIORITAS, kamu keluhkan]: katalog bahasa penuh (sesuai folder `values-*`) +
-  **terapkan runtime** — Android `AppCompatDelegate.setApplicationLocales` (actual), Desktop `Locale.setDefault`
-  + recompose `Res`. Impact: seluruh teks UI.
+- **1B ✅ DONE (compile-green, belum run-verify)** — Bahasa (`app_locale`): katalog **±66 bahasa** dari folder
+  `values-*` (`core/i18n/Languages.kt`), nama bahasa self-localized (`localeDisplayName` via `java.util.Locale`),
+  diurutkan; opsi "Ikuti sistem" di atas. **Diterapkan runtime** via `applyAppLocale`/`recreateForLocale`
+  expect/actual: **Android** = `MainActivity.attachBaseContext` membungkus Configuration dgn locale (baca
+  `nekuva_prefs/app_locale`, semua API, tanpa AppCompat) + `Activity.recreate()` saat ganti; **Desktop** =
+  `Locale.setDefault` + `App()` re-`key(localeTag)` agar Compose Resources resolve ulang. Impact: seluruh teks UI.
 - **1C — Daftar manga**: `list_mode_2`(+per-layar) · `grid_size` · `progress_indicators` · `manga_list_badges` ·
   `quick_filter` → komponen item manga bersama + wire ke Explore/Favourites/History/Local/RemoteList/Search.
 - **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.

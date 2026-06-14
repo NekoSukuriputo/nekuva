@@ -67,13 +67,19 @@ fun App() {
         else -> androidx.compose.foundation.isSystemInDarkTheme() // -1 = follow system
     }
 
-    org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme(darkTheme = darkTheme, amoled = amoled, colorSchemeName = colorSchemeName) {
+    // In-app language (Doki app_locale). Re-key on the locale so Compose Resources re-resolve; the
+    // remember applies the JVM/Desktop default before children compose (Android uses the Activity config).
+    val localeTag by settings.observeAppLocale().collectAsState(initial = settings.appLocales)
+    androidx.compose.runtime.key(localeTag) {
+      remember(localeTag) { org.nekosukuriputo.nekuva.core.i18n.applyAppLocale(localeTag) }
+      org.nekosukuriputo.nekuva.core.ui.theme.NekuvaTheme(darkTheme = darkTheme, amoled = amoled, colorSchemeName = colorSchemeName) {
         androidx.compose.material3.Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             org.nekosukuriputo.nekuva.core.nav.AppNavigation()
         }
+      }
     }
 }
 

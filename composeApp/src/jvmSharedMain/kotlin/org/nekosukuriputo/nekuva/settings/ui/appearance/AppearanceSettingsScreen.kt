@@ -23,6 +23,9 @@ import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.i18n.SUPPORTED_LANGUAGE_TAGS
+import org.nekosukuriputo.nekuva.core.i18n.localeDisplayName
+import org.nekosukuriputo.nekuva.core.i18n.recreateForLocale
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.prefs.ColorScheme
 import org.nekosukuriputo.nekuva.core.prefs.ListMode
@@ -93,17 +96,18 @@ fun AppearanceSettingsScreen(
                 checked = amoled,
                 onCheckedChange = { settings.isAmoledTheme = it; amoled = it },
             )
-            // Language (persisted; in-app locale switching deferred)
+            // Language (Doki app_locale): full translated-language catalog, applied at runtime.
             var locale by remember { mutableStateOf(settings.appLocales) }
+            val followSystem = stringResource(Res.string.follow_system)
+            val languageOptions = remember(followSystem) {
+                listOf(followSystem to "") +
+                    SUPPORTED_LANGUAGE_TAGS.map { localeDisplayName(it) to it }.sortedBy { it.first.lowercase() }
+            }
             SettingsSingleChoice(
                 title = stringResource(Res.string.language),
-                options = listOf(
-                    stringResource(Res.string.follow_system) to "",
-                    "English" to "en",
-                    "Bahasa Indonesia" to "id",
-                ),
+                options = languageOptions,
                 selected = locale,
-                onSelect = { settings.appLocales = it; locale = it },
+                onSelect = { settings.appLocales = it; locale = it; recreateForLocale() },
             )
 
             SettingsCategoryHeader(stringResource(Res.string.manga_list))

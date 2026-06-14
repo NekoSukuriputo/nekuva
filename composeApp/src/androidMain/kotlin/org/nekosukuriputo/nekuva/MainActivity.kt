@@ -1,14 +1,25 @@
 package org.nekosukuriputo.nekuva
 
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import java.lang.ref.WeakReference
+import org.nekosukuriputo.nekuva.core.i18n.LocaleActivityHolder
+import org.nekosukuriputo.nekuva.core.i18n.localeWrap
+import org.nekosukuriputo.nekuva.core.i18n.storedLocaleTag
 import org.nekosukuriputo.nekuva.reader.ui.ReaderKeyEvents
 
 class MainActivity : ComponentActivity() {
+    // Apply the chosen in-app language (Doki's app_locale) to the Activity config on every API level.
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(localeWrap(newBase, storedLocaleTag(newBase)))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LocaleActivityHolder.current = WeakReference(this)
         setContent {
             App()
         }
