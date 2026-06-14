@@ -4,7 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +26,8 @@ import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
 import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.core.parser.ParserMangaRepository
+import org.nekosukuriputo.nekuva.parsers.config.ConfigKey
 import org.nekosukuriputo.nekuva.history.data.HistoryRepository
 import org.nekosukuriputo.nekuva.history.domain.HistoryUpdateUseCase
 import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
@@ -60,6 +64,16 @@ data class ReaderChapterItem(
 data class ReaderBranch(
     val name: String?,
     val count: Int,
+)
+
+/**
+ * Preferred image-server / mirror choice for the current source (Doki's ImageServerDelegate). Present
+ * only for sources that expose a `ConfigKey.PreferredImageServer`; [options] is a list of
+ * (value, label) pairs and [current] is the selected value (an empty label means "Automatic").
+ */
+data class ImageServerUiState(
+    val options: List<Pair<String, String>>,
+    val current: String?,
 )
 
 /** Transient reader toast (Doki's ReaderToastView): bookmark add/remove + chapter change. */
@@ -164,6 +178,68 @@ class ReaderViewModel(
 
     /** Which controls to render in the bottom bar (Doki's reader_controls preference). */
     val readerControls: Set<org.nekosukuriputo.nekuva.core.prefs.ReaderControl> get() = settings.readerControls
+
+    // Preferred image server / mirror (Doki's ImageServerDelegate) — null when the source has no such config.
+    private val _imageServer = MutableStateFlow<ImageServerUiState?>(null)
+    val imageServer: StateFlow<ImageServerUiState?> = _imageServer.asStateFlow()
+
+    /** Resolve the parser repository for the current manga (for source-config access). */
+    private fun parserRepository(): ParserMangaRepository? {
+        val m = manga ?: return null
+        val source = MangaParserSource.entries.find { it.name == m.source.name } ?: return null
+        return repositoryFactory.create(source) as? ParserMangaRepository
+    }
+
+    /** Re-read the source's PreferredImageServer config into [imageServer] (off the main thread). */
+    private fun refreshImageServerState() {
+        viewModelScope.launch {
+            _imageServer.value = runCatching {
+                withContext(Dispatchers.Default) {
+                    val repo = parserRepository() ?: return@withContext null
+                    val key = repo.getConfigKeys()
+                        .firstNotNullOfOrNull { it as? ConfigKey.PreferredImageServer } ?: return@withContext null
+                    // presetValues is Map<entryValue?, label?>; a null entryValue is Doki's "automatic"
+                    // (stored as "" -> resolves to the source default). Coalesce both to "" here.
+                    val options = ArrayList<Pair<String, String>>()
+                    for (entry in key.presetValues) {
+                        options.add((entry.key ?: "") to (entry.value ?: ""))
+                    }
+                    ImageServerUiState(
+                        options = options,
+                        current = repo.getConfig()[key],
+                    )
+                }
+            }.getOrNull()
+        }
+    }
+
+    /** Switch the preferred image server (Doki): persist, drop cached page urls, reload the chapter. */
+    fun setImageServer(value: String) {
+        viewModelScope.launch {
+            val changed = runCatching {
+                withContext(Dispatchers.Default) {
+                    val repo = parserRepository() ?: return@withContext false
+                    val key = repo.getConfigKeys()
+                        .firstNotNullOfOrNull { it as? ConfigKey.PreferredImageServer } ?: return@withContext false
+                    if (repo.getConfig()[key] == value) return@withContext false
+                    repo.getConfig()[key] = value
+                    repo.invalidateCache()
+                    true
+                }
+            }.getOrDefault(false)
+            if (changed) {
+                refreshImageServerState()
+                reloadCurrentChapter()
+            }
+        }
+    }
+
+    /** Reload the current chapter (after a config change) keeping the current page position. */
+    private fun reloadCurrentChapter() {
+        val target = allChapters.firstOrNull { it.id == currentChapterId } ?: return
+        val page = loadedPages.getOrNull(currentVisibleIndex)?.pageInChapter ?: 0
+        loadChapterAt(target, page)
+    }
 
     // One-shot result of a save-page action: the saved location, or null on failure (drives a snackbar).
     private val _pageSaveEvent = kotlinx.coroutines.flow.MutableSharedFlow<String?>(extraBufferCapacity = 1)
@@ -274,6 +350,7 @@ class ReaderViewModel(
                 manga = m
                 mangaFlow.value = m
                 resolveIncognito(m)
+                refreshImageServerState()
                 allChapters = m.chapters ?: emptyList()
                 val chapter = allChapters.find { it.id == initialChapterId }
                     ?: throw IllegalArgumentException("Chapter with ID $initialChapterId not found.")

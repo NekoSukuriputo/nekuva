@@ -546,8 +546,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 			return policy.isNetworkAllowed()
 		}
 
-	val is32BitColorsEnabled: Boolean
+	var is32BitColorsEnabled: Boolean
 		get() = prefs.getBoolean(KEY_32BIT_COLOR, false)
+		set(value) = prefs.putBoolean(KEY_32BIT_COLOR, value)
 
 	val isDiscordRpcEnabled: Boolean
 		get() = prefs.getBoolean(KEY_DISCORD_RPC, false)
@@ -604,6 +605,14 @@ class AppSettings(private val prefs: ObservableSettings) {
 		}
 		val needle = if (mode == ReaderMode.WEBTOON) READER_CROP_WEBTOON else READER_CROP_PAGED
 		return needle.toString() in rawValue
+	}
+
+	/** Toggle "Crop pages" for the bucket the [mode] belongs to (webtoon vs paged), Doki's multi-set. */
+	fun setPagesCropEnabled(mode: ReaderMode, enabled: Boolean) {
+		val needle = (if (mode == ReaderMode.WEBTOON) READER_CROP_WEBTOON else READER_CROP_PAGED).toString()
+		val current = prefs.getStringSet(KEY_READER_CROP, emptySet()).toMutableSet()
+		if (enabled) current.add(needle) else current.remove(needle)
+		prefs.putStringSet(KEY_READER_CROP, current)
 	}
 
 	fun isTipEnabled(tip: String): Boolean {

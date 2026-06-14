@@ -49,6 +49,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,6 +75,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -158,12 +160,25 @@ fun ReaderScreen(
     val showPageNumbers = remember { settings.prefBoolean("pages_numbers", false) }
     val webtoonGaps = remember { settings.isWebtoonGapsEnabled }
     val animatePages = remember { settings.readerAnimation != org.nekosukuriputo.nekuva.core.prefs.ReaderAnimation.NONE }
+    val doubleOnLandscape = remember { settings.isReaderDoubleOnLandscape }
     val controls = remember { viewModel.readerControls }
     // Configurable tap zones (Doki TapGridSettings). tapsReversed = follow RTL reading direction.
     val tapGridSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.reader.data.TapGridSettings>()
     val tapsReversed = remember(readerMode) {
         readerMode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED && !settings.isReaderControlAlwaysLTR
     }
+
+    // Image pipeline options (Doki: crop pages [per mode] + 32-bit color). Bumped when toggled in-sheet.
+    var imageOptionsVersion by remember { mutableStateOf(0) }
+    val readerImageOptions = remember(readerMode, imageOptionsVersion) {
+        ReaderImageOptions(
+            crop = settings.isPagesCropEnabled(readerMode),
+            enhancedColors = settings.is32BitColorsEnabled,
+        )
+    }
+    // Preferred image server / mirror (Doki's ImageServerDelegate) — shown only when the source has it.
+    val imageServer by viewModel.imageServer.collectAsState()
+    var showImageServerDialog by remember { mutableStateOf(false) }
 
     // Doki-style reader overlay: tap toggles the app bar + the bottom actions bar.
     var controlsVisible by remember { mutableStateOf(true) }
@@ -260,6 +275,7 @@ fun ReaderScreen(
             is ReaderUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() }, modifier = Modifier.padding(paddingValues))
             is ReaderUiState.Success -> {
                 Box(modifier = Modifier.fillMaxSize().background(readerBackgroundColor(readerBackground))) {
+                  CompositionLocalProvider(LocalReaderImageOptions provides readerImageOptions) {
                     ReaderContent(
                         pages = state.pages,
                         mode = readerMode,
@@ -273,6 +289,7 @@ fun ReaderScreen(
                         pageAlignment = pageAlignment,
                         webtoonGaps = webtoonGaps,
                         animatePages = animatePages,
+                        doubleOnLandscape = doubleOnLandscape,
                         tapGridSettings = tapGridSettings,
                         tapsReversed = tapsReversed,
                         navEvents = navEvents,
@@ -282,6 +299,7 @@ fun ReaderScreen(
                         onToggleControls = { controlsVisible = !controlsVisible },
                         onShowMenu = { showConfigSheet = true },
                     )
+                  }
                     // Bottom stack: thin info bar (always, if enabled) + actions bar (only when controls shown).
                     Column(
                         modifier = Modifier.align(Alignment.BottomCenter).padding(paddingValues),
@@ -366,12 +384,33 @@ fun ReaderScreen(
                 showConfigSheet = false
                 showColorSheet = true
             },
+            imageServerAvailable = imageServer != null,
+            onImageServer = {
+                showConfigSheet = false
+                showImageServerDialog = true
+            },
+            onImageOptionsChanged = { imageOptionsVersion++ },
             onOpenSettings = {
                 showConfigSheet = false
                 onOpenSettings()
             },
             onDismiss = { showConfigSheet = false },
         )
+    }
+    if (showImageServerDialog) {
+        val state = imageServer
+        if (state != null) {
+            ImageServerDialog(
+                state = state,
+                onSelect = {
+                    viewModel.setImageServer(it)
+                    showImageServerDialog = false
+                },
+                onDismiss = { showImageServerDialog = false },
+            )
+        } else {
+            showImageServerDialog = false
+        }
     }
     if (showColorSheet) {
         ColorCorrectionSheet(
@@ -552,6 +591,9 @@ private fun ReaderConfigSheet(
     rotateSupported: Boolean,
     onRotate: () -> Unit,
     onColorCorrection: () -> Unit,
+    imageServerAvailable: Boolean,
+    onImageServer: () -> Unit,
+    onImageOptionsChanged: () -> Unit,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -622,6 +664,26 @@ private fun ReaderConfigSheet(
                     onChange = { settings.setPref("webtoon_pull_gesture", it); pull = it },
                 )
             }
+            // Crop pages (Doki, per active mode bucket) + 32-bit color — applied live to the page pipeline.
+            run {
+                var crop by remember(mode) { mutableStateOf(settings.isPagesCropEnabled(mode)) }
+                PersistSwitchRow(
+                    title = stringResource(Res.string.crop_pages),
+                    checked = crop,
+                    onChange = { settings.setPagesCropEnabled(mode, it); crop = it; onImageOptionsChanged() },
+                )
+            }
+            run {
+                var enhanced by remember { mutableStateOf(settings.is32BitColorsEnabled) }
+                PersistSwitchRow(
+                    title = stringResource(Res.string.enhanced_colors),
+                    checked = enhanced,
+                    onChange = { settings.is32BitColorsEnabled = it; enhanced = it; onImageOptionsChanged() },
+                )
+            }
+            if (imageServerAvailable) {
+                MenuRow(Icons.Filled.Dns, stringResource(Res.string.image_server), enabled = true, onClick = onImageServer)
+            }
             if (rotateSupported) {
                 MenuRow(Icons.Filled.ScreenRotation, stringResource(Res.string.rotate_screen), enabled = true, onClick = onRotate)
             }
@@ -630,6 +692,39 @@ private fun ReaderConfigSheet(
             MenuRow(Icons.Filled.Settings, stringResource(Res.string.settings), enabled = true, onClick = onOpenSettings)
         }
     }
+}
+
+/** Single-choice dialog to pick the preferred image server / mirror (Doki's ImageServerDelegate). */
+@Composable
+private fun ImageServerDialog(
+    state: ImageServerUiState,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val automatic = stringResource(Res.string.automatic)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.image_server)) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                state.options.forEach { (value, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(value) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = value == state.current, onClick = { onSelect(value) })
+                        Spacer(Modifier.width(8.dp))
+                        Text(label.ifEmpty { automatic })
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) } },
+    )
 }
 
 /** In-reader colour correction panel — sliders + toggles update the per-manga filter live (Doki parity). */
@@ -786,6 +881,7 @@ fun ReaderContent(
     pageAlignment: Alignment,
     webtoonGaps: Boolean,
     animatePages: Boolean,
+    doubleOnLandscape: Boolean,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
@@ -795,11 +891,16 @@ fun ReaderContent(
     onToggleControls: () -> Unit,
     onShowMenu: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        // Double-page only applies in landscape + a horizontal paged mode (Doki).
+        val landscape = maxWidth > maxHeight
+        val doublePage = doubleOnLandscape && landscape &&
+            (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.STANDARD ||
+                mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED)
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
             WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, navEvents, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
-            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, tapGridSettings, tapsReversed, navEvents, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
+            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, tapGridSettings, tapsReversed, navEvents, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
     }
 }
@@ -1145,7 +1246,11 @@ private fun WebtoonReader(
     }
 }
 
-/** Paged reader: one page per screen. Standard (LTR), right-to-left, or vertical; each page is zoomable. */
+/**
+ * Paged reader: one page per screen (Standard/RTL/Vertical, zoomable) OR two pages per screen when
+ * [doublePage] is on (landscape spreads, Doki). Internally it pages over "units": each unit is one
+ * page (single mode — identical to before) or a spread of up to two pages (cover stays solo).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PagedReader(
@@ -1159,6 +1264,7 @@ private fun PagedReader(
     contentScale: ContentScale,
     pageAlignment: Alignment,
     animatePages: Boolean,
+    doublePage: Boolean,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
@@ -1170,23 +1276,47 @@ private fun PagedReader(
 ) {
     val isVertical = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.VERTICAL
     val isReversed = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED
-    val lastIndex = (pages.size - 1).coerceAtLeast(0)
+    val useDouble = doublePage && !isVertical
+    // Display units: each is one page (single) or a spread of up to two (double, with the cover solo).
+    val units = remember(pages.size, useDouble) {
+        if (!useDouble) {
+            List(pages.size) { intArrayOf(it) }
+        } else {
+            buildList {
+                if (pages.isNotEmpty()) {
+                    add(intArrayOf(0)) // cover page solo
+                    var i = 1
+                    while (i < pages.size) {
+                        if (i + 1 < pages.size) { add(intArrayOf(i, i + 1)); i += 2 } else { add(intArrayOf(i)); i += 1 }
+                    }
+                }
+            }
+        }
+    }
+    val pageToUnit = remember(units) {
+        IntArray(pages.size).also { arr -> units.forEachIndexed { u, idxs -> idxs.forEach { if (it < arr.size) arr[it] = u } } }
+    }
+    fun unitFirstPage(u: Int) = units.getOrNull(u)?.firstOrNull() ?: 0
+    fun unitLastPage(u: Int) = units.getOrNull(u)?.lastOrNull() ?: 0
+    fun pageToUnitIdx(p: Int) = pageToUnit.getOrElse(p.coerceIn(0, (pages.size - 1).coerceAtLeast(0))) { 0 }
+    val lastUnit = (units.size - 1).coerceAtLeast(0)
+
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(
-        initialPage = scrollToIndex.coerceIn(0, lastIndex),
-        pageCount = { pages.size },
+        initialPage = pageToUnitIdx(scrollToIndex).coerceIn(0, lastUnit),
+        pageCount = { units.size },
     )
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var ready by remember { mutableStateOf(false) }
     // While a page is zoomed, disable pager swiping so panning the page doesn't flip pages.
     var pageZoomed by remember { mutableStateOf(false) }
     LaunchedEffect(scrollToken) {
-        if (pages.isNotEmpty()) pagerState.scrollToPage(scrollToIndex.coerceIn(0, pages.lastIndex))
+        if (units.isNotEmpty()) pagerState.scrollToPage(pageToUnitIdx(scrollToIndex).coerceIn(0, lastUnit))
         ready = true
     }
     LaunchedEffect(ready) {
-        if (ready) snapshotFlow { pagerState.currentPage }.collect { page ->
-            onVisibleIndexChanged(page)
-            onVisibleBounds(page, page, false) // paged: forward-append only (prepend would shift the pager)
+        if (ready) snapshotFlow { pagerState.currentPage }.collect { u ->
+            onVisibleIndexChanged(unitFirstPage(u))
+            onVisibleBounds(unitFirstPage(u), unitLastPage(u), false) // paged: forward-append only
         }
     }
     // Reset zoom-lock when the page changes (e.g. via keyboard/volume while not interacting).
@@ -1198,7 +1328,7 @@ private fun PagedReader(
             while (isActive) {
                 delay(delayMs)
                 val target = pagerState.currentPage + 1
-                if (target <= pages.lastIndex) pagerState.animateScrollToPage(target) else break
+                if (target <= lastUnit) pagerState.animateScrollToPage(target) else break
             }
         }
     }
@@ -1206,15 +1336,15 @@ private fun PagedReader(
     val leftDelta = if (isReversed) +1 else -1
     val rightDelta = if (isReversed) -1 else +1
     fun navigate(delta: Int) {
-        val target = (pagerState.currentPage + delta).coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+        val target = (pagerState.currentPage + delta).coerceIn(0, lastUnit)
         scope.launch {
             // Page-transition animation pref: animate, or jump instantly when disabled (Doki "none").
             if (animatePages) pagerState.animateScrollToPage(target) else pagerState.scrollToPage(target)
         }
     }
-    // Volume-key navigation in paged modes = page by ±1.
+    // Volume-key navigation in paged modes = unit by ±1.
     LaunchedEffect(Unit) { navEvents.collect { navigate(it) } }
-    // Configurable tap-grid dispatch (Doki). pageBy(+1)=next page; the tapsReversed flag handles RTL.
+    // Configurable tap-grid dispatch (Doki). pageBy(+1)=next unit; the tapsReversed flag handles RTL.
     val onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit = { offset, size, isLong ->
         dispatchTapAction(tapGridSettings, tapsReversed, offset, size, isLong, { navigate(it) }, onChapter, onToggleControls, onShowMenu)
     }
@@ -1253,8 +1383,8 @@ private fun PagedReader(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = !pageZoomed,
-            ) { page ->
-                ZoomablePage(pages.getOrNull(page)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
+            ) { u ->
+                ZoomablePage(pages.getOrNull(unitFirstPage(u))?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
             }
         } else {
             // Right-to-left is done by flipping the layout direction (reliable swipe paging),
@@ -1267,13 +1397,56 @@ private fun PagedReader(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = !pageZoomed,
-                ) { page ->
+                ) { u ->
                     // Keep page content laid out LTR regardless of the pager's RTL flow.
                     androidx.compose.runtime.CompositionLocalProvider(
                         androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
                     ) {
-                        ZoomablePage(pages.getOrNull(page)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
+                        val unitPages = units.getOrNull(u)
+                        if (useDouble && unitPages != null && unitPages.size == 2) {
+                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, onTapGrid)
+                        } else {
+                            ZoomablePage(pages.getOrNull(unitPages?.firstOrNull() ?: 0)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Two pages side by side (Doki double-page). RTL puts the lower page on the right. Tap zones map to the full spread. */
+@Composable
+private fun DoublePageSpread(
+    unitPages: IntArray,
+    pages: List<LoadedPage>,
+    isReversed: Boolean,
+    colorFilter: ColorFilter?,
+    contentScale: ContentScale,
+    onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit,
+) {
+    var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onTapGrid(it, size, false) }, onLongPress = { onTapGrid(it, size, true) })
+            },
+    ) {
+        val ordered = if (isReversed) unitPages.reversedArray() else unitPages
+        Row(modifier = Modifier.fillMaxSize()) {
+            ordered.forEach { idx ->
+                Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    SubcomposeAsyncImage(
+                        model = rememberReaderPageModel(pages.getOrNull(idx)?.page?.url),
+                        contentDescription = null,
+                        contentScale = contentScale,
+                        colorFilter = colorFilter,
+                        modifier = Modifier.fillMaxSize(),
+                        loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
+                        error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
+                    )
                 }
             }
         }
@@ -1337,7 +1510,7 @@ private fun ZoomablePage(
         contentAlignment = pageAlignment,
     ) {
         SubcomposeAsyncImage(
-            model = url,
+            model = rememberReaderPageModel(url),
             contentDescription = null,
             contentScale = contentScale,
             colorFilter = colorFilter,
@@ -1358,7 +1531,7 @@ private fun WebtoonPageItem(page: MangaPage, index: Int, colorFilter: ColorFilte
     var retryHash by remember { mutableIntStateOf(0) }
     key(retryHash) {
         SubcomposeAsyncImage(
-            model = page.url,
+            model = rememberReaderPageModel(page.url),
             contentDescription = "Page $index",
             contentScale = ContentScale.FillWidth,
             colorFilter = colorFilter,

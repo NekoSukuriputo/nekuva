@@ -120,10 +120,30 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       **A#4 DONE** auto-detect mode (`DetectReaderModeUseCase` + `decodeImageBounds` expect/actual — Android
       BitmapFactory bounds, Desktop ImageIO reader; per-manga saved mode menang, else webtoon bila rasio tinggi;
       `setReaderMode` kini simpan per-manga juga).
-      **SISA bagian A (DEFERRED, butuh kerja tersendiri):** double-page renderer (restrukturisasi pager: pairing
-      halaman + index mapping — berisiko, perlu verifikasi sendiri), crop pages (butuh Coil Transformation deteksi
-      border per-gambar), 32-bit color (Coil3 bitmap config platform-spesifik, nilai rendah), image-server/mirror
-      switch (butuh dukungan ConfigKey/mirror di nekuva-exts).)
+      **A#3 DONE double-page (v1):** PagedReader kini paging atas "units" — single = 1 halaman/unit (identik,
+      tanpa regresi), double = spread ≤2 halaman (cover solo, pair 2-by-2). Aktif hanya saat landscape
+      (`BoxWithConstraints`: maxWidth>maxHeight) + mode Standard/RTL + `reader_double_pages` ON. RTL menaruh
+      halaman bernomor-lebih-kecil di kanan. Tap zone dipetakan ke seluruh spread. Index mapping page↔unit untuk
+      resume/history/append/slider. **Refinement DEFERRED:** deteksi halaman lebar→solo (sensitivity, perlu dimensi
+      semua halaman), zoom per-spread.
+      **A#crop DONE — Crop pages (Doki `reader_crop`, per mode):** `CropBordersTransformation` (Coil
+      `Transformation`) memangkas margin seragam (putih/hitam) — `trimImageBorders` expect/actual: Android
+      `getPixels` bulk + `Bitmap.createBitmap`, Desktop Skia `getColor` scan + `extractSubset` (zero-copy,
+      pixelref refcounted). Edge-scan dari 4 sisi ke dalam (stride) → murah utk border tipis. Toggle in-reader
+      per-bucket mode (`AppSettings.setPagesCropEnabled`).
+      **A#32bit DONE — 32-bit color (`enhanced_colors`):** `ImageRequest.Builder.applyEnhancedColors` expect/actual
+      — Android `bitmapConfig` ARGB_8888 (ON) / RGB_565 (OFF, default Doki), Desktop no-op (Skia full-quality).
+      Toggle in-reader (`AppSettings.is32BitColorsEnabled`).
+      **A#imgserver DONE — Image-server/mirror switch (Doki `ImageServerDelegate`):** ternyata feasible in-repo —
+      `ConfigKey.PreferredImageServer` ADA di nekuva-exts. ViewModel baca `ParserMangaRepository.getConfigKeys()`
+      → preset (entryValue/label), simpan via `getConfig()[key]=` (prefs sama Doki), `invalidateCache()` + reload
+      bab di posisi sekarang. Dialog single-choice in-reader, baris hanya muncul bila source punya key.
+      Opsi crop/32-bit/image-server dialirkan ke renderer via `LocalReaderImageOptions` + `rememberReaderPageModel`.
+      (Compiled green Android+Desktop; **belum run-verified — perlu screenshot user**.)
+      **`reader_optimize` — N/A-by-architecture:** di Doki itu knob internal SSIV (sampleSize halaman
+      off-screen di `BasePageHolder`); Coil sudah auto-downsample ke ukuran tampil + kelola memory cache, jadi
+      tak ada padanan langsung. Bukan fitur user-facing yang di-drop. **Masih DEFERRED (refinement double-page):**
+      deteksi halaman lebar→solo (butuh dimensi semua halaman) & zoom per-spread (pinch lintas 2-gambar di Row).)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [x] `search` (run-verified Android+Desktop: global multi-source search streaming (Riwayat/Disukai/Lokal + sumber paralel), saran as-you-type S1 (tag/manga/riwayat-query/sumber+switch/penulis, hormati `searchSuggestionTypes`, tak dicatat saat incognito), footer "Cari sumber nonaktif" + "Buka di browser" pada error. Lihat ledger Area Search & Filter)
