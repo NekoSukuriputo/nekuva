@@ -604,7 +604,10 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     back ke-2 dlm 2s → `exitApp()` (Android finish / Desktop exitProcess).
   - [x] `nav_pinned` → di shell Compose bottom-bar/rail **selalu tampil** (tak auto-hide) = perilaku "pinned"
     Doki sudah default; tak perlu kode tambahan (dicatat).
-  - [ ] `dynamic_shortcuts` → app-shortcuts Android (ShortcutManager + deep-link ke Detail) — SEDANG dikerjakan.
+  - [x] `dynamic_shortcuts` **DONE** → launcher shortcuts Android (`ShortcutManagerCompat`): `updateDynamicShortcuts`
+    expect/actual (Android set/clear, Desktop no-op); App() observe 4 history terbaru → set shortcut (kalau setting ON,
+    else clear). Tap shortcut → intent ke MainActivity (`EXTRA_MANGA_ID`) → `DeepLinkBus` → AppNavigation buka
+    `MangaDetailsRoute`. Ikon = launcher app. **FASE 1E SELESAI.**
 - **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.
 
 ### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)

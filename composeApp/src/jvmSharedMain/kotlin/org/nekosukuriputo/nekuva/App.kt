@@ -67,6 +67,20 @@ fun App() {
         else -> androidx.compose.foundation.isSystemInDarkTheme() // -1 = follow system
     }
 
+    // Launcher dynamic shortcuts (Doki dynamic_shortcuts): keep them in sync with recent history
+    // (Android only; Desktop is a no-op). Clears them when the setting is off.
+    val historyRepoForShortcuts = koinInject<org.nekosukuriputo.nekuva.history.data.HistoryRepository>()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        historyRepoForShortcuts.observeAll(4).collect { recent ->
+            val shortcuts = if (settings.isDynamicShortcutsEnabled) {
+                recent.map { org.nekosukuriputo.nekuva.core.shortcuts.MangaShortcut(it.id, it.title) }
+            } else {
+                emptyList()
+            }
+            org.nekosukuriputo.nekuva.core.shortcuts.updateDynamicShortcuts(shortcuts)
+        }
+    }
+
     // In-app language (Doki app_locale). Re-key on the locale so Compose Resources re-resolve; the
     // remember applies the JVM/Desktop default before children compose (Android uses the Activity config).
     val localeTag by settings.observeAppLocale().collectAsState(initial = settings.appLocales)

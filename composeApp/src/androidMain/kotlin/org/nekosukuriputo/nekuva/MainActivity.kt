@@ -1,6 +1,7 @@
 package org.nekosukuriputo.nekuva
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -9,6 +10,8 @@ import java.lang.ref.WeakReference
 import org.nekosukuriputo.nekuva.core.i18n.LocaleActivityHolder
 import org.nekosukuriputo.nekuva.core.i18n.localeWrap
 import org.nekosukuriputo.nekuva.core.i18n.storedLocaleTag
+import org.nekosukuriputo.nekuva.core.nav.DeepLinkBus
+import org.nekosukuriputo.nekuva.core.shortcuts.EXTRA_MANGA_ID
 import org.nekosukuriputo.nekuva.reader.ui.ReaderKeyEvents
 
 class MainActivity : ComponentActivity() {
@@ -20,9 +23,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LocaleActivityHolder.current = WeakReference(this)
+        handleShortcutIntent(intent)
         setContent {
             App()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShortcutIntent(intent)
+    }
+
+    // Launcher dynamic shortcut tap (Doki dynamic_shortcuts) -> open that manga via the deep-link bus.
+    private fun handleShortcutIntent(intent: Intent?) {
+        val id = intent?.getLongExtra(EXTRA_MANGA_ID, -1L) ?: -1L
+        if (id > 0L) DeepLinkBus.requestOpenManga(id)
     }
 
     // Route hardware volume keys to the reader when it has installed a handler (Doki's volume-button

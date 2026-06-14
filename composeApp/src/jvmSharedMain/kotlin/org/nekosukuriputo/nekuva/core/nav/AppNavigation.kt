@@ -27,6 +27,15 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
+    // Deep link (launcher dynamic shortcut tap -> open manga details), then consume it.
+    val deepLinkMangaId by DeepLinkBus.openMangaId.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(deepLinkMangaId) {
+        deepLinkMangaId?.let { id ->
+            navController.navigate(MangaDetailsRoute(id))
+            DeepLinkBus.consume()
+        }
+    }
+
     // Top-level destinations that show the bottom bar / navigation rail
     val topLevelRoutes = listOf(
         HistoryTabRoute::class.qualifiedName,
