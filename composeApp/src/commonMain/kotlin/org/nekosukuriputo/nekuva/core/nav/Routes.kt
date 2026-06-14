@@ -8,8 +8,9 @@ data object HomeRoute
 @Serializable
 data class MangaDetailsRoute(val mangaId: Long)
 
+// [incognito] = opened from a bookmark (Doki forces incognito so it doesn't touch history/progress).
 @Serializable
-data class ReaderRoute(val mangaId: Long, val chapterId: Long, val page: Int)
+data class ReaderRoute(val mangaId: Long, val chapterId: Long, val page: Int, val incognito: Boolean = false)
 
 @Serializable
 data object SettingsRoute

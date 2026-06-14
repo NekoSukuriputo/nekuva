@@ -81,6 +81,7 @@ sealed interface ReaderToast {
     data object BookmarkAdded : ReaderToast
     data object BookmarkRemoved : ReaderToast
     data class Chapter(val name: String) : ReaderToast
+    data object Incognito : ReaderToast // forced incognito (opened from a bookmark)
 }
 
 /**
@@ -350,6 +351,11 @@ class ReaderViewModel(
                 manga = m
                 mangaFlow.value = m
                 resolveIncognito(m)
+                // Opened from a bookmark: force incognito (Doki) so this peek doesn't touch history.
+                if (route.incognito && !_isIncognito.value) {
+                    _isIncognito.value = true
+                    _toast.tryEmit(ReaderToast.Incognito)
+                }
                 refreshImageServerState()
                 allChapters = m.chapters ?: emptyList()
                 val chapter = allChapters.find { it.id == initialChapterId }
@@ -466,6 +472,7 @@ class ReaderViewModel(
                     val wrapped = pages.mapIndexed { i, p -> LoadedPage(p, next.id, i) }
                     // Append only — existing indices/scroll stay put.
                     loadedPages = loadedPages + wrapped
+                    trimLoadedPages(fromFront = true)
                     emitSuccess()
                 }
             } catch (_: Exception) {
@@ -497,6 +504,7 @@ class ReaderViewModel(
                     val wrapped = pages.mapIndexed { i, p -> LoadedPage(p, prev.id, i) }
                     // Prepend — stable item keys keep the current page in view (no scroll jump).
                     loadedPages = wrapped + loadedPages
+                    trimLoadedPages(fromFront = false)
                     emitSuccess()
                 }
             } catch (_: Exception) {
@@ -505,6 +513,25 @@ class ReaderViewModel(
                 prependingChapterId = null
             }
         }
+    }
+
+    /**
+     * Memory cap (Doki's `PAGES_TRIM_THRESHOLD`): once the continuous list spans more than one chapter
+     * and grows past the threshold, drop the far-away chapter. **Webtoon only** — the LazyColumn's stable
+     * item keys keep the visible page in place when items are removed (same mechanism as prepend). Paged
+     * modes use a Pager whose index would jump on a front-removal, so trimming there is intentionally
+     * skipped. The chapter currently being read is never trimmed.
+     */
+    private fun trimLoadedPages(fromFront: Boolean) {
+        if (_readerMode.value != org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) return
+        if (loadedPages.size <= PAGES_TRIM_THRESHOLD) return
+        val distinctChapters = loadedPages.map { it.chapterId }.distinct()
+        if (distinctChapters.size <= 1) return
+        val victim = if (fromFront) distinctChapters.first() else distinctChapters.last()
+        if (victim == currentChapterId) return
+        val removed = loadedPages.count { it.chapterId == victim }
+        loadedPages = loadedPages.filterNot { it.chapterId == victim }
+        if (fromFront) currentVisibleIndex = (currentVisibleIndex - removed).coerceAtLeast(0)
     }
 
     /** Explicit Next/Prev chapter control: replace the content with the target chapter at page 0. */
@@ -644,6 +671,7 @@ class ReaderViewModel(
 
     private companion object {
         const val END_THRESHOLD = 2
+        const val PAGES_TRIM_THRESHOLD = 120 // Doki parity: cap continuous-list pages (webtoon)
     }
 }
 

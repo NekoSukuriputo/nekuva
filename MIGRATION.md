@@ -124,8 +124,9 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       tanpa regresi), double = spread ≤2 halaman (cover solo, pair 2-by-2). Aktif hanya saat landscape
       (`BoxWithConstraints`: maxWidth>maxHeight) + mode Standard/RTL + `reader_double_pages` ON. RTL menaruh
       halaman bernomor-lebih-kecil di kanan. Tap zone dipetakan ke seluruh spread. Index mapping page↔unit untuk
-      resume/history/append/slider. **Refinement DEFERRED:** deteksi halaman lebar→solo (sensitivity, perlu dimensi
-      semua halaman), zoom per-spread.
+      resume/history/append/slider.
+      **A#3b DONE — zoom per-spread:** `DoublePageSpread` kini pinch-zoom + pan + double-tap (1×/2.5×) ala
+      `ZoomablePage`; saat zoom, pager berhenti swipe (`onZoomChanged`→`pageZoomed`).
       **A#crop DONE — Crop pages (Doki `reader_crop`, per mode):** `CropBordersTransformation` (Coil
       `Transformation`) memangkas margin seragam (putih/hitam) — `trimImageBorders` expect/actual: Android
       `getPixels` bulk + `Bitmap.createBitmap`, Desktop Skia `getColor` scan + `extractSubset` (zero-copy,
@@ -142,8 +143,18 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       (Compiled green Android+Desktop; **belum run-verified — perlu screenshot user**.)
       **`reader_optimize` — N/A-by-architecture:** di Doki itu knob internal SSIV (sampleSize halaman
       off-screen di `BasePageHolder`); Coil sudah auto-downsample ke ukuran tampil + kelola memory cache, jadi
-      tak ada padanan langsung. Bukan fitur user-facing yang di-drop. **Masih DEFERRED (refinement double-page):**
-      deteksi halaman lebar→solo (butuh dimensi semua halaman) & zoom per-spread (pinch lintas 2-gambar di Row).)
+      tak ada padanan langsung. Bukan fitur user-facing yang di-drop.
+      **A#trim DONE — page trimming memori (Doki `PAGES_TRIM_THRESHOLD`=120):** `trimLoadedPages` membuang bab
+      terjauh saat list kontinu >120 halaman & >1 bab (bab yang sedang dibaca tak pernah dibuang). **Webtoon saja**
+      — stable item key LazyColumn jaga posisi (mekanisme sama prepend); mode paged (Pager) di-skip karena
+      front-removal akan loncat index — itu satu-satunya bagian trim yang sengaja tidak dikerjakan.
+      **A#incognito-bookmark DONE:** buka reader dari bookmark (Bookmarks list + sheet Detail) kini paksa incognito
+      (`ReaderRoute.incognito=true`) + toast "Incognito mode" (Doki parity) — history/scrobble tak ditulis.
+      **MASIH DEFERRED (butuh perangkat/dependency atau area lain, bukan drop):**
+      (a) double-page **wide-page→solo** (butuh dimensi SEMUA halaman + reflow spread; pre-decode tiap halaman terlalu mahal),
+      (b) **double-foldable** (`reader_double_foldable`; butuh androidx.window fold-state + perangkat foldable utk uji),
+      (c) **RegionBitmapDecoder/SSIV subsampling** (Coil sudah downsample; SSIV-spesifik),
+      (d) **evaluateJs** (WebView/JS-engine — area `browser`, deferred terpisah).)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [x] `search` (run-verified Android+Desktop: global multi-source search streaming (Riwayat/Disukai/Lokal + sumber paralel), saran as-you-type S1 (tag/manga/riwayat-query/sumber+switch/penulis, hormati `searchSuggestionTypes`, tak dicatat saat incognito), footer "Cari sumber nonaktif" + "Buka di browser" pada error. Lihat ledger Area Search & Filter)
@@ -279,7 +290,8 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
             ditunda karena masalah "prepend jump" pada LazyColumn — sementara pakai tombol Prev).
       - [ ] Pemilihan branch/translasi (`manga.chapters[branch]`); sementara pakai urutan
             `manga.chapters` apa adanya.
-      - [ ] Page trimming memori (Doki trim >120 halaman); sementara semua chapter termuat tetap di list.
+      - [x] Page trimming memori (Doki trim >120 halaman) — DONE untuk **webtoon** (`trimLoadedPages`,
+            stable-key LazyColumn jaga posisi); paged di-skip (front-removal akan loncat index Pager). Lihat A#trim.
 - [ ] Keep Screen On.
 - [ ] RegionBitmapDecoder (untuk gambar sangat panjang/subsampling).
 - [ ] Page Save & Share.
@@ -355,7 +367,8 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 **DEFERRED (terblokir area lain / di luar scope) → masuk sesi reader-polish:**
 - [ ] **Save pages** dari mode seleksi (action_save Doki) — butuh `PageSaveHelper` / area **image-save/download**
       (belum ada). Gating: dibangun bersama area download/save.
-- [ ] **Incognito saat buka dari bookmark** (Doki paksa incognito + toast) — area **incognito** (deferred).
+- [x] **Incognito saat buka dari bookmark** (Doki paksa incognito + toast) — DONE (`ReaderRoute.incognito=true`
+      dari Bookmarks list + sheet Detail; toast "Incognito mode"). Lihat A#incognito-bookmark.
       Sementara buka reader normal (history tetap ter-update).
 - [ ] **Fungsi lain bottom-sheet reader** (UI sudah dibuat, masih non-fungsional/redup): Save page, Mode baca
       (standard/RTL/vertical/webtoon), 2 halaman landscape, pull gesture, rotate, auto-scroll, koreksi warna,

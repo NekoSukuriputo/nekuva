@@ -136,6 +136,7 @@ fun ReaderScreen(
     // Reader toasts: bookmark add/remove + chapter change (Doki's ReaderToastView).
     val bookmarkAddedMsg = stringResource(Res.string.bookmark_added)
     val bookmarkRemovedMsg = stringResource(Res.string.bookmark_removed)
+    val incognitoMsg = stringResource(Res.string.incognito_mode)
     LaunchedEffect(Unit) {
         viewModel.toast.collect { t ->
             snackbarHost.showSnackbar(
@@ -143,6 +144,7 @@ fun ReaderScreen(
                     ReaderToast.BookmarkAdded -> bookmarkAddedMsg
                     ReaderToast.BookmarkRemoved -> bookmarkRemovedMsg
                     is ReaderToast.Chapter -> t.name
+                    ReaderToast.Incognito -> incognitoMsg
                 },
             )
         }
@@ -1404,7 +1406,7 @@ private fun PagedReader(
                     ) {
                         val unitPages = units.getOrNull(u)
                         if (useDouble && unitPages != null && unitPages.size == 2) {
-                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, onTapGrid)
+                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, { pageZoomed = it }, onTapGrid)
                         } else {
                             ZoomablePage(pages.getOrNull(unitPages?.firstOrNull() ?: 0)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
                         }
@@ -1415,7 +1417,11 @@ private fun PagedReader(
     }
 }
 
-/** Two pages side by side (Doki double-page). RTL puts the lower page on the right. Tap zones map to the full spread. */
+/**
+ * Two pages side by side (Doki double-page). RTL puts the lower page on the right. Tap zones map to the
+ * full spread. Pinch-zoom + pan apply to the whole spread (double-tap toggles 1×/2.5×); while zoomed the
+ * parent pager stops swiping (via [onZoomChanged]) so panning never flips the spread.
+ */
 @Composable
 private fun DoublePageSpread(
     unitPages: IntArray,
@@ -1423,19 +1429,55 @@ private fun DoublePageSpread(
     isReversed: Boolean,
     colorFilter: ColorFilter?,
     contentScale: ContentScale,
+    onZoomChanged: (Boolean) -> Unit,
     onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit,
 ) {
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val zoomed = scale > 1f
+    LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        offset = if (scale > 1f) {
+            val maxX = (size.width * (scale - 1f)) / 2f
+            val maxY = (size.height * (scale - 1f)) / 2f
+            Offset(
+                (offset.x + panChange.x).coerceIn(-maxX, maxX),
+                (offset.y + panChange.y).coerceIn(-maxY, maxY),
+            )
+        } else {
+            Offset.Zero
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { size = it }
+            .transformable(state = transformState, enabled = zoomed)
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { onTapGrid(it, size, false) }, onLongPress = { onTapGrid(it, size, true) })
+                detectTapGestures(
+                    onTap = { onTapGrid(it, size, false) },
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            scale = 1f; offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                        }
+                    },
+                    onLongPress = { onTapGrid(it, size, true) },
+                )
             },
     ) {
         val ordered = if (isReversed) unitPages.reversedArray() else unitPages
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxSize().graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y,
+            ),
+        ) {
             ordered.forEach { idx ->
                 Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                     SubcomposeAsyncImage(

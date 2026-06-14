@@ -105,7 +105,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.bookmarks.ui.BookmarksScreen(
                         onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                         onOpenReader = { mangaId, chapterId, page ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
+                            // From a bookmark -> incognito (Doki parity): don't write history/progress.
+                            navController.navigate(ReaderRoute(mangaId, chapterId, page, incognito = true))
                         },
                         onBackClick = { navController.popBackStack() }
                     )
@@ -147,7 +148,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.navigate(ReaderRoute(mangaId, chapterId, -1))
                         },
                         onBookmarkClick = { mangaId, chapterId, page ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
+                            // From a bookmark -> incognito (Doki parity).
+                            navController.navigate(ReaderRoute(mangaId, chapterId, page, incognito = true))
                         },
                         onOpenDownloads = { navController.navigate(DownloadsRoute) },
                         onBackClick = { navController.popBackStack() },
