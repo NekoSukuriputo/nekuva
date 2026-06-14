@@ -465,6 +465,77 @@ hanya bila tak ada index.json** (download lama tetap terbaca). Plus 2 bug Window
 Akses: **top bar bersama di SETIAP tab** (`MainTopBar`: kotak pencarian "Cari manga" + menu titik-tiga)
 → item **"Pengaturan"** → `SettingsRootScreen` (9 kategori). Pencarian → global search (sudah jalan).
 
+---
+
+## RENCANA FULL MIGRASI SETTINGS — 9 FASE (per kategori, urut root Doki)
+
+> Tujuan sesi: migrasikan **SEMUA** fitur settings Doki, **termasuk efek/impact-nya ke screen lain**
+> (bukan sekadar toggle yang tersimpan). Tiru UI & perilaku Doki. Dikerjakan bertahap, commit per
+> sub-fase, run-verify tiap selesai. Keputusan terkunci: **color-scheme = palet STATIS di semua platform**
+> (MONET tidak benar-benar dinamis; jadi palet statis juga).
+
+| Fase | Kategori | Status ringkas |
+|---|---|---|
+| **1** | Appearance (Tampilan) | 🟡 sebagian; color-scheme tak diterapkan + bug widget list — **SEDANG DIKERJAKAN** |
+| **2** | Remote sources (+ Catalog) | 🔴 belum (top-level "Segera hadir") |
+| **3** | Reader | 🟢 ~lengkap (audit sisa kecil) |
+| **4** | Storage & network | 🟡 sebagian (proxy/DoH/ssl/adblock/meter/cache pending) |
+| **5** | Downloads | 🟡 sebagian (dir/format/metered; battery-opt + page-dir pending) |
+| **6** | Tracker (cek bab baru) | 🟡 sebagian (categories + notifications pending) |
+| **7** | Services | 🟡 sebagian (suggestions/discord/anilist/mal/kitsu/stats pending) |
+| **8** | Backup & restore | 🟡 sebagian (periodic + Telegram pending) |
+| **9** | About | 🟢 ~lengkap |
+
+### FASE 1 — Appearance (Tampilan) — parity checklist + impact
+
+Sumber Doki: `pref_appearance.xml`, `AppearanceSettingsFragment`, `ColorScheme.kt` (11 tema =
+ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPreference`, `nav/NavConfigFragment`,
+`protect/ProtectSetupActivity`.
+
+**Sub-fase 1A — Color scheme + perbaikan widget (PRIORITAS, ini yang rusak):**
+- [ ] Port 11 palet Doki (DEFAULT/Totoro, MONET, EXPRESSIVE, MIKU/…, ITSUKA) sebagai **`ColorScheme` Compose statis
+      light+dark** di `commonMain` (ekstrak nilai dari `colors_themed.xml` + `values-night`). MONET/EXPRESSIVE
+      = palet statis (bukan dynamic) sesuai keputusan.
+- [ ] `Theme.kt`: pilih palet dari `settings.colorScheme` (saat ini DIABAIKAN — cuma light/dark/amoled) ×
+      theme(system/light/dark) × AMOLED. **Live** (observe `colorScheme`).
+- [ ] Label tema **terlokalisasi** (`theme_name_totoro/miku/sakura/…`) + tambahkan string-nya; bukan nama enum mentah.
+      Idealnya tiru UI Doki `item_color_scheme` (swatch warna), minimal radio berlabel benar.
+- [ ] **FIX bug `SettingsSingleChoice`** (widget list-option) — reproduksi & perbaiki.
+- IMPACT: seluruh app (NekuvaTheme di root).
+
+**Sub-fase 1B — Main screen sections (NavConfig) + FAB:**
+- [ ] `nav_main` → layar konfigurasi urutan/aktif section bottom-nav (Doki `NavConfigFragment`: drag reorder +
+      tambah/hapus). IMPACT: `MainScreen` shell (tab yang tampil & urutannya).
+- [ ] `main_fab` (FAB "Lanjut baca"/Resume) IMPACT: shell.
+- [ ] `nav_labels`, `nav_pinned` IMPACT: bottom-nav / navigation-rail.
+
+**Sub-fase 1C — Tampilan daftar manga (wiring ke semua list):**
+- [ ] `list_mode_2` (LIST/DETAILED_LIST/GRID), `grid_size` IMPACT: Explore/Favourites/History/Local/RemoteList/Search.
+- [ ] `progress_indicators` (badge progress baca) IMPACT: item manga.
+- [ ] `manga_list_badges` (favourite/saved) IMPACT: item manga.
+- [ ] `quick_filter` (chip quick-filter) IMPACT: header list.
+
+**Sub-fase 1D — Details + perilaku app:**
+- [ ] `description_collapse`, `pages_tab`, `details_tab` IMPACT: layar Details.
+- [ ] `exit_confirm` (konfirmasi keluar), `dynamic_shortcuts` (Android app-shortcuts) IMPACT: shell/Android.
+- [ ] `screenshots_policy` IMPACT: `FLAG_SECURE` (Android actual; Desktop N/A).
+
+**Sub-fase 1E — Bahasa (`app_locale`):** in-app locale override lintas-platform (kompleks; saat ini hanya tersimpan).
+      Mungkin perlu pecah lagi / sebagian Android-actual. Dikerjakan terakhir di Fase 1.
+
+**Dipindah ke Fase 7 (Privacy/cross-cutting):** `protect_app` (app-lock/biometric — `ProtectSetupActivity`, besar & platform-spesifik).
+
+### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)
+- **Fase 2 Remote sources:** layar Sources (sort/grid/enable-all/no_nsfw/incognito_nsfw/tags_warnings/mirror_switching/handle_links)
+  → Manage sources (aktif/urut) → **Sources Catalog** (tambah sumber, filter locale/tipe, cari) → per-source (sign-in/cookies/domain).
+- **Fase 3 Reader:** audit sisa vs `pref_reader` (mayoritas sudah; cek `pages_preload`, `reader_multitask`, dll).
+- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
+- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android).
+- **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
+- **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + app-lock/biometric + settings-search.
+- **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
+- **Fase 9 About:** changelog + app-update checker + sisa link.
+
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,
 Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola sumber, Mode penyamaran)
