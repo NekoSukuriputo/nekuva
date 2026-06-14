@@ -76,7 +76,11 @@ val prefsModule = module {
 }
 
 val readerModule = module {
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get()) }
+    single { org.nekosukuriputo.nekuva.reader.data.TapGridSettings(get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.reader.TapGridConfigViewModel(get()) }
+    single { org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper(get(), get(), get()) }
+    single { org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase(get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val bookmarksModule = module {
@@ -160,10 +164,26 @@ val backupsModule = module {
     factory { org.nekosukuriputo.nekuva.backups.ui.BackupViewModel(get()) }
 }
 
+val syncModule = module {
+    single { org.nekosukuriputo.nekuva.sync.data.SyncSettings(get()) }
+    // Base client (no auth) used for login + the 401-refresh inside the authenticator.
+    single { org.nekosukuriputo.nekuva.sync.data.SyncAuthApi(get<okhttp3.OkHttpClient>()) }
+    single {
+        val settings = get<org.nekosukuriputo.nekuva.sync.data.SyncSettings>()
+        val client = get<okhttp3.OkHttpClient>().newBuilder()
+            .addInterceptor(org.nekosukuriputo.nekuva.sync.data.SyncInterceptor(settings))
+            .authenticator(org.nekosukuriputo.nekuva.sync.data.SyncAuthenticator(settings, get()))
+            .build()
+        org.nekosukuriputo.nekuva.sync.domain.SyncHelper(client, get(), settings)
+    }
+    single { org.nekosukuriputo.nekuva.sync.domain.SyncManager(get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.sync.ui.SyncViewModel(get(), get()) }
+}
+
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule, syncModule)
     }
 
 

@@ -413,7 +413,7 @@
     <string name="invalid_port_number">Nomor porta tak sah</string>
     <string name="network">Jaringan</string>
     <string name="show_pages_numbers_summary">Tampilkan nomor halaman di pojok bawah</string>
-    <string name="webtoon_zoom_summary">Izinkan gestur zum pada mode webtoon</string>
+    <string name="webtoon_zoom_summary">Izinkan gestur zoom pada mode webtoon</string>
     <string name="reader_info_bar_summary">Tampilkan waktu saat ini dan progres bacaan di bagian atas layar</string>
     <string name="clear_source_cookies_summary">Hapus kuki hanya untuk domain tertentu. Dalam kebanyakan kasus akan membatalkan otorisasi</string>
     <string name="download_option_whole_manga">Seluruh manga</string>
@@ -472,7 +472,7 @@
     <string name="zoom_out">Perkecil</string>
     <string name="keep_screen_on_summary">Jangan matikan layar saat membaca manga</string>
     <string name="list_options">Opsi daftar</string>
-    <string name="reader_zoom_buttons_summary">Apakah menampilkan tombol kontrol zum di sudut kanan bawah</string>
+    <string name="reader_zoom_buttons_summary">Apakah menampilkan tombol kontrol zoom di sudut kanan bawah</string>
     <string name="backup_frequency">Frekuensi pembuatan cadangan</string>
     <string name="suggest_new_sources">Sumber baru yang disarankan setelah pembaruan aplikasi</string>
     <string name="periodic_backups_enable">Aktifkan pencadangan berkala</string>
@@ -480,7 +480,7 @@
     <string name="enhanced_colors_summary">Mengurangi banding, tetapi dapat mempengaruhi kinerja</string>
     <string name="frequency_once_per_week">Sekali dalam seminggu</string>
     <string name="periodic_backups">Pencadangan berkala</string>
-    <string name="reader_zoom_buttons">Tampilkan tombol zum</string>
+    <string name="reader_zoom_buttons">Tampilkan tombol zoom</string>
     <string name="frequency_twice_per_month">Dua kali sebulan</string>
     <string name="by_relevance">Relevansi</string>
     <string name="state_abandoned">Ditinggalkan</string>
@@ -524,6 +524,7 @@
     <string name="state_paused">Dijeda</string>
     <string name="content_type_other">Lainnya</string>
     <string name="sync_auth">Masuk untuk sinkronkan akun</string>
+    <string name="sync_now">Sinkronkan sekarang</string>
     <string name="source_summary_pattern">%1$s, %2$s</string>
     <string name="downloads_settings_info">Anda dapat mengaktifkan perlambatan pengunduhan untuk setiap sumber manga satu per satu di pengaturan sumber, jika Anda mengalami masalah dengan pemblokiran sisi server</string>
     <string name="default_tab">Tab bawaan</string>

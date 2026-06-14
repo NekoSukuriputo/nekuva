@@ -6,7 +6,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -14,7 +22,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,16 +42,21 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PlayArrow
 import coil3.compose.AsyncImage
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
+import org.nekosukuriputo.nekuva.core.prefs.ReaderControl
+import org.nekosukuriputo.nekuva.reader.domain.ReaderColorFilter
+import org.nekosukuriputo.nekuva.reader.domain.toComposeColorFilter
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -53,23 +70,31 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.key
+import kotlin.math.roundToInt
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -80,24 +105,97 @@ import nekuva.composeapp.generated.resources.*
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel = koinViewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isBookmarked by viewModel.isBookmarked.collectAsState()
     val readerMode by viewModel.readerMode.collectAsState()
     val pageIndicator by viewModel.pageIndicator.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
+    val colorFilterState by viewModel.colorFilter.collectAsState()
+    val composeColorFilter = remember(colorFilterState) { colorFilterState.toComposeColorFilter() }
+    val isIncognito by viewModel.isIncognito.collectAsState()
+
+    // NSFW incognito prompt (Doki asks when the pref is ASK and the manga is NSFW).
+    var showNsfwIncognitoDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { viewModel.askNsfwIncognito.collect { showNsfwIncognitoDialog = true } }
+
+    // Save-page feedback (Doki shows a toast; we use a snackbar).
+    val snackbarHost = remember { SnackbarHostState() }
+    val pageSavedMsg = stringResource(Res.string.page_saved)
+    val errorMsg = stringResource(Res.string.error_occurred)
+    LaunchedEffect(Unit) {
+        viewModel.pageSaveEvent.collect { path ->
+            // Show where the page was written (Doki shows the location in a toast).
+            snackbarHost.showSnackbar(if (path != null) "$pageSavedMsg: $path" else errorMsg)
+        }
+    }
+    // Reader toasts: bookmark add/remove + chapter change (Doki's ReaderToastView).
+    val bookmarkAddedMsg = stringResource(Res.string.bookmark_added)
+    val bookmarkRemovedMsg = stringResource(Res.string.bookmark_removed)
+    LaunchedEffect(Unit) {
+        viewModel.toast.collect { t ->
+            snackbarHost.showSnackbar(
+                when (t) {
+                    ReaderToast.BookmarkAdded -> bookmarkAddedMsg
+                    ReaderToast.BookmarkRemoved -> bookmarkRemovedMsg
+                    is ReaderToast.Chapter -> t.name
+                },
+            )
+        }
+    }
 
     // Applied reader settings (R2)
     val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val readerBackground = remember { settings.readerBackground }
-    val showInfoBar = remember { settings.prefBoolean("reader_bar", true) }
+    val zoomMode = remember { settings.zoomMode }
+    val pageContentScale = remember(zoomMode) { zoomMode.toContentScale() }
+    val pageAlignment = remember(zoomMode) {
+        if (zoomMode == org.nekosukuriputo.nekuva.core.model.ZoomMode.KEEP_START) Alignment.TopCenter else Alignment.Center
+    }
+    val showInfoBar = remember { settings.prefBoolean("reader_bar", false) }
     val showPageNumbers = remember { settings.prefBoolean("pages_numbers", false) }
+    val webtoonGaps = remember { settings.isWebtoonGapsEnabled }
+    val animatePages = remember { settings.readerAnimation != org.nekosukuriputo.nekuva.core.prefs.ReaderAnimation.NONE }
+    val controls = remember { viewModel.readerControls }
+    // Configurable tap zones (Doki TapGridSettings). tapsReversed = follow RTL reading direction.
+    val tapGridSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.reader.data.TapGridSettings>()
+    val tapsReversed = remember(readerMode) {
+        readerMode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED && !settings.isReaderControlAlwaysLTR
+    }
 
-    // Doki-style reader overlay: tap toggles the app bar + the floating button.
+    // Doki-style reader overlay: tap toggles the app bar + the bottom actions bar.
     var controlsVisible by remember { mutableStateOf(true) }
     var showConfigSheet by remember { mutableStateOf(false) } // reader options (3-dot / long-press)
     var showChaptersSheet by remember { mutableStateOf(false) } // chapter list (bottom button)
+    var showColorSheet by remember { mutableStateOf(false) }    // colour correction panel
+    var autoScrollActive by remember { mutableStateOf(false) }  // auto-scroll (ScrollTimer)
+    var autoScrollSpeed by remember { mutableFloatStateOf(settings.readerAutoscrollSpeed.coerceIn(0f, 1f)) }
+
+    // Platform window controls (Android: keep-screen-on / fullscreen / orientation; Desktop: no-op).
+    val windowController = rememberReaderWindowController()
+    // Volume-key page navigation events (Android forwards via MainActivity; Desktop never emits).
+    val navEvents = remember { MutableSharedFlow<Int>(extraBufferCapacity = 4) }
+    DisposableEffect(Unit) {
+        windowController.apply(
+            keepScreenOn = settings.isReaderKeepScreenOn,
+            fullscreen = settings.isReaderFullscreenEnabled,
+            orientationIndex = settings.readerScreenOrientation,
+        )
+        if (settings.isReaderVolumeButtonsEnabled) {
+            val inverted = settings.isReaderNavigationInverted
+            ReaderKeyEvents.volumeKeyHandler = { up ->
+                // Doki: volume-up = previous page by default (inverted swaps it).
+                navEvents.tryEmit(if (up) (if (inverted) 1 else -1) else (if (inverted) -1 else 1))
+                true
+            }
+        }
+        onDispose {
+            windowController.reset()
+            ReaderKeyEvents.volumeKeyHandler = null
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -113,7 +211,22 @@ fun ReaderScreen(
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleMedium,
                                 )
-                                if (state.chaptersTotal > 0 && state.currentChapterIndex >= 0) {
+                                if (isIncognito) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Filled.VisibilityOff,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(Res.string.incognito_mode),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                } else if (state.chaptersTotal > 0 && state.currentChapterIndex >= 0) {
                                     Text(
                                         text = "${state.currentChapterIndex + 1}/${state.chaptersTotal}",
                                         style = MaterialTheme.typography.labelSmall,
@@ -140,26 +253,7 @@ fun ReaderScreen(
                 )
             }
         },
-        floatingActionButton = {
-            val state = uiState
-            if (state is ReaderUiState.Success) {
-                AnimatedVisibility(visible = controlsVisible) {
-                    // Wide pill (Doki-style) — larger tap target; opens the chapter list.
-                    ExtendedFloatingActionButton(
-                        onClick = { showChaptersSheet = true },
-                        icon = { Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = null) },
-                        text = {
-                            Text(
-                                state.currentChapterName.ifEmpty { stringResource(Res.string.chapters) },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
-                    )
-                }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center,
+        snackbarHost = { SnackbarHost(snackbarHost) },
     ) { paddingValues ->
         when (val state = uiState) {
             is ReaderUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
@@ -172,27 +266,67 @@ fun ReaderScreen(
                         paddingValues = paddingValues,
                         scrollToIndex = state.scrollToIndex,
                         scrollToken = state.scrollToken,
+                        colorFilter = composeColorFilter,
+                        autoScroll = autoScrollActive,
+                        autoScrollSpeed = autoScrollSpeed,
+                        contentScale = pageContentScale,
+                        pageAlignment = pageAlignment,
+                        webtoonGaps = webtoonGaps,
+                        animatePages = animatePages,
+                        tapGridSettings = tapGridSettings,
+                        tapsReversed = tapsReversed,
+                        navEvents = navEvents,
                         onVisibleIndexChanged = { viewModel.onVisibleIndexChanged(it) },
+                        onVisibleBounds = { first, last, allowPrepend -> viewModel.onVisibleBounds(first, last, allowPrepend) },
+                        onChapter = { viewModel.goToChapter(it) },
                         onToggleControls = { controlsVisible = !controlsVisible },
-                        onLongPress = { showConfigSheet = true },
+                        onShowMenu = { showConfigSheet = true },
                     )
-                    if (showInfoBar && pageIndicator.total > 0) {
-                        ReaderInfoBar(
-                            indicator = pageIndicator,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(paddingValues),
-                        )
-                    } else if (showPageNumbers && pageIndicator.total > 0) {
-                        Text(
-                            text = "${pageIndicator.page} / ${pageIndicator.total}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(paddingValues)
-                                .padding(bottom = 8.dp)
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), MaterialTheme.shapes.small)
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                        )
+                    // Bottom stack: thin info bar (always, if enabled) + actions bar (only when controls shown).
+                    Column(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(paddingValues),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        if (showInfoBar && pageIndicator.total > 0) {
+                            ReaderInfoBar(indicator = pageIndicator)
+                        } else if (showPageNumbers && pageIndicator.total > 0) {
+                            Text(
+                                text = "${pageIndicator.page} / ${pageIndicator.total}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .padding(bottom = 4.dp)
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), MaterialTheme.shapes.small)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                            )
+                        }
+                        // Auto-scroll speed control stays visible while active so it can be stopped.
+                        if (autoScrollActive) {
+                            AutoScrollControl(
+                                speed = autoScrollSpeed,
+                                onSpeedChange = { autoScrollSpeed = it; settings.readerAutoscrollSpeed = it },
+                                onStop = { autoScrollActive = false },
+                            )
+                        }
+                        AnimatedVisibility(visible = controlsVisible) {
+                            ReaderActionsBar(
+                                controls = controls,
+                                indicator = pageIndicator,
+                                hasPrev = state.hasPrev,
+                                hasNext = state.hasNext,
+                                isBookmarked = isBookmarked,
+                                autoScrollActive = autoScrollActive,
+                                onPrevChapter = { viewModel.goToChapter(-1) },
+                                onNextChapter = { viewModel.goToChapter(1) },
+                                onSeek = { viewModel.seekToPageInCurrentChapter(it) },
+                                onOpenChapters = { showChaptersSheet = true },
+                                onToggleBookmark = { viewModel.toggleBookmark() },
+                                onSavePage = { viewModel.savePage() },
+                                onToggleAutoScroll = { autoScrollActive = !autoScrollActive },
+                                rotateSupported = windowController.supportsOrientation,
+                                onRotate = { windowController.toggleOrientationLock() },
+                            )
+                        }
                     }
                 }
             }
@@ -201,14 +335,84 @@ fun ReaderScreen(
 
     if (showConfigSheet) {
         ReaderConfigSheet(
+            settings = settings,
             isBookmarked = isBookmarked,
+            isIncognito = isIncognito,
+            onToggleIncognito = { viewModel.toggleIncognito() },
             mode = readerMode,
             onSelectMode = { viewModel.setReaderMode(it) },
             onToggleBookmark = {
                 viewModel.toggleBookmark()
                 showConfigSheet = false
             },
+            onSavePage = {
+                viewModel.savePage()
+                showConfigSheet = false
+            },
+            onSharePage = {
+                viewModel.sharePage()
+                showConfigSheet = false
+            },
+            onAutoScroll = {
+                autoScrollActive = !autoScrollActive
+                showConfigSheet = false
+            },
+            rotateSupported = windowController.supportsOrientation,
+            onRotate = {
+                windowController.toggleOrientationLock()
+                showConfigSheet = false
+            },
+            onColorCorrection = {
+                showConfigSheet = false
+                showColorSheet = true
+            },
+            onOpenSettings = {
+                showConfigSheet = false
+                onOpenSettings()
+            },
             onDismiss = { showConfigSheet = false },
+        )
+    }
+    if (showColorSheet) {
+        ColorCorrectionSheet(
+            current = colorFilterState,
+            onChange = { viewModel.setColorFilter(it) },
+            onDismiss = { showColorSheet = false },
+        )
+    }
+    if (showNsfwIncognitoDialog) {
+        var dontAskAgain by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.setIncognito(false, dontAskAgain)
+                showNsfwIncognitoDialog = false
+            },
+            icon = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+            title = { Text(stringResource(Res.string.incognito_mode)) },
+            text = {
+                Column {
+                    Text(stringResource(Res.string.incognito_mode_hint_nsfw))
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = dontAskAgain, onCheckedChange = { dontAskAgain = it })
+                        Text(stringResource(Res.string.dont_ask_again))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setIncognito(true, dontAskAgain)
+                    showNsfwIncognitoDialog = false
+                }) { Text(stringResource(Res.string.incognito)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    viewModel.setIncognito(false, dontAskAgain)
+                    showNsfwIncognitoDialog = false
+                }) { Text(stringResource(Res.string.cancel)) }
+            },
         )
     }
     if (showChaptersSheet) {
@@ -218,6 +422,9 @@ fun ReaderScreen(
                 chapters = state.chapters,
                 pages = state.pages,
                 bookmarks = bookmarks,
+                branches = state.branches,
+                selectedBranch = state.selectedBranch,
+                onBranchSelect = { viewModel.setBranch(it) },
                 onChapterClick = { id -> viewModel.goToChapterById(id); showChaptersSheet = false },
                 onPageClick = { index -> viewModel.jumpToPageIndex(index); showChaptersSheet = false },
                 onBookmarkClick = { chapterId, page -> viewModel.goToChapterAtPage(chapterId, page); showChaptersSheet = false },
@@ -228,17 +435,124 @@ fun ReaderScreen(
 }
 
 /**
- * Reader options bottom sheet — UI mirrors Doki's reader config sheet. Only the bookmark action is
- * functional this session; the rest (save page, reading modes, settings, color correction, auto-scroll,
- * etc.) are shown but disabled and deferred to the reader-polish session (see MIGRATION.md).
+ * Bottom actions overlay — mirrors Doki's docked `ReaderActionsView` (a rounded card centred at the
+ * bottom). Renders only the controls enabled in the reader_controls pref, in Doki's order:
+ * chapters/pages, prev-chapter, page slider, next-chapter, save, auto-scroll, rotate, bookmark.
+ */
+@Composable
+private fun ReaderActionsBar(
+    controls: Set<ReaderControl>,
+    indicator: PageIndicator,
+    hasPrev: Boolean,
+    hasNext: Boolean,
+    isBookmarked: Boolean,
+    autoScrollActive: Boolean,
+    onPrevChapter: () -> Unit,
+    onNextChapter: () -> Unit,
+    onSeek: (Int) -> Unit,
+    onOpenChapters: () -> Unit,
+    onToggleBookmark: () -> Unit,
+    onSavePage: () -> Unit,
+    onToggleAutoScroll: () -> Unit,
+    rotateSupported: Boolean,
+    onRotate: () -> Unit,
+) {
+    val hasSlider = ReaderControl.SLIDER in controls && indicator.total > 1
+    // Doki's toolbar_docked: rounded card, centred, with side + bottom margins.
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 6.dp,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (ReaderControl.PAGES_SHEET in controls) {
+                IconButton(onClick = onOpenChapters) {
+                    Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = stringResource(Res.string.chapters_and_pages))
+                }
+            }
+            if (ReaderControl.PREV_CHAPTER in controls) {
+                IconButton(onClick = onPrevChapter, enabled = hasPrev) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(Res.string.prev_chapter))
+                }
+            }
+            if (hasSlider) {
+                var sliderPos by remember(indicator.page, indicator.total) { mutableFloatStateOf((indicator.page - 1).toFloat()) }
+                Text("${sliderPos.roundToInt() + 1}", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = sliderPos.coerceIn(0f, (indicator.total - 1).toFloat()),
+                    onValueChange = { sliderPos = it },
+                    onValueChangeFinished = { onSeek(sliderPos.roundToInt()) },
+                    valueRange = 0f..(indicator.total - 1).toFloat(),
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
+                Text("${indicator.total}", style = MaterialTheme.typography.labelMedium)
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            if (ReaderControl.NEXT_CHAPTER in controls) {
+                IconButton(onClick = onNextChapter, enabled = hasNext) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(Res.string.next_chapter))
+                }
+            }
+            if (ReaderControl.SAVE_PAGE in controls) {
+                IconButton(onClick = onSavePage) {
+                    Icon(Icons.Filled.Save, contentDescription = stringResource(Res.string.save_page))
+                }
+            }
+            if (ReaderControl.TIMER in controls) {
+                IconButton(onClick = onToggleAutoScroll) {
+                    Icon(
+                        Icons.Filled.Timer,
+                        contentDescription = stringResource(Res.string.automatic_scroll),
+                        tint = if (autoScrollActive) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                    )
+                }
+            }
+            if (ReaderControl.SCREEN_ROTATION in controls && rotateSupported) {
+                IconButton(onClick = onRotate) {
+                    Icon(Icons.Filled.ScreenRotation, contentDescription = stringResource(Res.string.screen_orientation))
+                }
+            }
+            if (ReaderControl.BOOKMARK in controls) {
+                IconButton(onClick = onToggleBookmark) {
+                    Icon(
+                        if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                        contentDescription = stringResource(Res.string.bookmark_add),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Reader options bottom sheet — mirrors Doki's reader config sheet. Bookmark + reading mode +
+ * colour correction + reader settings are functional; double-page / pull-gesture toggles persist
+ * to settings (the double-page renderer itself is a later R4 increment). Save-page / auto-scroll /
+ * rotate are platform actions wired in a later R4 increment.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReaderConfigSheet(
+    settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
     isBookmarked: Boolean,
+    isIncognito: Boolean,
+    onToggleIncognito: () -> Unit,
     mode: org.nekosukuriputo.nekuva.core.prefs.ReaderMode,
     onSelectMode: (org.nekosukuriputo.nekuva.core.prefs.ReaderMode) -> Unit,
     onToggleBookmark: () -> Unit,
+    onSavePage: () -> Unit,
+    onSharePage: () -> Unit,
+    onAutoScroll: () -> Unit,
+    rotateSupported: Boolean,
+    onRotate: () -> Unit,
+    onColorCorrection: () -> Unit,
+    onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -252,8 +566,13 @@ private fun ReaderConfigSheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            // Deferred (reader-polish / save area)
-            MenuRow(Icons.Filled.Save, stringResource(Res.string.save_page), enabled = false) {}
+            PersistSwitchRow(
+                title = stringResource(Res.string.incognito_mode),
+                checked = isIncognito,
+                onChange = { onToggleIncognito() },
+            )
+            MenuRow(Icons.Filled.Save, stringResource(Res.string.save_page), enabled = true, onClick = onSavePage)
+            MenuRow(Icons.Filled.Share, stringResource(Res.string.share_image), enabled = true, onClick = onSharePage)
             // FUNCTIONAL
             MenuRow(
                 icon = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -289,12 +608,139 @@ private fun ReaderConfigSheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
 
-            SwitchRow(stringResource(Res.string.use_two_pages_landscape))
-            SwitchRow(stringResource(Res.string.enable_pull_gesture_title))
-            MenuRow(Icons.Filled.ScreenRotation, stringResource(Res.string.rotate_screen), enabled = false) {}
-            MenuRow(Icons.Filled.Timer, stringResource(Res.string.automatic_scroll), enabled = false) {}
-            MenuRow(Icons.Filled.Palette, stringResource(Res.string.color_correction), enabled = false) {}
-            MenuRow(Icons.Filled.Settings, stringResource(Res.string.settings), enabled = false) {}
+            // Persisted quick toggles (Doki parity). Double-page rendering itself is a later R4 increment.
+            PersistSwitchRow(
+                title = stringResource(Res.string.use_two_pages_landscape),
+                checked = settings.isReaderDoubleOnLandscape,
+                onChange = { settings.isReaderDoubleOnLandscape = it },
+            )
+            run {
+                var pull by remember { mutableStateOf(settings.prefBoolean("webtoon_pull_gesture", false)) }
+                PersistSwitchRow(
+                    title = stringResource(Res.string.enable_pull_gesture_title),
+                    checked = pull,
+                    onChange = { settings.setPref("webtoon_pull_gesture", it); pull = it },
+                )
+            }
+            if (rotateSupported) {
+                MenuRow(Icons.Filled.ScreenRotation, stringResource(Res.string.rotate_screen), enabled = true, onClick = onRotate)
+            }
+            MenuRow(Icons.Filled.Timer, stringResource(Res.string.automatic_scroll), enabled = true, onClick = onAutoScroll)
+            MenuRow(Icons.Filled.Palette, stringResource(Res.string.color_correction), enabled = true, onClick = onColorCorrection)
+            MenuRow(Icons.Filled.Settings, stringResource(Res.string.settings), enabled = true, onClick = onOpenSettings)
+        }
+    }
+}
+
+/** In-reader colour correction panel — sliders + toggles update the per-manga filter live (Doki parity). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ColorCorrectionSheet(
+    current: ReaderColorFilter,
+    onChange: (ReaderColorFilter) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var filter by remember { mutableStateOf(current) }
+    fun update(new: ReaderColorFilter) {
+        filter = new
+        onChange(new)
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            Text(stringResource(Res.string.color_correction), style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+
+            Text(stringResource(Res.string.brightness), style = MaterialTheme.typography.labelLarge)
+            Slider(
+                value = filter.brightness,
+                onValueChange = { update(filter.copy(brightness = it)) },
+                valueRange = -1f..1f,
+            )
+            Text(stringResource(Res.string.contrast), style = MaterialTheme.typography.labelLarge)
+            Slider(
+                value = filter.contrast,
+                onValueChange = { update(filter.copy(contrast = it)) },
+                valueRange = -1f..1f,
+            )
+            PersistSwitchRow(
+                title = stringResource(Res.string.invert_colors),
+                checked = filter.isInverted,
+                onChange = { update(filter.copy(isInverted = it)) },
+            )
+            PersistSwitchRow(
+                title = stringResource(Res.string.grayscale),
+                checked = filter.isGrayscale,
+                onChange = { update(filter.copy(isGrayscale = it)) },
+            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = { update(ReaderColorFilter.EMPTY) },
+                modifier = Modifier.align(Alignment.End),
+            ) { Text(stringResource(Res.string.reset)) }
+        }
+    }
+}
+
+/** Auto-scroll speed control shown while auto-scroll is running (Doki's ScrollTimerControlView). */
+@Composable
+private fun AutoScrollControl(speed: Float, onSpeedChange: (Float) -> Unit, onStop: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        tonalElevation = 3.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Timer, contentDescription = stringResource(Res.string.automatic_scroll))
+            Text(
+                text = stringResource(Res.string.speed),
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+            Slider(
+                value = speed,
+                onValueChange = onSpeedChange,
+                valueRange = 0f..1f,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onStop) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.cancel))
+            }
+        }
+    }
+}
+
+/** Branch/translation dropdown for the chapters sheet (Doki's MangaBranch selector). */
+@Composable
+private fun BranchSelector(
+    branches: List<ReaderBranch>,
+    selectedBranch: String?,
+    onSelect: (String?) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val unknown = stringResource(Res.string.unknown)
+    fun label(name: String?) = name?.takeIf { it.isNotEmpty() } ?: unknown
+    val current = branches.firstOrNull { it.name == selectedBranch } ?: branches.first()
+    Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+        TextButton(onClick = { open = true }) {
+            Icon(Icons.Filled.Translate, contentDescription = stringResource(Res.string.translation), modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("${label(current.name)} (${current.count})", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            branches.forEach { b ->
+                DropdownMenuItem(
+                    text = { Text("${label(b.name)} (${b.count})") },
+                    onClick = { onSelect(b.name); open = false },
+                    trailingIcon = {
+                        if (b.name == selectedBranch) Icon(Icons.Filled.Check, contentDescription = null)
+                    },
+                )
+            }
         }
     }
 }
@@ -316,13 +762,13 @@ private fun MenuRow(icon: ImageVector, title: String, enabled: Boolean, onClick:
 }
 
 @Composable
-private fun SwitchRow(title: String) {
+private fun PersistSwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().alpha(0.5f).padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = false, onCheckedChange = null, enabled = false)
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 
@@ -333,17 +779,70 @@ fun ReaderContent(
     paddingValues: PaddingValues,
     scrollToIndex: Int,
     scrollToken: Int,
+    colorFilter: ColorFilter?,
+    autoScroll: Boolean,
+    autoScrollSpeed: Float,
+    contentScale: ContentScale,
+    pageAlignment: Alignment,
+    webtoonGaps: Boolean,
+    animatePages: Boolean,
+    tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
+    tapsReversed: Boolean,
+    navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
     onVisibleIndexChanged: (Int) -> Unit,
+    onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
+    onChapter: (Int) -> Unit,
     onToggleControls: () -> Unit,
-    onLongPress: () -> Unit,
+    onShowMenu: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
-            WebtoonReader(pages, scrollToIndex, scrollToken, onVisibleIndexChanged, onToggleControls, onLongPress)
+            WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, navEvents, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
-            PagedReader(pages, mode, scrollToIndex, scrollToken, onVisibleIndexChanged, onToggleControls, onLongPress)
+            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, tapGridSettings, tapsReversed, navEvents, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
     }
+}
+
+/** Shared tap-zone → action dispatch (Doki ReaderControlDelegate). [pageBy] handles page nav per mode. */
+private fun dispatchTapAction(
+    tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
+    tapsReversed: Boolean,
+    offset: androidx.compose.ui.geometry.Offset,
+    size: androidx.compose.ui.unit.IntSize,
+    isLongTap: Boolean,
+    pageBy: (Int) -> Unit,
+    onChapter: (Int) -> Unit,
+    onToggleControls: () -> Unit,
+    onShowMenu: () -> Unit,
+) {
+    val area = org.nekosukuriputo.nekuva.reader.domain.tapGridAreaAt(offset.x, offset.y, size.width, size.height) ?: return
+    val action = tapGridSettings.getTapAction(area, isLongTap) ?: return
+    val effective = if (tapsReversed) {
+        when (action) {
+            org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_NEXT -> org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_PREV
+            org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_PREV -> org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_NEXT
+            else -> action
+        }
+    } else {
+        action
+    }
+    when (effective) {
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_NEXT -> pageBy(1)
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.PAGE_PREV -> pageBy(-1)
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.CHAPTER_NEXT -> onChapter(1)
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.CHAPTER_PREV -> onChapter(-1)
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.TOGGLE_UI -> onToggleControls()
+        org.nekosukuriputo.nekuva.reader.domain.TapAction.SHOW_MENU -> onShowMenu()
+    }
+}
+
+/** Map the user's zoom mode to a Compose [ContentScale] for paged reading (Doki parity). */
+private fun org.nekosukuriputo.nekuva.core.model.ZoomMode.toContentScale(): ContentScale = when (this) {
+    org.nekosukuriputo.nekuva.core.model.ZoomMode.FIT_CENTER -> ContentScale.Fit
+    org.nekosukuriputo.nekuva.core.model.ZoomMode.FIT_HEIGHT -> ContentScale.FillHeight
+    org.nekosukuriputo.nekuva.core.model.ZoomMode.FIT_WIDTH -> ContentScale.FillWidth
+    org.nekosukuriputo.nekuva.core.model.ZoomMode.KEEP_START -> ContentScale.FillWidth
 }
 
 /** Doki-style reader chapter sheet: tabs for the chapter list, page thumbnails, and bookmarks. */
@@ -353,6 +852,9 @@ private fun ReaderChaptersSheet(
     chapters: List<ReaderChapterItem>,
     pages: List<LoadedPage>,
     bookmarks: List<Bookmark>,
+    branches: List<ReaderBranch>,
+    selectedBranch: String?,
+    onBranchSelect: (String?) -> Unit,
     onChapterClick: (Long) -> Unit,
     onPageClick: (Int) -> Unit,
     onBookmarkClick: (Long, Int) -> Unit,
@@ -362,6 +864,11 @@ private fun ReaderChaptersSheet(
     var tab by remember { mutableIntStateOf(0) } // 0=list, 1=grid, 2=bookmarks
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
+            // Branch / translation selector (Doki) — only when the manga has more than one branch.
+            if (branches.isNotEmpty()) {
+                BranchSelector(branches, selectedBranch, onBranchSelect)
+                HorizontalDivider()
+            }
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -472,9 +979,18 @@ private fun readerBackgroundColor(bg: org.nekosukuriputo.nekuva.core.prefs.Reade
     org.nekosukuriputo.nekuva.core.prefs.ReaderBackground.BLACK -> Color.Black
 }
 
-/** Thin bottom info bar: chapter name + page x/total. */
+/** Thin bottom info bar (Doki's ReaderInfoBarView): chapter name · clock · battery · page x/total. */
+@OptIn(kotlin.time.ExperimentalTime::class)
 @Composable
 private fun ReaderInfoBar(indicator: PageIndicator, modifier: Modifier = Modifier) {
+    val battery = rememberBatteryPercent()
+    var clock by remember { mutableStateOf(currentClockLabel()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            clock = currentClockLabel()
+            delay(15_000)
+        }
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -490,7 +1006,13 @@ private fun ReaderInfoBar(indicator: PageIndicator, modifier: Modifier = Modifie
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(clock, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (battery != null) {
+            Spacer(Modifier.width(10.dp))
+            Text("$battery%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.width(12.dp))
         Text(
             text = "${indicator.page} / ${indicator.total}",
             style = MaterialTheme.typography.labelMedium,
@@ -499,15 +1021,30 @@ private fun ReaderInfoBar(indicator: PageIndicator, modifier: Modifier = Modifie
     }
 }
 
+@OptIn(kotlin.time.ExperimentalTime::class)
+private fun currentClockLabel(): String {
+    // Use kotlin.time.Clock/Instant (stdlib), NOT kotlinx.datetime.Instant — the latter was removed in
+    // kotlinx-datetime 0.7+ and throws NoClassDefFoundError on Desktop at runtime (CLAUDE.md §4.6).
+    val dt = kotlin.time.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+    fun pad(v: Int) = v.toString().padStart(2, '0')
+    return "${pad(dt.hour)}:${pad(dt.minute)}"
+}
+
 /** Continuous vertical reader (full-width images, multi-chapter append). */
 @Composable
 private fun WebtoonReader(
     pages: List<LoadedPage>,
     scrollToIndex: Int,
     scrollToken: Int,
+    colorFilter: ColorFilter?,
+    autoScroll: Boolean,
+    autoScrollSpeed: Float,
+    webtoonGaps: Boolean,
+    navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
     onVisibleIndexChanged: (Int) -> Unit,
+    onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
     onToggleControls: () -> Unit,
-    onLongPress: () -> Unit,
+    onShowMenu: () -> Unit,
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     var ready by remember { mutableStateOf(false) }
@@ -515,16 +1052,90 @@ private fun WebtoonReader(
         if (pages.isNotEmpty()) listState.scrollToItem(scrollToIndex.coerceIn(0, pages.lastIndex))
         ready = true
     }
+    // Track first AND last visible page (Doki uses both to load adjacent chapters at the boundary).
     LaunchedEffect(ready) {
-        if (ready) snapshotFlow { listState.firstVisibleItemIndex }.collect { onVisibleIndexChanged(it) }
+        if (!ready) return@LaunchedEffect
+        snapshotFlow {
+            val info = listState.layoutInfo.visibleItemsInfo
+            val first = info.firstOrNull()?.index ?: 0
+            val last = info.lastOrNull()?.index ?: first
+            first to last
+        }.collect { (first, last) ->
+            onVisibleIndexChanged(first)
+            onVisibleBounds(first, last, true)
+        }
     }
+    // Auto-scroll: continuously nudge the list while active. Speed maps to px/second (Doki's ScrollTimer).
+    LaunchedEffect(autoScroll, autoScrollSpeed) {
+        if (autoScroll) {
+            val pixelsPerSecond = 30f + autoScrollSpeed.coerceIn(0f, 1f) * 470f
+            while (isActive) {
+                listState.scrollBy(pixelsPerSecond / 60f)
+                delay(16)
+            }
+        }
+    }
+    // Volume-key navigation in webtoon = jump ~one viewport up/down.
+    LaunchedEffect(Unit) {
+        navEvents.collect { delta ->
+            val vp = listState.layoutInfo.viewportSize.height
+            listState.animateScrollBy((if (vp > 0) vp * 0.9f else 1200f) * delta)
+        }
+    }
+    // Pinch-zoom for the continuous strip (Doki's webtoon zoom). The whole LazyColumn is scaled via
+    // graphicsLayer; vertical drags fall through to the list scroll, while pinch + horizontal pan are
+    // handled here. Double-tap toggles 1× / 2×.
+    // Webtoon is full-width at rest (scale 1); the user can pinch up to 3×.
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    fun maxPanX() = (size.width * (scale - 1f)) / 2f
     Box(
         modifier = Modifier.fillMaxSize()
-            .pointerInput(Unit) { detectTapGestures(onTap = { onToggleControls() }, onLongPress = { onLongPress() }) },
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                // Webtoon is continuous-scroll, so any tap toggles the UI (Doki-like); long-press = menu.
+                detectTapGestures(
+                    onTap = { onToggleControls() },
+                    onDoubleTap = {
+                        if (scale > 1f) { scale = 1f; offsetX = 0f } else { scale = 2f }
+                    },
+                    onLongPress = { onShowMenu() },
+                )
+            }
+            // Pinch (2 fingers) zooms; while zoomed a horizontal one-finger drag pans. Vertical drags
+            // are NOT consumed, so the LazyColumn keeps scrolling normally.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.count { it.pressed }
+                        if (pressed >= 2) {
+                            val zoom = event.calculateZoom()
+                            if (zoom != 1f) {
+                                scale = (scale * zoom).coerceIn(1f, 3f)
+                                offsetX = offsetX.coerceIn(-maxPanX(), maxPanX())
+                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                            }
+                        } else if (scale > 1f) {
+                            val pan = event.calculatePan()
+                            if (kotlin.math.abs(pan.x) > kotlin.math.abs(pan.y)) {
+                                offsetX = (offsetX + pan.x).coerceIn(-maxPanX(), maxPanX())
+                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            },
     ) {
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offsetX),
+            verticalArrangement = if (webtoonGaps) Arrangement.spacedBy(12.dp) else Arrangement.Top,
+        ) {
             itemsIndexed(items = pages, key = { _, p -> "${p.chapterId}_${p.pageInChapter}" }) { index, loadedPage ->
-                WebtoonPageItem(page = loadedPage.page, index = index)
+                WebtoonPageItem(page = loadedPage.page, index = index, colorFilter = colorFilter)
             }
         }
         org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
@@ -542,9 +1153,20 @@ private fun PagedReader(
     mode: org.nekosukuriputo.nekuva.core.prefs.ReaderMode,
     scrollToIndex: Int,
     scrollToken: Int,
+    colorFilter: ColorFilter?,
+    autoScroll: Boolean,
+    autoScrollSpeed: Float,
+    contentScale: ContentScale,
+    pageAlignment: Alignment,
+    animatePages: Boolean,
+    tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
+    tapsReversed: Boolean,
+    navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
     onVisibleIndexChanged: (Int) -> Unit,
+    onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
+    onChapter: (Int) -> Unit,
     onToggleControls: () -> Unit,
-    onLongPress: () -> Unit,
+    onShowMenu: () -> Unit,
 ) {
     val isVertical = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.VERTICAL
     val isReversed = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED
@@ -555,36 +1177,46 @@ private fun PagedReader(
     )
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var ready by remember { mutableStateOf(false) }
+    // While a page is zoomed, disable pager swiping so panning the page doesn't flip pages.
+    var pageZoomed by remember { mutableStateOf(false) }
     LaunchedEffect(scrollToken) {
         if (pages.isNotEmpty()) pagerState.scrollToPage(scrollToIndex.coerceIn(0, pages.lastIndex))
         ready = true
     }
     LaunchedEffect(ready) {
-        if (ready) snapshotFlow { pagerState.currentPage }.collect { onVisibleIndexChanged(it) }
+        if (ready) snapshotFlow { pagerState.currentPage }.collect { page ->
+            onVisibleIndexChanged(page)
+            onVisibleBounds(page, page, false) // paged: forward-append only (prepend would shift the pager)
+        }
+    }
+    // Reset zoom-lock when the page changes (e.g. via keyboard/volume while not interacting).
+    LaunchedEffect(pagerState.currentPage) { pageZoomed = false }
+    // Auto-scroll for paged modes = auto-advance after a delay (shorter delay = faster).
+    LaunchedEffect(autoScroll, autoScrollSpeed) {
+        if (autoScroll) {
+            val delayMs = (8000L - (autoScrollSpeed.coerceIn(0f, 1f) * 6500f).toLong()).coerceAtLeast(1000L)
+            while (isActive) {
+                delay(delayMs)
+                val target = pagerState.currentPage + 1
+                if (target <= pages.lastIndex) pagerState.animateScrollToPage(target) else break
+            }
+        }
     }
 
     val leftDelta = if (isReversed) +1 else -1
     val rightDelta = if (isReversed) -1 else +1
     fun navigate(delta: Int) {
         val target = (pagerState.currentPage + delta).coerceIn(0, (pages.size - 1).coerceAtLeast(0))
-        scope.launch { pagerState.animateScrollToPage(target) }
-    }
-    val onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize) -> Unit = { offset, size ->
-        if (isVertical) {
-            val third = size.height / 3f
-            when {
-                offset.y < third -> navigate(-1)
-                offset.y > 2 * third -> navigate(+1)
-                else -> onToggleControls()
-            }
-        } else {
-            val third = size.width / 3f
-            when {
-                offset.x < third -> navigate(leftDelta)
-                offset.x > 2 * third -> navigate(rightDelta)
-                else -> onToggleControls()
-            }
+        scope.launch {
+            // Page-transition animation pref: animate, or jump instantly when disabled (Doki "none").
+            if (animatePages) pagerState.animateScrollToPage(target) else pagerState.scrollToPage(target)
         }
+    }
+    // Volume-key navigation in paged modes = page by ±1.
+    LaunchedEffect(Unit) { navEvents.collect { navigate(it) } }
+    // Configurable tap-grid dispatch (Doki). pageBy(+1)=next page; the tapsReversed flag handles RTL.
+    val onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit = { offset, size, isLong ->
+        dispatchTapAction(tapGridSettings, tapsReversed, offset, size, isLong, { navigate(it) }, onChapter, onToggleControls, onShowMenu)
     }
 
     // Desktop / hardware-keyboard navigation: arrows page through.
@@ -608,14 +1240,21 @@ private fun PagedReader(
                 Key.DirectionRight -> if (!isVertical) { navigate(rightDelta); true } else false
                 Key.DirectionUp -> if (isVertical) { navigate(-1); true } else false
                 Key.DirectionDown -> if (isVertical) { navigate(+1); true } else false
+                // Extra keys (Doki): space / Page Down / 'R' = next, Page Up / 'L' = previous.
+                Key.Spacebar, Key.PageDown, Key.R -> { navigate(+1); true }
+                Key.PageUp, Key.L -> { navigate(-1); true }
                 else -> false
             }
         }
 
     Box(modifier = keyboardModifier) {
         if (isVertical) {
-            androidx.compose.foundation.pager.VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                ZoomablePage(pages.getOrNull(page)?.page?.url, onTap, onLongPress)
+            androidx.compose.foundation.pager.VerticalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = !pageZoomed,
+            ) { page ->
+                ZoomablePage(pages.getOrNull(page)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
             }
         } else {
             // Right-to-left is done by flipping the layout direction (reliable swipe paging),
@@ -627,12 +1266,13 @@ private fun PagedReader(
                 androidx.compose.foundation.pager.HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !pageZoomed,
                 ) { page ->
                     // Keep page content laid out LTR regardless of the pager's RTL flow.
                     androidx.compose.runtime.CompositionLocalProvider(
                         androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr,
                     ) {
-                        ZoomablePage(pages.getOrNull(page)?.page?.url, onTap, onLongPress)
+                        ZoomablePage(pages.getOrNull(page)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
                     }
                 }
             }
@@ -641,36 +1281,72 @@ private fun PagedReader(
 }
 
 /**
- * A single page: single tap is forwarded for tap-navigation / control toggle, double-tap toggles zoom.
- * (Pinch-pan is intentionally NOT handled here — a per-page pan gesture swallows the Pager's swipe;
- * coexisting pinch-zoom + paging is a follow-up refinement, see MIGRATION.md R4.)
+ * A single page with pinch-zoom + pan. Two-finger pinch zooms (even from 1×), double-tap toggles
+ * zoom, and while zoomed a one-finger drag pans (clamped to edges). A one-finger drag at 1× is NOT
+ * consumed, so the pager still receives swipes; while zoomed the pager scroll is disabled by the
+ * parent so pan never flips the page.
  */
 @Composable
 private fun ZoomablePage(
     url: String?,
-    onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize) -> Unit,
-    onLongPress: () -> Unit,
+    colorFilter: ColorFilter?,
+    contentScale: ContentScale,
+    pageAlignment: Alignment,
+    onZoomChanged: (Boolean) -> Unit,
+    onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, isLongTap: Boolean) -> Unit,
 ) {
     var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val zoomed = scale > 1f
+    // Tell the pager to stop owning drags while zoomed, so pan goes to this page (not page-flip).
+    LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
+    // Official transform gesture (pinch + pan). Enabled ONLY while zoomed so that at 1× a one-finger
+    // drag stays with the HorizontalPager (page swipe). Enter zoom via double-tap.
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        offset = if (scale > 1f) {
+            val maxX = (size.width * (scale - 1f)) / 2f
+            val maxY = (size.height * (scale - 1f)) / 2f
+            Offset(
+                (offset.x + panChange.x).coerceIn(-maxX, maxX),
+                (offset.y + panChange.y).coerceIn(-maxY, maxY),
+            )
+        } else {
+            Offset.Zero
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { size = it }
+            .transformable(state = transformState, enabled = zoomed)
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { onTap(it, size) },
-                    onDoubleTap = { scale = if (scale > 1f) 1f else 2.5f },
-                    onLongPress = { onLongPress() },
+                    onTap = { onTap(it, size, false) },
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            scale = 1f; offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                        }
+                    },
+                    onLongPress = { onTap(it, size, true) },
                 )
             },
-        contentAlignment = Alignment.Center,
+        contentAlignment = pageAlignment,
     ) {
         SubcomposeAsyncImage(
             model = url,
             contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale),
+            contentScale = contentScale,
+            colorFilter = colorFilter,
+            modifier = Modifier.fillMaxSize().graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y,
+            ),
             loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
             error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
         )
@@ -678,13 +1354,14 @@ private fun ZoomablePage(
 }
 
 @Composable
-private fun WebtoonPageItem(page: MangaPage, index: Int) {
+private fun WebtoonPageItem(page: MangaPage, index: Int, colorFilter: ColorFilter?) {
     var retryHash by remember { mutableIntStateOf(0) }
     key(retryHash) {
         SubcomposeAsyncImage(
             model = page.url,
             contentDescription = "Page $index",
             contentScale = ContentScale.FillWidth,
+            colorFilter = colorFilter,
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
             loading = {
                 Box(modifier = Modifier.fillMaxWidth().height(400.dp), contentAlignment = Alignment.Center) {

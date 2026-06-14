@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -20,6 +21,7 @@ import org.koin.mp.KoinPlatform
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
 import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
+import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.history.data.HistoryRepository
@@ -54,14 +56,29 @@ data class ReaderChapterItem(
     val isCurrent: Boolean,
 )
 
+/** A translation/scanlation branch for the reader's branch selector (Doki's MangaBranch). */
+data class ReaderBranch(
+    val name: String?,
+    val count: Int,
+)
+
+/** Transient reader toast (Doki's ReaderToastView): bookmark add/remove + chapter change. */
+sealed interface ReaderToast {
+    data object BookmarkAdded : ReaderToast
+    data object BookmarkRemoved : ReaderToast
+    data class Chapter(val name: String) : ReaderToast
+}
+
 /**
- * Reader with inter-chapter navigation (subset of reader-advanced — see MIGRATION.md):
- * - Forward continuous-append: when the user nears the end of the loaded pages, the next
- *   chapter's pages are appended to the SAME list (each page keeps its chapterId), mirroring
- *   Doki's vertical/continuous behaviour.
+ * Reader with continuous inter-chapter navigation (Doki's `onCurrentPageChanged` boundary loading):
+ * - Forward append: when the LAST visible page nears the end, the next chapter's pages are appended
+ *   to the SAME list (each page keeps its chapterId).
+ * - Backward prepend (webtoon): when the FIRST visible page nears the start, the previous chapter's
+ *   pages are prepended; stable LazyColumn item keys keep the reading position (no scroll jump).
  * - Explicit Next/Prev chapter controls (replace content with the target chapter at page 0).
- * - History moves with the active chapter via the existing [HistoryUpdateUseCase] path.
- * Backward continuous-prepend, branch selection and page-trimming stay deferred (MIGRATION.md).
+ * - Navigation always uses the FULL chapter list (not branch-filtered) so inconsistent per-chapter
+ *   branch values can't strand the reader; the branch selector only filters the chapters-sheet view.
+ * Page-trimming (Doki's PAGES_TRIM_THRESHOLD) stays deferred (MIGRATION.md).
  */
 @OptIn(ExperimentalTime::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ReaderViewModel(
@@ -72,6 +89,9 @@ class ReaderViewModel(
     private val historyUpdateUseCase: HistoryUpdateUseCase,
     private val bookmarksRepository: BookmarksRepository,
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
+    private val pageSaveHelper: org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper,
+    private val scrobblerManager: org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager,
+    private val detectReaderModeUseCase: org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
@@ -87,7 +107,9 @@ class ReaderViewModel(
 
     fun setReaderMode(mode: org.nekosukuriputo.nekuva.core.prefs.ReaderMode) {
         _readerMode.value = mode
-        settings.defaultReaderMode = mode // remember the chosen mode for next time
+        settings.defaultReaderMode = mode // remember as the global default
+        // Also persist per-manga so it sticks for this title (and overrides auto-detect next time).
+        manga?.let { m -> viewModelScope.launch { runCatching { mangaDataRepository.saveReaderMode(m, mode) } } }
     }
 
     /** Reactive page position (page x of N in the current chapter) for the info bar / page-number overlay. */
@@ -96,7 +118,9 @@ class ReaderViewModel(
 
     private var manga: Manga? = null
     private val mangaFlow = MutableStateFlow<Manga?>(null)
-    private var chapters: List<MangaChapter> = emptyList()      // ordered (parser order)
+    private var allChapters: List<MangaChapter> = emptyList()    // every branch (parser order)
+    private var selectedBranch: String? = null                  // branch currently shown/navigated
+    private var chapters: List<MangaChapter> = emptyList()      // allChapters filtered to selectedBranch
 
     /** Bookmarks of the current manga (for the reader chapters sheet's bookmarks tab). */
     val bookmarks: StateFlow<List<Bookmark>> = mangaFlow
@@ -115,12 +139,123 @@ class ReaderViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    /** Effective reader colour filter: per-manga override if set, else the global one (Doki parity). */
+    val colorFilter: StateFlow<org.nekosukuriputo.nekuva.reader.domain.ReaderColorFilter> = mangaFlow
+        .flatMapLatest { m ->
+            if (m == null) flowOf(settings.readerColorFilter)
+            else mangaDataRepository.observeColorFilter(m.id)
+                .map { perManga -> perManga?.takeUnless { it.isEmpty } ?: settings.readerColorFilter }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), settings.readerColorFilter)
+
+    /** Live-update the per-manga colour filter from the in-reader colour panel. */
+    fun setColorFilter(filter: org.nekosukuriputo.nekuva.reader.domain.ReaderColorFilter) {
+        val m = manga ?: return
+        viewModelScope.launch {
+            runCatching { mangaDataRepository.saveColorFilter(m, filter.takeUnless { it.isEmpty }) }
+        }
+    }
+
+    /** Seek to a 0-based page within the currently visible chapter (driven by the bottom slider). */
+    fun seekToPageInCurrentChapter(pageInChapter: Int) {
+        val idx = loadedPages.indexOfFirst { it.chapterId == currentChapterId && it.pageInChapter == pageInChapter }
+        if (idx >= 0) jumpToPageIndex(idx)
+    }
+
+    /** Which controls to render in the bottom bar (Doki's reader_controls preference). */
+    val readerControls: Set<org.nekosukuriputo.nekuva.core.prefs.ReaderControl> get() = settings.readerControls
+
+    // One-shot result of a save-page action: the saved location, or null on failure (drives a snackbar).
+    private val _pageSaveEvent = kotlinx.coroutines.flow.MutableSharedFlow<String?>(extraBufferCapacity = 1)
+    val pageSaveEvent: kotlinx.coroutines.flow.SharedFlow<String?> = _pageSaveEvent.asSharedFlow()
+
+    // Incognito: when on, history/stats are not written and progress isn't scrobbled (Doki parity).
+    private val _isIncognito = MutableStateFlow(false)
+    val isIncognito: StateFlow<Boolean> = _isIncognito.asStateFlow()
+
+    // Asks the UI to prompt for incognito on an NSFW manga when the pref is ASK.
+    private val _askNsfwIncognito = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val askNsfwIncognito: kotlinx.coroutines.flow.SharedFlow<Unit> = _askNsfwIncognito.asSharedFlow()
+
+    private var lastScrobbledChapterId = 0L
+
+    // Transient reader toasts (bookmark add/remove, chapter change) — Doki's ReaderToastView.
+    private val _toast = kotlinx.coroutines.flow.MutableSharedFlow<ReaderToast>(extraBufferCapacity = 4)
+    val toast: kotlinx.coroutines.flow.SharedFlow<ReaderToast> = _toast.asSharedFlow()
+
+    private fun emitChapterToast(chapterId: Long) {
+        if (!settings.isReaderChapterToastEnabled) return
+        val c = chapters.firstOrNull { it.id == chapterId } ?: allChapters.firstOrNull { it.id == chapterId } ?: return
+        val name = c.title?.takeIf { it.isNotEmpty() } ?: c.name ?: return
+        _toast.tryEmit(ReaderToast.Chapter(name))
+    }
+
+    /** Decide incognito for this session from the global/NSFW settings (Doki's logic). */
+    private fun resolveIncognito(m: Manga) {
+        val nsfw = m.isNsfw()
+        when {
+            settings.isIncognitoModeEnabled -> _isIncognito.value = true
+            nsfw && settings.incognitoModeForNsfw == org.nekosukuriputo.nekuva.core.prefs.TriStateOption.ENABLED ->
+                _isIncognito.value = true
+            nsfw && settings.incognitoModeForNsfw == org.nekosukuriputo.nekuva.core.prefs.TriStateOption.ASK ->
+                _askNsfwIncognito.tryEmit(Unit)
+            else -> _isIncognito.value = false
+        }
+    }
+
+    /** Answer the NSFW incognito prompt; [dontAskAgain] persists the choice (Doki's setIncognitoMode). */
+    fun setIncognito(value: Boolean, dontAskAgain: Boolean) {
+        _isIncognito.value = value
+        if (dontAskAgain) {
+            settings.incognitoModeForNsfw = if (value) {
+                org.nekosukuriputo.nekuva.core.prefs.TriStateOption.ENABLED
+            } else {
+                org.nekosukuriputo.nekuva.core.prefs.TriStateOption.DISABLED
+            }
+        }
+    }
+
+    fun toggleIncognito() {
+        _isIncognito.value = !_isIncognito.value
+    }
+
+    /** Push read progress to linked scrobblers when the read chapter changes (skipped in incognito). */
+    private fun maybeScrobble(chapterId: Long) {
+        if (_isIncognito.value || chapterId == lastScrobbledChapterId) return
+        lastScrobbledChapterId = chapterId
+        val m = manga ?: return
+        viewModelScope.launch { runCatching { scrobblerManager.scrobble(m, chapterId) } }
+    }
+
+    /** Save the currently visible page to platform storage (Doki's "save page"). */
+    fun savePage() {
+        val lp = loadedPages.getOrNull(currentVisibleIndex) ?: return
+        viewModelScope.launch {
+            val result = runCatching { pageSaveHelper.save(lp.page) }
+                .onFailure { println("[Nekuva][reader] save page failed: ${it.message}") }
+                .getOrNull()
+            _pageSaveEvent.tryEmit(result)
+        }
+    }
+
+    /** Share the currently visible page via the platform share mechanism. */
+    fun sharePage() {
+        val lp = loadedPages.getOrNull(currentVisibleIndex) ?: return
+        viewModelScope.launch {
+            val result = runCatching { pageSaveHelper.share(lp.page) }
+                .onFailure { println("[Nekuva][reader] share page failed: ${it.message}") }
+                .getOrNull()
+            _pageSaveEvent.tryEmit(result)
+        }
+    }
+
     // Scroll signalling: the screen only (re)scrolls when scrollToken changes.
     private var scrollToken: Int = 0
     private var scrollTarget: Int = 0
 
     private val appendMutex = Mutex()
     private var appendingChapterId: Long? = null
+    private var prependingChapterId: Long? = null
     private var navJob: Job? = null
 
     init {
@@ -138,13 +273,22 @@ class ReaderViewModel(
                     ?: throw IllegalArgumentException("Manga with ID $mangaId not found.")
                 manga = m
                 mangaFlow.value = m
-                chapters = m.chapters ?: emptyList()
-                val chapter = chapters.find { it.id == initialChapterId }
+                resolveIncognito(m)
+                allChapters = m.chapters ?: emptyList()
+                val chapter = allChapters.find { it.id == initialChapterId }
                     ?: throw IllegalArgumentException("Chapter with ID $initialChapterId not found.")
+                // Default the branch SELECTOR to the opened chapter's branch. Navigation (append +
+                // prev/next) always uses the full ordered list so inconsistent per-chapter branch
+                // values from a source can't strand the reader (see #19 regression).
+                selectedBranch = chapter.branch
+                chapters = allChapters
 
                 val pages = fetchPages(m, chapter)
+                // Auto-detect the reading mode (Doki): per-manga saved mode, else webtoon-by-aspect-ratio.
+                runCatching { detectReaderModeUseCase(m, pages) }.getOrNull()?.let { _readerMode.value = it }
                 loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, chapter.id, i) }
                 currentChapterId = chapter.id
+                maybeScrobble(chapter.id)
 
                 // Resume target: an explicit page (e.g. opened from a bookmark) overrides history.
                 val maxIndex = (loadedPages.size - 1).coerceAtLeast(0)
@@ -193,15 +337,29 @@ class ReaderViewModel(
             // The visible page crossed into another (already-appended) chapter — update the toolbar
             // without moving the scroll position (scrollToken unchanged).
             currentChapterId = lp.chapterId
+            maybeScrobble(lp.chapterId)
+            emitChapterToast(lp.chapterId)
             emitSuccess()
         }
-        // Auto-advance: near the end of the loaded list -> append the next chapter.
-        if (index >= loadedPages.lastIndex - END_THRESHOLD) {
+    }
+
+    /**
+     * Continuous-reader boundary loading (Doki's `onCurrentPageChanged`): append the next chapter when
+     * the LAST visible page nears the end, and (webtoon only) prepend the previous chapter when the
+     * FIRST visible page nears the start. Using the last/first visible index — not just the top one —
+     * is what makes the trigger fire reliably.
+     */
+    fun onVisibleBounds(firstVisible: Int, lastVisible: Int, allowPrepend: Boolean) {
+        if (lastVisible >= loadedPages.lastIndex - END_THRESHOLD) {
             appendNextChapter()
+        }
+        if (allowPrepend && firstVisible <= END_THRESHOLD) {
+            prependPrevChapter()
         }
     }
 
     private fun writeHistory(lp: LoadedPage) {
+        if (_isIncognito.value) return // incognito: don't record reading history
         val m = manga ?: return
         val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
         val percent = (lp.pageInChapter + 1) / chapterPageCount.toFloat()
@@ -241,6 +399,37 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Prepend the previous chapter to the FRONT of the continuous list (webtoon). The LazyColumn keeps
+     * the user's position because items have stable keys, so this is seamless (Doki's addFirst).
+     */
+    private fun prependPrevChapter() {
+        val firstId = loadedPages.firstOrNull()?.chapterId ?: return
+        val idx = chapters.indexOfFirst { it.id == firstId }
+        if (idx <= 0) return                                     // already at the first chapter
+        val prev = chapters.getOrNull(idx - 1) ?: return
+        if (prependingChapterId == prev.id) return               // already in flight
+        if (loadedPages.any { it.chapterId == prev.id }) return  // already prepended
+        prependingChapterId = prev.id
+        viewModelScope.launch {
+            try {
+                appendMutex.withLock {
+                    if (loadedPages.any { it.chapterId == prev.id }) return@withLock
+                    val m = manga ?: return@withLock
+                    val pages = fetchPages(m, prev)
+                    val wrapped = pages.mapIndexed { i, p -> LoadedPage(p, prev.id, i) }
+                    // Prepend — stable item keys keep the current page in view (no scroll jump).
+                    loadedPages = wrapped + loadedPages
+                    emitSuccess()
+                }
+            } catch (_: Exception) {
+                // Prepend failed (network/JS); the explicit Prev button still works.
+            } finally {
+                prependingChapterId = null
+            }
+        }
+    }
+
     /** Explicit Next/Prev chapter control: replace the content with the target chapter at page 0. */
     fun goToChapter(delta: Int) {
         val idx = chapters.indexOfFirst { it.id == currentChapterId }
@@ -250,16 +439,37 @@ class ReaderViewModel(
 
     /** Open a specific chapter (from the reader chapter list) at page 0. */
     fun goToChapterById(chapterId: Long) {
-        loadChapterAt(chapters.firstOrNull { it.id == chapterId } ?: return, 0)
+        val target = allChapters.firstOrNull { it.id == chapterId } ?: return
+        switchBranchTo(target.branch)
+        loadChapterAt(target, 0)
     }
 
-    /** Open a specific chapter at a given page (from the bookmarks tab). */
+    /** Open a specific chapter at a given page (from the bookmarks tab — may be any branch). */
     fun goToChapterAtPage(chapterId: Long, page: Int) {
         if (chapterId == currentChapterId) {
             jumpToPageIndex(loadedPages.indexOfFirst { it.chapterId == chapterId && it.pageInChapter == page }.takeIf { it >= 0 } ?: page)
         } else {
-            loadChapterAt(chapters.firstOrNull { it.id == chapterId } ?: return, page)
+            val target = allChapters.firstOrNull { it.id == chapterId } ?: return
+            switchBranchTo(target.branch)
+            loadChapterAt(target, page)
         }
+    }
+
+    /** Switch the browsed/translation branch (Doki's branch selector) — filters the sheet display only. */
+    fun setBranch(branch: String?) {
+        if (branch == selectedBranch) return
+        selectedBranch = branch
+        emitSuccess()
+    }
+
+    private fun switchBranchTo(branch: String?) {
+        selectedBranch = branch
+    }
+
+    /** Distinct branches with chapter counts; empty when the manga has only one (no selector shown). */
+    private fun computeBranches(): List<ReaderBranch> {
+        val grouped = allChapters.groupBy { it.branch }
+        return if (grouped.size <= 1) emptyList() else grouped.map { ReaderBranch(it.key, it.value.size) }
     }
 
     /** Jump to a page within the currently loaded pages (from the pages-grid tab). */
@@ -279,6 +489,8 @@ class ReaderViewModel(
                 val pages = fetchPages(m, target)
                 loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, target.id, i) }
                 currentChapterId = target.id
+                maybeScrobble(target.id)
+                emitChapterToast(target.id)
                 val resume = page.coerceIn(0, (loadedPages.size - 1).coerceAtLeast(0))
                 loadedPages.getOrNull(resume)?.let { writeHistory(it) }
                 scrollTarget = resume
@@ -298,6 +510,7 @@ class ReaderViewModel(
             try {
                 if (isBookmarked.value) {
                     bookmarksRepository.removeBookmark(m.id, lp.chapterId, lp.pageInChapter)
+                    _toast.tryEmit(ReaderToast.BookmarkRemoved)
                 } else {
                     val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
                     val percent = (lp.pageInChapter + 1) / chapterPageCount.toFloat()
@@ -313,6 +526,7 @@ class ReaderViewModel(
                             percent = percent,
                         ),
                     )
+                    _toast.tryEmit(ReaderToast.BookmarkAdded)
                 }
             } catch (e: Exception) {
                 println("[Nekuva][bookmark] toggle failed: ${e.message}")
@@ -322,8 +536,11 @@ class ReaderViewModel(
 
     private fun emitSuccess() {
         val m = manga ?: return
+        // Navigation/index use the full ordered list; the sheet shows only the selected branch.
         val idx = chapters.indexOfFirst { it.id == currentChapterId }
         val chapter = chapters.getOrNull(idx)
+        val branches = computeBranches()
+        val sheetChapters = if (branches.isEmpty()) chapters else chapters.filter { it.branch == selectedBranch }
         _uiState.value = ReaderUiState.Success(
             manga = m,
             pages = loadedPages,
@@ -331,7 +548,7 @@ class ReaderViewModel(
             currentChapterName = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name ?: "",
             currentChapterIndex = idx,
             chaptersTotal = chapters.size,
-            chapters = chapters.mapIndexed { i, c ->
+            chapters = sheetChapters.mapIndexed { i, c ->
                 ReaderChapterItem(
                     id = c.id,
                     number = i + 1,
@@ -343,6 +560,8 @@ class ReaderViewModel(
             hasNext = idx in 0 until chapters.lastIndex,
             scrollToIndex = scrollTarget.coerceAtLeast(0),
             scrollToken = scrollToken,
+            branches = branches,
+            selectedBranch = selectedBranch,
         )
     }
 
@@ -365,6 +584,8 @@ sealed interface ReaderUiState {
         val hasNext: Boolean,
         val scrollToIndex: Int,
         val scrollToken: Int,
+        val branches: List<ReaderBranch> = emptyList(),
+        val selectedBranch: String? = null,
     ) : ReaderUiState
     data class Error(val exception: Throwable) : ReaderUiState
 }

@@ -184,10 +184,30 @@ class AppSettings(private val prefs: ObservableSettings) {
 	val isReaderOptimizationEnabled: Boolean
 		get() = prefs.getBoolean(KEY_READER_OPTIMIZE, false)
 
+	// Global reader colour filter (per-manga override lives in MangaDataRepository). Mirrors Doki.
+	var readerColorFilter: org.nekosukuriputo.nekuva.reader.domain.ReaderColorFilter
+		get() = org.nekosukuriputo.nekuva.reader.domain.ReaderColorFilter(
+			brightness = prefs.getFloat(KEY_CF_BRIGHTNESS, 0f),
+			contrast = prefs.getFloat(KEY_CF_CONTRAST, 0f),
+			isInverted = prefs.getBoolean(KEY_CF_INVERTED, false),
+			isGrayscale = prefs.getBoolean(KEY_CF_GRAYSCALE, false),
+			isBookBackground = prefs.getBoolean(KEY_CF_BOOK, false),
+		)
+		set(value) {
+			prefs.putFloat(KEY_CF_BRIGHTNESS, value.brightness)
+			prefs.putFloat(KEY_CF_CONTRAST, value.contrast)
+			prefs.putBoolean(KEY_CF_INVERTED, value.isInverted)
+			prefs.putBoolean(KEY_CF_GRAYSCALE, value.isGrayscale)
+			prefs.putBoolean(KEY_CF_BOOK, value.isBookBackground)
+		}
+
 	val readerControls: Set<ReaderControl>
-		get() = prefs.getStringSet(KEY_READER_CONTROLS, emptySet()).mapNotNullTo(mutableSetOf<ReaderControl>()) {
-			ReaderControl.entries.find { r -> r.name == it }
-		} ?: ReaderControl.DEFAULT
+		// The settings UI stores controls as ordinal indices ("0".."7"); map by ordinal. Fall back to
+		// Doki's DEFAULT whenever the result is empty (unset, or all unchecked) so the reader always has
+		// its core controls — most importantly the chapters button.
+		get() = prefs.getStringSet(KEY_READER_CONTROLS, emptySet())
+			.mapNotNullTo(mutableSetOf<ReaderControl>()) { v -> ReaderControl.entries.getOrNull(v.toIntOrNull() ?: -1) }
+			.ifEmpty { ReaderControl.DEFAULT }
 
 	val isOfflineCheckDisabled: Boolean
 		get() = prefs.getBoolean(KEY_OFFLINE_DISABLED, false)
@@ -433,7 +453,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		}
 
 	val isReaderBarEnabled: Boolean
-		get() = prefs.getBoolean(KEY_READER_BAR, true)
+		get() = prefs.getBoolean(KEY_READER_BAR, false)
 
 	val isReaderBarTransparent: Boolean
 		get() = prefs.getBoolean(KEY_READER_BAR_TRANSPARENT, true)

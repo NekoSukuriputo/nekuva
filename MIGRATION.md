@@ -37,8 +37,93 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       terhubung. **R3 DONE** (run-verified Android+Desktop): baca manga lokal/unduhan **offline** — `LocalImageFetcher`
       (Coil) memuat gambar `zip:`/`file:` (drive-letter Windows aman), dan reader memilih sumber **per-bab**
       (`getPagesIfDownloaded`): bab yang sudah diunduh dibaca dari disk, sisanya online (offline-first ala Doki).
-      **R4** (save-page, koreksi warna, auto-scroll, double-page, keep-screen-on/fullscreen/orientasi/volume —
-      platform Android) = berikutnya.)
+      **R4 sedang berjalan (compile-verified Android+Desktop, pending run-verify):**
+      **R4a DONE** — *bottom actions overlay* ala Doki `ReaderActionsView`: slider halaman (seek dalam bab) +
+      tombol bab sebelum/sesudah + chip kontrol (chapters/bookmark/save) yang dirender dari preferensi
+      `reader_controls` (PREV/NEXT/SLIDER/PAGES_SHEET/BOOKMARK fungsional; SAVE_PAGE kini fungsional;
+      SCREEN_ROTATION/TIMER masih placeholder). Tombol FAB tengah lama diganti bottom bar.
+      **R4b DONE** — *color filter*: brightness/contrast/grayscale/invert/book diterapkan ke gambar via Compose
+      `ColorFilter`/`ColorMatrix` (`ReaderColorFilter.toComposeColorFilter()`), override per-manga
+      (`MangaDataRepository.observeColorFilter`) jatuh ke global (`AppSettings.readerColorFilter`, KEY_CF_*);
+      panel "Koreksi warna" in-reader (slider+toggle, live) + tombol Reset. Config sheet "Settings" → buka Reader
+      Settings; toggle double-page/pull-gesture kini persist ke settings.
+      **R4c DONE** — *Page Save & Share*: `PageSaveHelper` (jvmShared) ambil byte halaman (http via image-proxy;
+      `zip:`/`file:` baca langsung dari disk) + `PagePersister` expect-pattern via DI: Android → MediaStore
+      (Pictures/Nekuva) + share lewat content Uri; Desktop → `~/Pictures/Nekuva` + reveal folder. Wired ke
+      menu Save/Share + chip Save di bottom bar; snackbar `page_saved`/`error_occurred`.
+      **R4c+ "Final polish reader" (bagian A, lintas-platform) sedang berjalan:**
+      **A#1 DONE** — auto-scroll: webtoon scroll kontinu + paged auto-advance, kecepatan diatur via kontrol
+      slider in-reader (Doki `ScrollTimer`/`ScrollTimerControlView`), toggle dari chip TIMER + menu; lokasi simpan
+      ditampilkan di toast save/share.
+      **A#6 DONE** — zoom modes: FIT_CENTER/FIT_HEIGHT/FIT_WIDTH/KEEP_START dipetakan ke Compose `ContentScale`
+      (+ align top utk KEEP_START) di paged reader.
+      **SISA bagian A:** tap-grid 9-zona configurable (`TapGridSettings`/`TapAction`) + layar konfigurasi, double-page
+      renderer (toggle sudah persist) + sensitivity + double-foldable, reader-mode auto-detect (`DetectReaderModeUseCase`),
+      info bar jam+baterai (`ReaderInfoBarView`) + transparansi, pinch-zoom+pan koeksis paging, webtoon gaps +
+      webtoon zoom-out, page transition animation, pages-crop/32-bit/optimize, image-server/mirror switch, toast
+      bookmark/ganti-bab, tombol keyboard tambahan (space/PageUp-Down/R/L/Ctrl+panah).
+      **Bagian B DONE (Android platform-actual via expect/actual `ReaderWindowController` + `ReaderKeyEvents`;
+      Desktop = no-op):** #14 rotate/orientation lock (chip + menu, toggle portrait↔landscape; disembunyikan di
+      Desktop; pref `reader_orientation` diterapkan saat reader dibuka), #15 navigasi tombol volume (MainActivity
+      `onKeyDown` → reader: paged ±1 halaman, webtoon ~1 viewport; hormati `reader_volume_buttons` +
+      `reader_navigation_inverted`), #16 keep-screen-on (`FLAG_KEEP_SCREEN_ON` saat dibuka, clear saat keluar),
+      #17 fullscreen/immersive (sembunyikan system bars via `WindowInsetsControllerCompat`, restore saat keluar).
+      **SISA bagian A (lanjut setelah B):** tap-grid config, double-page renderer, auto-detect mode, info-bar
+      jam/baterai, pinch-zoom+pan, webtoon gaps/zoom-out, page animation, crop/32-bit/optimize, image-server,
+      toast bookmark/ganti-bab, tombol keyboard tambahan.
+      **Bagian C sebagian DONE:** #18 **incognito** (run-verifiable) — resolusi dari `AppSettings`
+      (`isIncognitoModeEnabled` global / `incognitoModeForNsfw` TriState; NSFW + ASK → dialog prompt ala Doki dgn
+      "jangan tanya lagi"); saat incognito history TIDAK ditulis + tidak di-scrobble; indikator "Incognito mode" di
+      top bar + toggle di config sheet. #20 **auto-scrobble** (compile/DI-verified; runtime butuh OAuth) —
+      `ScrobblerManager.scrobble(manga, chapterId)` dipanggil saat bab berganti (skip saat incognito) via
+      `tryScrobble`. #19 **branch/translation selector** (run-verifiable di sumber multi-branch) — VM simpan
+      `allChapters` (semua branch) + `selectedBranch` (default = branch bab yg dibuka, ala Doki preferred-branch),
+      `chapters` = filter ke selectedBranch (nav/append/sheet semua per-branch); picker **BranchSelector**
+      (dropdown Translate + nama branch + jumlah, ✓ pada yg aktif) di header chapters sheet, tampil hanya bila >1
+      branch; tap bab di branch lain otomatis pindah branch. **Bagian C SELESAI** (compile-verified Android+Desktop;
+      auto-scrobble runtime butuh OAuth).
+      **A#7 DONE** — pinch-zoom + pan di paged reader: double-tap zoom in → pinch sesuaikan + drag pan (dibatasi
+      tepi); transform gesture HANYA aktif saat zoom (scale>1) DAN pager `userScrollEnabled=false` saat zoom
+      (supaya pan tidak dimakan pager); di 1× HorizontalPager/VerticalPager tetap dapat swipe.
+      **FIX regresi #19 + boundary loading (port `onCurrentPageChanged` Doki):** navigasi bab pakai daftar PENUH
+      (branch selector hanya filter tampilan sheet); boundary loading kini pakai indeks halaman **terakhir terlihat**
+      (`visibleItemsInfo.last`) untuk append bab berikutnya — bukan `firstVisibleItemIndex` (yang bikin trigger tak
+      jalan); **prepend bab sebelumnya** saat halaman pertama dekat awal (webtoon; key LazyColumn stabil jaga posisi).
+      **A#7 (zoom) v3 — PAGED + WEBTOON keduanya:** PAGED (Standard/RTL/Vertical) pakai `Modifier.transformable(
+      state, enabled = zoomed)` + double-tap + pager `userScrollEnabled=false` saat zoom (`ZoomablePage`). WEBTOON
+      (ala Doki WebtoonImageView): seluruh LazyColumn di-`graphicsLayer(scale, translationX)`; pinch 2-jari zoom +
+      double-tap toggle 1×/2× + drag horizontal pan saat zoom, sedang drag vertikal LOLOS ke scroll LazyColumn
+      (awaitEachGesture: konsumsi hanya pinch & pan horizontal). maxScale 3× (webtoon) / 5× (paged).
+      **A#12 DONE** — toast reader (ala `ReaderToastView`): "Bookmark added/removed" + nama bab saat ganti bab
+      (hormati `reader_chapter_toast`), via snackbar.
+      **FIX UI reader (sesuai screenshot user):** bug `readerControls` (default `emptySet` → `?: DEFAULT` tak pernah
+      jalan + map by-name padahal store by-ordinal) diperbaiki → tombol bawah muncul lagi; bottom bar jadi
+      **docked rounded card** ala Doki `toolbar_docket` (chapters/prev/slider/next/save/timer/rotate/bookmark satu
+      baris); **info bar default HIDE** (`reader_bar`=false di reader+settings+AppSettings, ala Doki visibility=gone).
+      **FIX runtime crash `NoClassDefFoundError: kotlinx/datetime/Instant`** (saat info bar diaktifkan): kotlinx-datetime
+      di-resolve ke **0.7.1** (transitive) yang MENGHAPUS `kotlinx.datetime.Instant` (pindah ke `kotlin.time.Instant`),
+      tapi versi yg dideklarasi masih 0.6.1 (skew compile vs runtime). FIX: bump kotlinx-datetime → 0.7.1 di
+      libs + 2 hardcoded build.gradle, dan pakai `kotlin.time.Clock`/`kotlin.time.Instant` (stdlib) + ekstensi
+      `kotlinx.datetime.toLocalDateTime` — JANGAN `kotlinx.datetime.Instant` (§4.6). Sama difix di SyncSettingsScreen.
+      **A#5 DONE** info-bar jam+baterai (jam via kotlinx-datetime ticker 15s; baterai `rememberBatteryPercent`
+      expect/actual — Android BroadcastReceiver, Desktop null) + halaman + bab. **A#8 DONE (gaps)** webtoon gaps
+      (`Arrangement.spacedBy` saat `webtoon_gaps`). **A#9 DONE** page animation (`reader_animation` NONE →
+      `scrollToPage` instan; selain itu animasi). **A#13 DONE** keyboard paged: Space/PageDown/R = next, PageUp/L = prev.
+      **A#2 DONE** tap-grid 9-zona configurable (`TapGridArea`/`TapAction`/`TapGridSettings` di ObservableSettings,
+      default ala Doki) + dispatch di **paged** (PAGE/CHAPTER/TOGGLE_UI/SHOW_MENU; RTL swap saat reversed+!alwaysLTR).
+      **WEBTOON: tap apa saja = toggle UI** (long-press = menu) — bukan grid, karena continuous-scroll perlu
+      tap-to-toggle (grid bikin kontrol tak bisa di-hide). + **layar konfig** (Settings→Reader→"Reader actions": grid 3×3, toggle Tap/Long-tap,
+      Reset/Disable-all). **A#8 webtoon zoom-out DIBATALKAN** (bikin webtoon tak full-width; webtoon kini selalu
+      mulai skala 1.0 full-width ala Doki, pinch tetap 1×–3×). **FIX `readerControls`** fallback ke DEFAULT saat
+      resolve KOSONG (bukan cuma unset) — set kosong (user uncheck semua) sempat bikin bottom bar tanpa tombol
+      (tombol ≡ chapters hilang); kini bar selalu punya kontrol inti termasuk chapters.
+      **A#4 DONE** auto-detect mode (`DetectReaderModeUseCase` + `decodeImageBounds` expect/actual — Android
+      BitmapFactory bounds, Desktop ImageIO reader; per-manga saved mode menang, else webtoon bila rasio tinggi;
+      `setReaderMode` kini simpan per-manga juga).
+      **SISA bagian A (DEFERRED, butuh kerja tersendiri):** double-page renderer (restrukturisasi pager: pairing
+      halaman + index mapping — berisiko, perlu verifikasi sendiri), crop pages (butuh Coil Transformation deteksi
+      border per-gambar), 32-bit color (Coil3 bitmap config platform-spesifik, nilai rendah), image-server/mirror
+      switch (butuh dukungan ConfigKey/mirror di nekuva-exts).)
 - [x] `main` (Shell, adaptive navigasi)
 - [ ] `image`
 - [x] `search` (run-verified Android+Desktop: global multi-source search streaming (Riwayat/Disukai/Lokal + sumber paralel), saran as-you-type S1 (tag/manga/riwayat-query/sumber+switch/penulis, hormati `searchSuggestionTypes`, tak dicatat saat incognito), footer "Cari sumber nonaktif" + "Buka di browser" pada error. Lihat ledger Area Search & Filter)
@@ -49,13 +134,16 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `download` (run-verified Android+Desktop: engine coroutine KMP (BUKAN WorkManager) dengan **output desain `index.json` Doki** — `MangaIndex`(org.json, `compileOnly(libs.json)`) + `ZipOutput` asli; `LocalMangaZipOutput`=SINGLE_CBZ (satu `.cbz` flat + index.json), `LocalMangaDirOutput`=MULTIPLE_CBZ (per-bab `.cbz` + index.json), `canWriteTo` (cocok manga.id, kalau tidak sufiks `_1`), id bab = id remote asli. Dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail, layar Downloads manager card-based ala Doki. **Fitur run-verified:** unduh→muncul di Local dgn **cover asli** (`addCover`), buka & **baca offline** manga unduhan, **resume** (bab sudah-unduh otomatis ✓ tak diulang), **retry** (tombol kartu = semua bab gagal + ikon ↻ per-bab), **pause** (ikon pause, bukan spinner), **cancel** (tak ada spinner nyangkut), pembersihan temp (`page*.tmp`/`*.cbz.tmp`), folder kustom persist, lanjut-saat-gagal. Hapus manga lokal (long-press di Local). Notifikasi foreground (Android), metered-network, save-page dll deferred — lihat ledger)
 - [x] `tracker` (T1 — run-verified Android+Desktop: tracker internal bab-baru + tab **Feed/Updates**; `TrackingRepository` + `CheckNewChaptersUseCase` + `FeedScreen`; kategori favorit default tracking ON + toggle lonceng di Kelola kategori)
 - [~] `scrobbling` (T2 — **fondasi + 1 layanan referensi (Shikimori) + UI login, compile + DI-verified; OAuth BELUM run-verify (butuh client ID dari user)**. DONE: `ScrobblerConfig` (placeholder client ID/secret + `REDIRECT_URI=nekuva://oauth`), model umum, `ScrobblerStorage` (token di ObservableSettings), `ScrobblerRepository`+`Scrobbler` base (adaptasi KMP), **ShikimoriRepository+ShikimoriScrobbler+ScrobblerManager** (referensi penuh OAuth+API), **OAuthScreen** (browser in-app menangkap redirect `code` → authorize) + **Settings→Services** menampilkan scrobbler ter-konfigurasi dgn login/logout. CARA AKTIFKAN: isi `SHIKIMORI_CLIENT_ID/SECRET` di `ScrobblerConfig` + daftarkan app dgn redirect `nekuva://oauth`. **SISA (increment berikut, pola sama):** AniList/MAL/Kitsu + Discord RPC, selector "ikat manga ke tracker" di Detail + tampil ScrobblingInfo, auto-scrobble saat baca, penyempurnaan tangkap-redirect custom-scheme (shouldOverrideUrl/CefRequestHandler))
-- [ ] `sync` (T3 — server sync Kotatsu; favorit/history lintas perangkat + OAuth akun. Belum dimulai)
+- [~] `sync` (T3 — server sync Kotatsu; favorit/history lintas perangkat. **Compile-verified Android+Desktop; BELUM run-verify (butuh akun + server sync untuk uji aktual)**. ARSITEKTUR: framework Android SyncAdapter/AccountManager/ContentProvider Doki di-re-arsitektur untuk KMP — `SyncSettings` (kredensial/flag di ObservableSettings), DAO Room langsung (ganti ContentProvider), `SyncManager.syncNow()` manual + sync setelah login (ganti requestSync periodik). DONE: protokol 1:1 (`POST {host}/resource/{favourites,history}` payload `SyncDto`, merge balasan → DB, soft-delete GC 4 hari), `SyncAuthApi` (`POST /auth` {email,password}→token, akun dibuat bila belum ada), `SyncInterceptor` (Bearer + X-App/Db-Version) + `SyncAuthenticator` (refresh token saat 401), DTO 1:1 + mapping entity↔DTO, `SyncHelper` (push/merge via DAO; `HistoryDao.upsertForSync` verbatim agar tombstone tak ter-resurrect; `findAllForSync` baca semua baris termasuk soft-deleted), **SyncSettingsScreen** (login email/password/host ala Doki SyncAuthActivity + toggle favorit/history + "Sync sekarang" + waktu sync terakhir), wired ke Settings→Services→"Synchronization". CARA UJI: Settings→Services→Synchronization→isi server (default `https://sync.kotatsu.app`)+email+password→Login→Sync sekarang. **SISA/DEFERRED:** auto periodic background sync (dulu SyncAdapter periodik) → area background-jobs (WorkManager actual/Desktop scheduler); change-triggered auto-sync (observe InvalidationTracker); **CAVEAT** `X-Db-Version` mengirim versi Room lokal Nekuva (=1, "Fresh V1") sedang skema kanonik Kotatsu jauh lebih tinggi — bentuk JSON tetap cocok, server self-hosted aman, tapi server resmi mungkin berperilaku beda berdasar header ini)
 - [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & harus sama**, sesuai
       permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
       Beberapa BEHAVIOR menunggu area konsumennya (reader-advanced, tracker, sync, stats, biometric, proxy/DoH);
       nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen (nav config, proxy, suggestions, login
       tracker, discord) = "Segera hadir". Lihat ledger)
 - [ ] `alternatives`
+- **Isu source/parser (di `nekuva-exts`, BUKAN repo UI ini — §8):**
+  - **MagusManga `JSONObject["author"] not found` (Android+Desktop):** parser `MagusToon` di nekuva-exts memanggil `getString("author")` pada entry tanpa field author → harus `getStringOrNull("author")`. Fix di repo nekuva-exts, lalu naikkan tag `exts` di `libs.versions.toml`.
+  - **Shinigami "Error code:" hanya di Linux Desktop (Windows+Android aman):** pola khas celah cipher TLS — JVM Linux baku sering kurang cipher yang dipakai CDN, sedang Android (Conscrypt) & JVM Windows punya. **MITIGASI (repo ini):** tambah **Conscrypt** sbg JSSE provider teratas di Desktop (`Main.kt` + `conscrypt-openjdk-uber` di desktopMain). Kandidat-fix; perlu run-verify di Linux. Bila masih gagal, kirim stack trace Linux yang sebenarnya (baris `gcm DEPRECATED_ENDPOINT`/USB di log = noise Chromium).
 - [x] `browser` / `webview` / `evaluateJs` (run-verified Android+Desktop — PENUH B1+B2a+B2b+B3): **B1** evaluateJs Android via WebView (`WebViewExecutor`); **B3** evaluateJs Desktop via **KCEF** (embedded Chromium, unduh ~150MB sekali ke `~/.nekuva/kcef`); **B2a** browser in-app (`PlatformWebView` expect/actual: WebView/`AndroidView` + KCEF/`SwingPanel`; `BrowserScreen` toolbar ala Doki; "Buka di browser" dari error pencarian); **B2b** resolusi CloudFlare — cookie bridging (`createCookieJar` expect/actual: Android `AndroidCookieJar` berbagi CookieManager, Desktop `MemoryCookieJar` + `syncBrowserCookies` salin cookie CEF→OkHttp), `CloudFlareScreen` polling `cf_clearance`, error CF di RemoteList → tombol "Selesaikan captcha" → solve → **auto-retry**. Catatan: `evaluateJs` punya timeout 4s; saat KCEF masih mengunduh, eval pertama bisa gagal lalu sukses setelah siap)
 - [ ] `picker`
 - [ ] `widget`

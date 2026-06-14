@@ -190,6 +190,10 @@ abstract class FavouritesDao : MangaQueryBuilder.ConditionCallback {
 	@Query("DELETE FROM favourites WHERE deleted_at != 0 AND deleted_at < :maxDeletionTime")
 	abstract suspend fun gc(maxDeletionTime: Long)
 
+	// Sync push needs every row INCLUDING soft-deleted ones (to propagate tombstones).
+	@Query("SELECT * FROM favourites")
+	abstract suspend fun findAllForSync(): List<FavouriteEntity>
+
 	/** TOOLS **/
 
 	@Upsert

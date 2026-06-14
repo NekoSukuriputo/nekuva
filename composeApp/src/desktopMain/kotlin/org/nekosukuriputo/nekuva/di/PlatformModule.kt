@@ -10,4 +10,7 @@ actual val platformModule: Module = module {
         com.russhwolf.settings.PreferencesSettings(java.util.prefs.Preferences.userRoot().node("Nekuva")) 
     }
     single<LocalStorageManager> { DesktopLocalStorageManager(get()) }
+    single<org.nekosukuriputo.nekuva.reader.domain.PagePersister> {
+        org.nekosukuriputo.nekuva.reader.data.DesktopPagePersister()
+    }
 }

@@ -36,6 +36,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSlider
 @Composable
 fun ReaderSettingsScreen(
     onBackClick: () -> Unit,
+    onTapActions: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     Scaffold(
@@ -90,7 +91,7 @@ fun ReaderSettingsScreen(
                     stringResource(Res.string.automatic_scroll) to "6", stringResource(Res.string.bookmark_add) to "7",
                 ),
             )
-            SettingsItem(title = stringResource(Res.string.reader_actions), summary = stringResource(Res.string.coming_soon), enabled = false)
+            SettingsItem(title = stringResource(Res.string.reader_actions), onClick = onTapActions)
             BoolPref(settings, "reader_taps_ltr", stringResource(Res.string.reader_control_ltr), stringResource(Res.string.reader_control_ltr_summary), false)
             BoolPref(settings, "reader_volume_buttons", stringResource(Res.string.switch_pages_volume_buttons), stringResource(Res.string.switch_pages_volume_buttons_summary), false)
             BoolPref(settings, "reader_navigation_inverted", stringResource(Res.string.reader_navigation_inverted), stringResource(Res.string.reader_navigation_inverted_summary), false)
@@ -112,7 +113,7 @@ fun ReaderSettingsScreen(
             )
             BoolPref(settings, "reader_screen_on", stringResource(Res.string.keep_screen_on), stringResource(Res.string.keep_screen_on_summary), true)
             BoolPref(settings, "reader_multitask", stringResource(Res.string.reader_multitask), stringResource(Res.string.reader_multitask_summary), false)
-            BoolPref(settings, "reader_bar", stringResource(Res.string.reader_info_bar), stringResource(Res.string.reader_info_bar_summary), true)
+            BoolPref(settings, "reader_bar", stringResource(Res.string.reader_info_bar), stringResource(Res.string.reader_info_bar_summary), false)
             BoolPref(settings, "reader_bar_transparent", stringResource(Res.string.reader_info_bar_transparent), null, true)
             BoolPref(settings, "reader_chapter_toast", stringResource(Res.string.reader_chapter_toast), stringResource(Res.string.reader_chapter_toast_summary), true)
             IndexListPref(

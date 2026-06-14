@@ -64,6 +64,10 @@ abstract class FavouriteCategoriesDao {
 	@Query("DELETE FROM favourite_categories WHERE deleted_at != 0 AND deleted_at < :maxDeletionTime")
 	abstract suspend fun gc(maxDeletionTime: Long)
 
+	// Sync push: every category except the implicit local default (id 0), including soft-deleted ones.
+	@Query("SELECT * FROM favourite_categories WHERE category_id != 0")
+	abstract suspend fun findAllForSync(): List<FavouriteCategoryEntity>
+
 	@Query("SELECT MAX(sort_key) FROM favourite_categories WHERE deleted_at = 0")
 	protected abstract suspend fun getMaxSortKey(): Int?
 

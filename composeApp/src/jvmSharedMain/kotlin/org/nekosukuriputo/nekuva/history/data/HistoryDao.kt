@@ -8,6 +8,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RawQuery
 import androidx.room.Transaction
+import androidx.room.Upsert
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -143,6 +144,15 @@ abstract class HistoryDao : MangaQueryBuilder.ConditionCallback {
 
 	@Query("DELETE FROM history WHERE deleted_at != 0 AND deleted_at < :maxDeletionTime")
 	abstract suspend fun gc(maxDeletionTime: Long)
+
+	// Sync push needs every row INCLUDING soft-deleted ones (to propagate tombstones).
+	@Query("SELECT * FROM history")
+	abstract suspend fun findAllForSync(): List<HistoryEntity>
+
+	// Verbatim upsert for sync: writes ALL columns (incl. deleted_at) as-is, unlike upsert()/update()
+	// which force deleted_at = 0 and would resurrect a tombstone arriving from the server.
+	@Upsert
+	abstract suspend fun upsertForSync(entity: HistoryEntity)
 
 	suspend fun deleteAfter(minDate: Long) = setDeletedAtAfter(minDate, System.currentTimeMillis())
 

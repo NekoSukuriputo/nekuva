@@ -12,4 +12,7 @@ actual val platformModule: Module = module {
         com.russhwolf.settings.SharedPreferencesSettings(prefs)
     }
     single<LocalStorageManager> { AndroidLocalStorageManager(get(), get()) }
+    single<org.nekosukuriputo.nekuva.reader.domain.PagePersister> {
+        org.nekosukuriputo.nekuva.reader.data.AndroidPagePersister(get())
+    }
 }

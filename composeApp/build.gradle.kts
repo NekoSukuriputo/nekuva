@@ -39,7 +39,7 @@ kotlin {
                 implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
                     exclude(group = "org.json", module = "json")
                 }
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
                 // org.json for MangaIndex (download index.json). compileOnly: Android bundles it in the
                 // platform; Desktop provides it via desktopMain's implementation(libs.json) at runtime.
                 compileOnly(libs.json)
@@ -93,9 +93,14 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.json)
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.6.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.7.1")
                 // Embedded Chromium (JCEF) for Desktop evaluateJs + in-app browser / CloudFlare.
                 implementation(libs.kcef)
+                // Conscrypt (Google's BoringSSL-backed JSSE provider). The stock Linux JVM's default
+                // TLS stack lacks some ciphers/ALPN that several manga CDNs require, so a source can
+                // work on Android (Conscrypt) + Windows JVM yet fail on Linux JVM. Installing Conscrypt
+                // as the top security provider (see Main.kt) gives Desktop the same TLS as Android.
+                implementation(libs.conscrypt.openjdk.uber)
             }
         }
     }

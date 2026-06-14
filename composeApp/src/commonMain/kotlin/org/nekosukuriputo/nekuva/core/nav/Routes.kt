@@ -64,3 +64,9 @@ data object ServicesSettingsRoute
 
 @Serializable
 data object TrackerSettingsRoute
+
+@Serializable
+data object SyncSettingsRoute
+
+@Serializable
+data object TapGridConfigRoute

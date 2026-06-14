@@ -160,7 +160,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.reader.ui.ReaderScreen(
                         onBackClick = {
                             navController.popBackStack()
-                        }
+                        },
+                        onOpenSettings = { navController.navigate(ReaderSettingsRoute) },
                     )
                 }
                 composable<SettingsRoute> {
@@ -179,12 +180,24 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<ReaderSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.reader.ReaderSettingsScreen(
                         onBackClick = { navController.popBackStack() },
+                        onTapActions = { navController.navigate(TapGridConfigRoute) },
+                    )
+                }
+                composable<TapGridConfigRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.reader.TapGridConfigScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<ServicesSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.services.ServicesSettingsScreen(
                         onBackClick = { navController.popBackStack() },
                         onScrobblerLogin = { serviceId -> navController.navigate(OAuthRoute(serviceId)) },
+                        onSyncClick = { navController.navigate(SyncSettingsRoute) },
+                    )
+                }
+                composable<SyncSettingsRoute> {
+                    org.nekosukuriputo.nekuva.sync.ui.SyncSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<TrackerSettingsRoute> {
