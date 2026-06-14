@@ -504,27 +504,64 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
       (sebelumnya daftar panjang spt 9 tema meluber & opsi bawah tak terjangkau).
 - IMPACT: seluruh app (NekuvaTheme di root). **Sisa 1A (opsional):** swatch warna ala Doki `item_color_scheme`.
 
-**Sub-fase 1B — Main screen sections (NavConfig) + FAB:**
-- [ ] `nav_main` → layar konfigurasi urutan/aktif section bottom-nav (Doki `NavConfigFragment`: drag reorder +
-      tambah/hapus). IMPACT: `MainScreen` shell (tab yang tampil & urutannya).
-- [ ] `main_fab` (FAB "Lanjut baca"/Resume) IMPACT: shell.
-- [ ] `nav_labels`, `nav_pinned` IMPACT: bottom-nav / navigation-rail.
+#### Perbandingan PER-SETTING (nama setting · Doki · Nekuva sekarang · status)
+> Audit fungsional 2026-06-14 (cek konsumen di kode, bukan cuma "toggle tersimpan"). **Temuan: hampir
+> semua setting Appearance TERSIMPAN tapi BELUM DITERAPKAN** — hanya tema warna/terang-gelap/AMOLED +
+> saran-pencarian yang benar-benar berfungsi. Status: ✅ sesuai Doki · 🟡 setengah (tersimpan, tak
+> diterapkan) · 🔴 belum ada.
 
-**Sub-fase 1C — Tampilan daftar manga (wiring ke semua list):**
-- [ ] `list_mode_2` (LIST/DETAILED_LIST/GRID), `grid_size` IMPACT: Explore/Favourites/History/Local/RemoteList/Search.
-- [ ] `progress_indicators` (badge progress baca) IMPACT: item manga.
-- [ ] `manga_list_badges` (favourite/saved) IMPACT: item manga.
-- [ ] `quick_filter` (chip quick-filter) IMPACT: header list.
+**Tema:**
+| Setting (key) | Doki | Nekuva sekarang | Status |
+|---|---|---|---|
+| Tema warna (`color_theme`) | 11 palet (Monet dinamis) | 9 palet statis, live | ✅ (1A; tanpa Monet dinamis — sesuai keputusan) |
+| Tema (`theme`) | sistem/terang/gelap, live | sama | ✅ |
+| Hitam pekat/AMOLED (`amoled_theme`) | switch live | sama | ✅ |
+| **Bahasa (`app_locale`)** | semua bahasa terjemahan; ganti runtime (`AppCompatDelegate.setApplicationLocales`) | **hanya 3 opsi (sistem/en/id); tersimpan tapi TAK diterapkan** | 🟡 **(kamu keluhkan)** |
 
-**Sub-fase 1D — Details + perilaku app:**
-- [ ] `description_collapse`, `pages_tab`, `details_tab` IMPACT: layar Details.
-- [ ] `exit_confirm` (konfirmasi keluar), `dynamic_shortcuts` (Android app-shortcuts) IMPACT: shell/Android.
-- [ ] `screenshots_policy` IMPACT: `FLAG_SECURE` (Android actual; Desktop N/A).
+**Daftar manga:**
+| Setting (key) | Doki | Nekuva sekarang | Status |
+|---|---|---|---|
+| Mode tampilan (`list_mode_2`) | LIST/DETAILED/GRID dipakai semua daftar (+override per-layar) | enum + per-layar tersimpan, TAPI semua layar **hardcode grid** (Explore Adaptive 100dp, Favourites 120dp) | 🟡 |
+| Ukuran grid (`grid_size`) | persen ukuran sel | tersimpan, grid pakai Adaptive tetap | 🟡 |
+| Saringan cepat (`quick_filter`) | chip filter cepat di header daftar | `isQuickFilterEnabled` ada, tanpa konsumen | 🟡 |
+| Indikator progres (`progress_indicators`) | badge progres di item (off/percent/chapters…) | `progressIndicatorMode` ada, item tak menampilkan | 🟡 |
+| Badge daftar (`manga_list_badges`) | badge favorit/tersimpan di cover | tersimpan, tanpa konsumen | 🟡 |
 
-**Sub-fase 1E — Bahasa (`app_locale`):** in-app locale override lintas-platform (kompleks; saat ini hanya tersimpan).
-      Mungkin perlu pecah lagi / sebagian Android-actual. Dikerjakan terakhir di Fase 1.
+**Detail:**
+| Setting (key) | Doki | Nekuva sekarang | Status |
+|---|---|---|---|
+| Ciutkan deskripsi (`description_collapse`) | sinopsis panjang diciutkan | tersimpan, Details tak baca | 🟡 |
+| Thumbnail halaman (`pages_tab`) | section/tab halaman di Details | tersimpan, Details tak baca | 🟡 |
+| Tab default (`details_tab`) | tab awal Details (terakhir/bab/halaman/markah) | tersimpan, Details tak baca | 🟡 |
 
-**Dipindah ke Fase 7 (Privacy/cross-cutting):** `protect_app` (app-lock/biometric — `ProtectSetupActivity`, besar & platform-spesifik).
+**Layar utama:**
+| Setting (key) | Doki | Nekuva sekarang | Status |
+|---|---|---|---|
+| Saran pencarian (`search_suggest_types`) | tipe saran yg tampil | `SearchSuggestionViewModel` baca `searchSuggestionTypes` | ✅ |
+| Bagian layar utama (`nav_main`) | reorder/aktif tab (drag, `NavConfigFragment`) | "Segera hadir" | 🔴 |
+| FAB lanjut baca (`main_fab`) | tombol mengambang "Lanjut baca" | `isMainFabEnabled` ada, tak ada FAB | 🟡 |
+| Label navbar (`nav_labels`) | tampil/sembunyi label tab | tersimpan, tanpa konsumen | 🟡 |
+| Sematkan nav (`nav_pinned`) | rail nav tersemat (tablet/desktop) | tersimpan, tanpa konsumen | 🟡 |
+| Konfirmasi keluar (`exit_confirm`) | dialog saat back keluar | tersimpan, tanpa konsumen | 🟡 |
+| Pintasan riwayat (`dynamic_shortcuts`) | app-shortcuts dinamis (Android) | tersimpan, tanpa konsumen | 🟡 (Android) |
+
+**Privasi:**
+| Setting (key) | Doki | Nekuva sekarang | Status |
+|---|---|---|---|
+| Kunci aplikasi (`protect_app`) | app-lock PIN/biometrik (`ProtectSetupActivity`) | tersimpan, tanpa konsumen | 🔴 (→ Fase 7) |
+| Kebijakan tangkapan layar (`screenshots_policy`) | `FLAG_SECURE` per kondisi | tersimpan, tak diterapkan | 🟡 (Android) |
+
+#### Sub-fase Fase 1 (revisi — fokus "menerapkan" yang setengah jalan)
+- **1A ✅ DONE** — Tema warna (9 palet) + perbaikan widget list-option.
+- **1B — Bahasa (`app_locale`)** [PRIORITAS, kamu keluhkan]: katalog bahasa penuh (sesuai folder `values-*`) +
+  **terapkan runtime** — Android `AppCompatDelegate.setApplicationLocales` (actual), Desktop `Locale.setDefault`
+  + recompose `Res`. Impact: seluruh teks UI.
+- **1C — Daftar manga**: `list_mode_2`(+per-layar) · `grid_size` · `progress_indicators` · `manga_list_badges` ·
+  `quick_filter` → komponen item manga bersama + wire ke Explore/Favourites/History/Local/RemoteList/Search.
+- **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.
+- **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
+  `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).
+- **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.
 
 ### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 2 Remote sources:** layar Sources (sort/grid/enable-all/no_nsfw/incognito_nsfw/tags_warnings/mirror_switching/handle_links)
