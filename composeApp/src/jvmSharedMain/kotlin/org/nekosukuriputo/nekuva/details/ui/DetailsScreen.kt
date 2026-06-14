@@ -300,7 +300,9 @@ fun MangaDetailsContent(
         // Description
         val description = manga.description?.replace("<br>".toRegex(RegexOption.IGNORE_CASE), "\n")?.replace("<[^>]*>".toRegex(), "")?.trim()
         if (!description.isNullOrEmpty()) {
-            var expanded by remember { mutableStateOf(false) }
+            // Doki `description_collapse`: when collapsing is off, show the full synopsis by default.
+            val descSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+            var expanded by remember { mutableStateOf(descSettings.isDescriptionExpanded) }
             Column(modifier = Modifier.padding(horizontal = 16.dp).animateContentSize()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -390,7 +392,10 @@ fun ChaptersSheetContent(
     onDownloadClick: () -> Unit,
     onForget: () -> Unit,
 ) {
-    var view by remember { mutableStateOf(SheetView.CHAPTERS) }
+    // Doki `details_tab`: default sheet section (2 = bookmarks; chapters otherwise — Nekuva's sheet has
+    // no separate Pages view, so the Pages index falls back to chapters).
+    val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+    var view by remember { mutableStateOf(if (tabSettings.defaultDetailsTab == 2) SheetView.BOOKMARKS else SheetView.CHAPTERS) }
     var readMenuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {

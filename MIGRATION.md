@@ -492,7 +492,7 @@ Sumber Doki: `pref_appearance.xml`, `AppearanceSettingsFragment`, `ColorScheme.k
 ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPreference`, `nav/NavConfigFragment`,
 `protect/ProtectSetupActivity`.
 
-**Sub-fase 1A — Color scheme + perbaikan widget (PRIORITAS, ini yang rusak) — ✅ DONE (compile-green, belum run-verify):**
+**Sub-fase 1A — Color scheme + perbaikan widget (PRIORITAS, ini yang rusak) — ✅ DONE & RUN-VERIFIED:**
 - [x] Port **9 palet statis** Doki (Totoro=DEFAULT, Miku, Asuka=RENA, Mion=FROG, Rikka=BLUEBERRY, Sakura, Mamimi,
       Kanade, Itsuka) sebagai `ColorScheme` Compose light+dark di `commonMain/.../theme/ColorSchemes.kt`
       (auto-generate dari `colors_themed.xml` + `values-night` via `scripts/gen_color_schemes.py`). MONET/EXPRESSIVE
@@ -553,13 +553,13 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 
 #### Sub-fase Fase 1 (revisi — fokus "menerapkan" yang setengah jalan)
 - **1A ✅ DONE** — Tema warna (9 palet) + perbaikan widget list-option.
-- **1B ✅ DONE (compile-green, belum run-verify)** — Bahasa (`app_locale`): katalog **±66 bahasa** dari folder
+- **1B ✅ DONE & RUN-VERIFIED** — Bahasa (`app_locale`): katalog **±66 bahasa** dari folder
   `values-*` (`core/i18n/Languages.kt`), nama bahasa self-localized (`localeDisplayName` via `java.util.Locale`),
   diurutkan; opsi "Ikuti sistem" di atas. **Diterapkan runtime** via `applyAppLocale`/`recreateForLocale`
   expect/actual: **Android** = `MainActivity.attachBaseContext` membungkus Configuration dgn locale (baca
   `nekuva_prefs/app_locale`, semua API, tanpa AppCompat) + `Activity.recreate()` saat ganti; **Desktop** =
   `Locale.setDefault` + `App()` re-`key(localeTag)` agar Compose Resources resolve ulang. Impact: seluruh teks UI.
-- **1C — Daftar manga** [SEDANG]: komponen item bersama `core/ui/components/MangaListItems.kt` ala Doki
+- **1C ✅ DONE & RUN-VERIFIED — Daftar manga**: komponen item bersama `core/ui/components/MangaListItems.kt` ala Doki
   (`MangaGridItem` grid + `MangaListRow` LIST/DETAILED + `MangaListContent` + `mangaGridCells`), badge
   favorit/saved (`MangaBadges`) + bar progres opsional.
   - [x] `list_mode_2` (GRID/LIST/DETAILED) + `grid_size` → **Local** (global), **Favourites** (per-layar
@@ -582,7 +582,15 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     butuh set id manga terunduh dari `LocalMangaIndex`, tapi `LocalMangaIndex.updateIfRequired()` di Nekuva
     masih **stub** (tak ada scan storage). Ini pekerjaan **area `local`** (implement index scan), bukan
     Appearance. Badge saved tetap tampil di **Local**. Counter "bab baru" (BadgeView Doki) = area tracker.
-- **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.
+- **1D ✅ DONE (compile-green, belum run-verify) — Details**:
+  - [x] `description_collapse` → sinopsis di DetailsScreen kini hormati setting: bila "ciutkan" OFF
+    (`isDescriptionExpanded`), deskripsi tampil penuh default (tanpa tombol "Selengkapnya"); bila ON, terpotong 3 baris + "Selengkapnya".
+  - [x] `details_tab` → sheet Detail (`ChaptersSheetContent`) buka di section default: `defaultDetailsTab==2` → Bookmarks,
+    selain itu Chapters (index Pages jatuh ke Chapters karena sheet Nekuva tak punya view Pages terpisah).
+  - [ ] `pages_tab` (tab "Pages"/thumbnail halaman) → **fitur area Details**: Doki punya fragment
+    `details/ui/pager/pages/` (ViewPager). Nekuva pakai bottom-sheet (Chapters/Bookmarks) tanpa view Pages;
+    menambah preview thumbnail halaman = pekerjaan Details (muat halaman + grid). `isPagesTabEnabled` sudah
+    dipakai `defaultDetailsTab` (clamp), tapi view Pages-nya belum ada. **Ditunda ke area Details.**
 - **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
   `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).
 - **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.
