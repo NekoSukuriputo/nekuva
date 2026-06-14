@@ -138,6 +138,10 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getInt(KEY_GRID_SIZE, 100)
 		set(value) = prefs.putInt(KEY_GRID_SIZE, value)
 
+	/** Read/write a list mode by key (global or per-screen), used by the "list options" sheet. */
+	fun getListMode(key: String): ListMode = prefs.getEnum(key, listMode)
+	fun setListMode(key: String, mode: ListMode) = prefs.putEnum(key, mode)
+
 	var gridSizePages: Int
 		get() = prefs.getInt(KEY_GRID_SIZE_PAGES, 100)
 		set(value) = prefs.putInt(KEY_GRID_SIZE_PAGES, value)

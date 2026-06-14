@@ -21,7 +21,10 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
+import org.koin.compose.koinInject
 import org.nekosukuriputo.nekuva.core.nav.*
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.list.ui.ListConfigSheet
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
@@ -57,7 +60,10 @@ fun MainScreen(
     // (back arrow / submit / picking a suggestion). Tying visibility to raw focus closed the panel the
     // moment any suggestion row/switch was pressed (the press steals focus), eating the click.
     var searchActive by remember { mutableStateOf(false) }
-    val overflowItems = rememberOverflowItems(navController, currentDestination)
+    // "List options" overflow → opens the list-config sheet for the active tab's key (Doki parity).
+    val settings = koinInject<AppSettings>()
+    var listConfigKey by remember { mutableStateOf<String?>(null) }
+    val overflowItems = rememberOverflowItems(navController, currentDestination, onListOptions = { listConfigKey = it })
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     // As-you-type search suggestions (Doki parity).
@@ -218,6 +224,10 @@ fun MainScreen(
             }
         }
     }
+
+    listConfigKey?.let { key ->
+        ListConfigSheet(settings = settings, listModeKey = key, onDismiss = { listConfigKey = null })
+    }
 }
 
 /**
@@ -228,6 +238,7 @@ fun MainScreen(
 private fun rememberOverflowItems(
     navController: NavHostController,
     currentDestination: NavDestination?,
+    onListOptions: (String) -> Unit,
 ): List<OverflowItem> {
     val route = currentDestination?.route ?: ""
     // Read all labels unconditionally (stringResource must not be called inside a changing branch).
@@ -244,15 +255,19 @@ private fun rememberOverflowItems(
     val incognito = stringResource(Res.string.incognito_mode)
     val settingsLabel = stringResource(Res.string.settings)
 
-    fun has(route2: Any) = route.contains(route2::class.qualifiedName ?: " ")
+    fun has(route2: Any) = route.contains(route2::class.qualifiedName ?: " ")
+    // "List options" is functional (opens the list-config sheet for that section's key); the other
+    // tab items stay disabled until their own polish pass.
+    fun disabled(label: String) = OverflowItem(label, enabled = false, onClick = {})
+    fun listOpt(key: String) = OverflowItem(listOptions, enabled = true, onClick = { onListOptions(key) })
     val tabItems = when {
-        has(HistoryTabRoute) -> listOf(clearHistory, listOptions, statistics)
-        has(FavoritesTabRoute) -> listOf(listOptions, favCategories)
-        has(ExploreRoute) -> listOf(manageSources)
-        has(FeedTabRoute) -> listOf(update, showUpdated, clearFeed)
-        has(HomeRoute) -> listOf(filter, listOptions, directories)
+        has(HistoryTabRoute) -> listOf(disabled(clearHistory), listOpt(AppSettings.KEY_LIST_MODE_HISTORY), disabled(statistics))
+        has(FavoritesTabRoute) -> listOf(listOpt(AppSettings.KEY_LIST_MODE_FAVORITES), disabled(favCategories))
+        has(ExploreRoute) -> listOf(disabled(manageSources))
+        has(FeedTabRoute) -> listOf(disabled(update), disabled(showUpdated), disabled(clearFeed))
+        has(HomeRoute) -> listOf(disabled(filter), listOpt(AppSettings.KEY_LIST_MODE), disabled(directories))
         else -> emptyList()
-    }.map { OverflowItem(it, enabled = false, onClick = {}) }
+    }
 
     return tabItems +
         OverflowItem(incognito, enabled = false, onClick = {}) +

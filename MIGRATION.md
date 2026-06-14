@@ -574,9 +574,14 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     (observe `HistoryRepository.observeProgressMap` + `FavouritesRepository.observeFavouriteIds` via DAO baru
     `observeProgress`/`observeFavouriteIds`) → bar progres + badge hati di **Local/Favourites/RemoteList/Search**
     (gated setting). Favourites pakai badge favorit konstan (semua item favorit).
-  - [ ] **SISA kecil 1C:** badge **saved** lintas-daftar di RemoteList/Search (butuh lookup id manga lokal/unduh;
-    saat ini badge saved hanya di Local). Override list-mode per-layar (Favourites) belum punya UI "Opsi daftar"
-    (fallback ke global) — masuk fitur overflow "list options" (ditunda).
+  - [x] **Override list-mode per-layar (UI "Opsi daftar" ala Doki `ListConfigSheet`/`MangaListMenuProvider`):**
+    overflow **"Opsi daftar"** di tab History/Favourites/Local kini aktif → `ListConfigSheet` (segmented
+    Grid/List/Detailed + slider ukuran grid, live) tulis ke key per-section (`KEY_LIST_MODE_HISTORY`/
+    `_FAVORITES`/global). `AppSettings.getListMode/setListMode(key)`.
+  - [ ] **SISA kecil 1C (jujur terblokir area lain):** badge **saved** lintas-daftar di RemoteList/Search —
+    butuh set id manga terunduh dari `LocalMangaIndex`, tapi `LocalMangaIndex.updateIfRequired()` di Nekuva
+    masih **stub** (tak ada scan storage). Ini pekerjaan **area `local`** (implement index scan), bukan
+    Appearance. Badge saved tetap tampil di **Local**. Counter "bab baru" (BadgeView Doki) = area tracker.
 - **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.
 - **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
   `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).
