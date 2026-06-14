@@ -548,7 +548,7 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 **Privasi:**
 | Setting (key) | Doki | Nekuva sekarang | Status |
 |---|---|---|---|
-| Kunci aplikasi (`protect_app`) | app-lock PIN/biometrik (`ProtectSetupActivity`) | tersimpan, tanpa konsumen | 🔴 (→ Fase 7) |
+| Kunci aplikasi (`protect_app`) | app-lock PIN/biometrik (`ProtectSetupActivity`) | ✅ setup + lock gate + biometrik (1F) | ✅ |
 | Kebijakan tangkapan layar (`screenshots_policy`) | `FLAG_SECURE` per kondisi | tersimpan, tak diterapkan | 🟡 (Android) |
 
 #### Sub-fase Fase 1 (revisi — fokus "menerapkan" yang setengah jalan)
@@ -592,7 +592,7 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     sekarang/terakhir-dibaca (`DetailsViewModel.loadPagesPreview` muat via local/parser, lazy), tap → buka
     Reader di halaman itu (`onPageClick` → `ReaderRoute(page)`). `details_tab==1` kini buka section Pages.
     Doki ref: `details/ui/pager/pages/PagesFragment`.
-- **1E — Main shell** [SEDANG]:
+- **1E ✅ DONE & RUN-VERIFIED — Main shell**:
   - [x] `nav_main` → `NavItem` diselaraskan ke 5 tab nyata (History/Favorites/Explore/Feed/Local); bottom-nav
     + rail kini dibangun dari `settings.mainNavItems` (live via `observeNavItems`). **Editor** `NavConfigScreen`
     (Appearance→"Bagian layar utama"): reorder (panah atas/bawah) + tambah/hapus section, min 1 (ala Doki `NavConfigFragment`).
@@ -608,7 +608,17 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     expect/actual (Android set/clear, Desktop no-op); App() observe 4 history terbaru → set shortcut (kalau setting ON,
     else clear). Tap shortcut → intent ke MainActivity (`EXTRA_MANGA_ID`) → `DeepLinkBus` → AppNavigation buka
     `MangaDetailsRoute`. Ikon = launcher app. **FASE 1E SELESAI.**
-- **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.
+- **1F ✅ DONE (compile-green, belum run-verify) — Privasi:**
+  - [x] `screenshots_policy` → `SecureScreenEffect` expect/actual (Android `FLAG_SECURE` ref-counted; Desktop N/A).
+    Diterapkan: App-level (BLOCK_ALL; BLOCK_INCOGNITO saat incognito global), Reader (BLOCK_NSFW manga NSFW;
+    BLOCK_INCOGNITO sesi incognito). Doki ref: `ScreenshotPolicyHelper`.
+  - [x] `protect_app` (app-lock) **DONE — tidak ditunda ke Fase 7** (impact penuh): `AppLockController` (state
+    locked) + `ProtectSetupScreen` (enter→ulangi→confirm, simpan `appPassword=md5`, `isAppPasswordNumeric`,
+    toggle biometrik) + `LockScreen` overlay (password + biometrik) di App() saat terkunci; toggle "Kunci aplikasi"
+    di Tampilan (ON→setup, OFF→hapus password, live via `observeAppPasswordSet`); re-lock saat background
+    (`MainActivity.onStop`, skip saat config-change). **Biometrik** = framework `BiometricPrompt` API 28+
+    (expect/actual, TANPA dep androidx.biometric / FragmentActivity; Desktop password-only). Doki ref:
+    `ProtectSetupActivity` + `ProtectActivity`. md5/isNumeric helper `core/util/Hashing.kt`.
 
 ### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 2 Remote sources:** layar Sources (sort/grid/enable-all/no_nsfw/incognito_nsfw/tags_warnings/mirror_switching/handle_links)
@@ -617,7 +627,7 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 - **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android).
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
-- **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + app-lock/biometric + settings-search.
+- **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + sisa link.
 

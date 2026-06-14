@@ -127,6 +127,11 @@ class AppSettings(private val prefs: ObservableSettings) {
 		prefs.toFlowSettings().getStringOrNullFlow(KEY_SCREENSHOTS_POLICY)
 			.map { name -> name?.let { runCatching { ScreenshotsPolicy.valueOf(it) }.getOrNull() } ?: ScreenshotsPolicy.ALLOW }
 
+	/** True while an app-lock password is set (drives the Appearance toggle live). */
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeAppPasswordSet(): kotlinx.coroutines.flow.Flow<Boolean> =
+		prefs.toFlowSettings().getStringOrNullFlow(KEY_APP_PASSWORD).map { it != null }
+
 	private fun parseNavItems(raw: String?): List<NavItem> {
 		val parsed = raw?.split(',')?.mapNotNull { x -> NavItem.entries.find { it.name == x } }
 		return parsed?.ifEmpty { null } ?: NAV_ITEMS_DEFAULT

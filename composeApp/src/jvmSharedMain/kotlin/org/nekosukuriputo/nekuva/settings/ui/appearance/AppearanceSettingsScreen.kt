@@ -14,6 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSwitch
 fun AppearanceSettingsScreen(
     onBackClick: () -> Unit,
     onNavSections: () -> Unit = {},
+    onProtectSetup: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     Scaffold(
@@ -166,7 +168,14 @@ fun AppearanceSettingsScreen(
             BoolPref(settings, AppSettings.KEY_SHORTCUTS, stringResource(Res.string.history_shortcuts), null, true)
 
             SettingsCategoryHeader(stringResource(Res.string.privacy))
-            BoolPref(settings, AppSettings.KEY_PROTECT_APP, stringResource(Res.string.protect_application), stringResource(Res.string.protect_application_summary), false)
+            // App lock (Doki protect_app): ON → set up a password; OFF → clear it. Reflects live.
+            val hasPassword by settings.observeAppPasswordSet().collectAsState(initial = settings.appPassword != null)
+            SettingsSwitch(
+                title = stringResource(Res.string.protect_application),
+                summary = stringResource(Res.string.protect_application_summary),
+                checked = hasPassword,
+                onCheckedChange = { on -> if (on) onProtectSetup() else settings.appPassword = null },
+            )
             IndexListPref(
                 settings, AppSettings.KEY_SCREENSHOTS_POLICY, stringResource(Res.string.screenshots_policy),
                 listOf(stringResource(Res.string.screenshots_allow), stringResource(Res.string.screenshots_block_nsfw), stringResource(Res.string.screenshots_block_incognito), stringResource(Res.string.screenshots_block_all)),

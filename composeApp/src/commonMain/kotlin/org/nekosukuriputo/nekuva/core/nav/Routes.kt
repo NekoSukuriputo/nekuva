@@ -73,4 +73,7 @@ data object SyncSettingsRoute
 data object TapGridConfigRoute
 
 @Serializable
+data object ProtectSetupRoute
+
+@Serializable
 data object NavConfigRoute

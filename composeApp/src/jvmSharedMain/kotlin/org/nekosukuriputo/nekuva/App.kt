@@ -102,7 +102,14 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            org.nekosukuriputo.nekuva.core.nav.AppNavigation()
+            androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+                org.nekosukuriputo.nekuva.core.nav.AppNavigation()
+                // App-lock gate (Doki protect_app): cover everything until unlocked.
+                remember { org.nekosukuriputo.nekuva.core.security.AppLockController.initIfNeeded(settings) }
+                if (org.nekosukuriputo.nekuva.core.security.AppLockController.isLocked) {
+                    org.nekosukuriputo.nekuva.settings.ui.protect.LockScreen()
+                }
+            }
         }
       }
     }

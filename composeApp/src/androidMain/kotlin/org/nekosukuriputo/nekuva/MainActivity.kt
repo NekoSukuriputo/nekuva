@@ -35,6 +35,19 @@ class MainActivity : ComponentActivity() {
         handleShortcutIntent(intent)
     }
 
+    // Re-lock the app when it leaves the foreground (Doki protect_app) — but not on a config change
+    // (rotation / locale recreate), so the user isn't asked to unlock again right away.
+    override fun onStop() {
+        super.onStop()
+        if (!isChangingConfigurations) {
+            runCatching {
+                val settings = org.koin.mp.KoinPlatform.getKoin()
+                    .get<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+                org.nekosukuriputo.nekuva.core.security.AppLockController.lockIfProtected(settings)
+            }
+        }
+    }
+
     // Launcher dynamic shortcut tap (Doki dynamic_shortcuts) -> open that manga via the deep-link bus.
     private fun handleShortcutIntent(intent: Intent?) {
         val id = intent?.getLongExtra(EXTRA_MANGA_ID, -1L) ?: -1L
