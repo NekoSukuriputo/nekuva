@@ -559,8 +559,17 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   expect/actual: **Android** = `MainActivity.attachBaseContext` membungkus Configuration dgn locale (baca
   `nekuva_prefs/app_locale`, semua API, tanpa AppCompat) + `Activity.recreate()` saat ganti; **Desktop** =
   `Locale.setDefault` + `App()` re-`key(localeTag)` agar Compose Resources resolve ulang. Impact: seluruh teks UI.
-- **1C — Daftar manga**: `list_mode_2`(+per-layar) · `grid_size` · `progress_indicators` · `manga_list_badges` ·
-  `quick_filter` → komponen item manga bersama + wire ke Explore/Favourites/History/Local/RemoteList/Search.
+- **1C — Daftar manga** [SEDANG]: komponen item bersama `core/ui/components/MangaListItems.kt` ala Doki
+  (`MangaGridItem` grid + `MangaListRow` LIST/DETAILED + `MangaListContent` + `mangaGridCells`), badge
+  favorit/saved (`MangaBadges`) + bar progres opsional.
+  - [x] `list_mode_2` (GRID/LIST/DETAILED) + `grid_size` → **Local** (global), **Favourites** (per-layar
+    `list_mode_favorites`), **RemoteList** (global, grid+list, load-more di kedua mode), **Search** (carousel
+    horizontal ala Doki — list-mode N/A, pakai item bersama). Live via `observeListModeOrNull`/`observeGridSize`.
+  - [x] `manga_list_badges` → badge **saved** di Local, **favourite** di Favourites (`getMangaListBadges()` bitmask).
+  - [x] `quick_filter` → RemoteList: baris chip quick-filter digate `isQuickFilterEnabled` (filter tetap di toolbar).
+  - [ ] **SISA 1C:** `historyListMode` (History masih grup-tanggal + item khusus resume/hapus → perlu varian
+    grid+progres+aksi), `progress_indicators` lintas-daftar (butuh lookup progres history per-manga di tiap
+    ViewModel: Explore/Favourites/RemoteList/Search), badge favorit/saved di RemoteList/Search (butuh lookup).
 - **1D — Details**: `description_collapse` · `pages_tab` · `details_tab` → DetailsScreen.
 - **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
   `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).

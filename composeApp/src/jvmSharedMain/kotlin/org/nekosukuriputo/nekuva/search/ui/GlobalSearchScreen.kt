@@ -36,7 +36,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
-import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
+import org.nekosukuriputo.nekuva.core.ui.components.MangaGridItem
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)

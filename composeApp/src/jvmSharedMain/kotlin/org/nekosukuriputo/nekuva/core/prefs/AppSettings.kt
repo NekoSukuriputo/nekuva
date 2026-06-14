@@ -77,6 +77,25 @@ class AppSettings(private val prefs: ObservableSettings) {
 	fun observeAppLocale(): kotlinx.coroutines.flow.Flow<String> =
 		prefs.toFlowSettings().getStringOrNullFlow(KEY_APP_LOCALE).map { it ?: "" }
 
+	/** Live manga-list appearance observers (Appearance settings → list screens, Doki parity). */
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeListModeOrNull(key: String): kotlinx.coroutines.flow.Flow<ListMode?> =
+		prefs.toFlowSettings().getStringOrNullFlow(key).map { name ->
+			name?.let { runCatching { ListMode.valueOf(it) }.getOrNull() }
+		}
+
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeGridSize(): kotlinx.coroutines.flow.Flow<Int> =
+		prefs.toFlowSettings().getIntFlow(KEY_GRID_SIZE, 100)
+
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeInt(key: String, default: Int): kotlinx.coroutines.flow.Flow<Int> =
+		prefs.toFlowSettings().getIntFlow(key, default)
+
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeBoolean(key: String, default: Boolean): kotlinx.coroutines.flow.Flow<Boolean> =
+		prefs.toFlowSettings().getBooleanFlow(key, default)
+
 	/** Emits each time the given (string-backed) preference key changes. Used by [observeAsStateFlow]. */
 	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
 	fun keyChangeFlow(key: String): kotlinx.coroutines.flow.Flow<Unit> =

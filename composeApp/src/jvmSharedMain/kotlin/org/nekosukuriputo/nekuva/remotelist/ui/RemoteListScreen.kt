@@ -82,7 +82,14 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
-import org.nekosukuriputo.nekuva.local.ui.MangaGridItem
+import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.core.prefs.ListMode
+import org.nekosukuriputo.nekuva.core.ui.components.MangaGridItem
+import org.nekosukuriputo.nekuva.core.ui.components.MangaListRow
+import org.nekosukuriputo.nekuva.core.ui.components.mangaGridCells
+import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
+import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
 import org.nekosukuriputo.nekuva.parsers.model.MangaTag
 import org.nekosukuriputo.nekuva.parsers.model.YEAR_MIN
 import org.nekosukuriputo.nekuva.parsers.model.YEAR_UNKNOWN
@@ -101,6 +108,11 @@ fun RemoteListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+
+    // Appearance: list mode + grid size (Doki — remote browse uses the global list mode).
+    val settings = koinInject<AppSettings>()
+    val listMode = rememberMangaListMode(settings)
+    val gridSize = rememberGridSize(settings)
 
     var searchActive by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -177,13 +189,17 @@ fun RemoteListScreen(
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            QuickFilterRow(
-                state = filterState,
-                viewModel = viewModel,
-                searchActive = searchActive,
-                onOpenSheet = { showFilterSheet = true },
-                onEditSearch = { searchActive = true },
-            )
+            // Doki: the quick-filter chip row is gated by the `quick_filter` setting (filter stays
+            // reachable via the toolbar filter icon).
+            if (settings.isQuickFilterEnabled) {
+                QuickFilterRow(
+                    state = filterState,
+                    viewModel = viewModel,
+                    searchActive = searchActive,
+                    onOpenSheet = { showFilterSheet = true },
+                    onEditSearch = { searchActive = true },
+                )
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 when (val state = uiState) {
                     is RemoteListUiState.Loading -> LoadingState()
@@ -225,34 +241,63 @@ fun RemoteListScreen(
                         }
                     }
                     is RemoteListUiState.Success -> {
-                        val gridState = rememberLazyGridState()
-                        LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 120.dp),
-                            contentPadding = PaddingValues(8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            state = gridState,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(state.mangaList) { manga ->
-                                MangaGridItem(manga = manga, onClick = { onMangaClick(manga.id) })
-                            }
-                            if (state.isAppending) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator()
+                        if (listMode == ListMode.GRID) {
+                            val gridState = rememberLazyGridState()
+                            LazyVerticalGrid(
+                                columns = mangaGridCells(gridSize),
+                                contentPadding = PaddingValues(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                state = gridState,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(state.mangaList) { manga ->
+                                    MangaGridItem(manga = manga, onClick = { onMangaClick(manga.id) })
+                                }
+                                if (state.isAppending) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                } else if (state.hasNextPage) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        LaunchedEffect(state.mangaList.size) { viewModel.loadNextPage() }
                                     }
                                 }
-                            } else if (state.hasNextPage) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    LaunchedEffect(state.mangaList.size) { viewModel.loadNextPage() }
+                            }
+                            org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                                state = gridState,
+                                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+                            )
+                        } else {
+                            val detailed = listMode == ListMode.DETAILED_LIST
+                            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                            androidx.compose.foundation.lazy.LazyColumn(
+                                contentPadding = PaddingValues(vertical = 4.dp),
+                                state = listState,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(state.mangaList) { manga ->
+                                    MangaListRow(manga = manga, onClick = { onMangaClick(manga.id) }, detailed = detailed)
+                                }
+                                if (state.isAppending) {
+                                    item {
+                                        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                } else if (state.hasNextPage) {
+                                    item {
+                                        LaunchedEffect(state.mangaList.size) { viewModel.loadNextPage() }
+                                    }
                                 }
                             }
+                            org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                                state = listState,
+                                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+                            )
                         }
-                        org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
-                            state = gridState,
-                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
-                        )
                     }
                 }
             }
