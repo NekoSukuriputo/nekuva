@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,11 +48,13 @@ fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel(),
     onChapterClick: (Long, Long) -> Unit,
     onBookmarkClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
+    onPageClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
     onOpenDownloads: () -> Unit,
     onBackClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val pagesState by viewModel.pagesState.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
     val allCategories by viewModel.allCategories.collectAsState()
     val mangaCategories by viewModel.mangaCategories.collectAsState()
@@ -143,8 +146,11 @@ fun DetailsScreen(
                     chapters = manga.chapters ?: emptyList(),
                     history = history,
                     bookmarks = bookmarks,
+                    pagesState = pagesState,
+                    onLoadPages = { viewModel.loadPagesPreview() },
                     onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) },
                     onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) },
+                    onPageClick = { chapterId, page -> onPageClick(manga.id, chapterId, page) },
                     onDownloadClick = { showDownloadDialog = true },
                     onForget = { viewModel.removeFromHistory() }
                 )
@@ -380,22 +386,35 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-private enum class SheetView { CHAPTERS, BOOKMARKS }
+private enum class SheetView { CHAPTERS, PAGES, BOOKMARKS }
 
 @Composable
 fun ChaptersSheetContent(
     chapters: List<MangaChapter>,
     history: org.nekosukuriputo.nekuva.core.model.MangaHistory?,
     bookmarks: List<Bookmark>,
+    pagesState: PagesPreviewState,
+    onLoadPages: () -> Unit,
     onChapterClick: (MangaChapter) -> Unit,
     onBookmarkClick: (Bookmark) -> Unit,
+    onPageClick: (chapterId: Long, page: Int) -> Unit,
     onDownloadClick: () -> Unit,
     onForget: () -> Unit,
 ) {
-    // Doki `details_tab`: default sheet section (2 = bookmarks; chapters otherwise — Nekuva's sheet has
-    // no separate Pages view, so the Pages index falls back to chapters).
     val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
-    var view by remember { mutableStateOf(if (tabSettings.defaultDetailsTab == 2) SheetView.BOOKMARKS else SheetView.CHAPTERS) }
+    val pagesEnabled = tabSettings.isPagesTabEnabled
+    // Doki `details_tab`: default section — 0/last=chapters, 1=pages (if enabled), 2=bookmarks.
+    var view by remember {
+        mutableStateOf(
+            when (tabSettings.defaultDetailsTab) {
+                2 -> SheetView.BOOKMARKS
+                1 -> if (pagesEnabled) SheetView.PAGES else SheetView.CHAPTERS
+                else -> SheetView.CHAPTERS
+            }
+        )
+    }
+    // Load the page previews lazily the first time the Pages section is shown.
+    androidx.compose.runtime.LaunchedEffect(view) { if (view == SheetView.PAGES) onLoadPages() }
     var readMenuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -416,8 +435,15 @@ fun ChaptersSheetContent(
                         tint = if (view == SheetView.CHAPTERS) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                     )
                 }
-                IconButton(onClick = { /* Deferred: grid layout for chapters */ }) {
-                    Icon(Icons.Default.GridView, contentDescription = "Grid View")
+                // Pages preview (Doki pages_tab) — shown only when enabled in Appearance settings.
+                if (pagesEnabled) {
+                    IconButton(onClick = { view = SheetView.PAGES }) {
+                        Icon(
+                            Icons.Default.GridView,
+                            contentDescription = stringResource(Res.string.pages),
+                            tint = if (view == SheetView.PAGES) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
                 }
                 // Bookmarks of this manga
                 IconButton(onClick = { view = SheetView.BOOKMARKS }) {
@@ -515,6 +541,36 @@ fun ChaptersSheetContent(
                     )
                 }
             }
+            SheetView.PAGES -> {
+                when (val ps = pagesState) {
+                    is PagesPreviewState.Success -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 100.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            gridItemsIndexed(ps.pages) { index, page ->
+                                DetailsPageThumb(
+                                    url = page.preview?.takeIf { it.isNotEmpty() } ?: page.url,
+                                    number = index + 1,
+                                    onClick = { onPageClick(ps.chapterId, index) },
+                                )
+                            }
+                        }
+                    }
+                    is PagesPreviewState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
+                    }
+                    PagesPreviewState.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(Res.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                }
+            }
             SheetView.BOOKMARKS -> {
                 if (bookmarks.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -538,6 +594,32 @@ fun ChaptersSheetContent(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(13f / 18f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick),
+    ) {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), RoundedCornerShape(50))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        ) {
+            Text("$number", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }

@@ -578,19 +578,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     overflow **"Opsi daftar"** di tab History/Favourites/Local kini aktif → `ListConfigSheet` (segmented
     Grid/List/Detailed + slider ukuran grid, live) tulis ke key per-section (`KEY_LIST_MODE_HISTORY`/
     `_FAVORITES`/global). `AppSettings.getListMode/setListMode(key)`.
-  - [ ] **SISA kecil 1C (jujur terblokir area lain):** badge **saved** lintas-daftar di RemoteList/Search —
-    butuh set id manga terunduh dari `LocalMangaIndex`, tapi `LocalMangaIndex.updateIfRequired()` di Nekuva
-    masih **stub** (tak ada scan storage). Ini pekerjaan **area `local`** (implement index scan), bukan
-    Appearance. Badge saved tetap tampil di **Local**. Counter "bab baru" (BadgeView Doki) = area tracker.
+  - [x] **Badge "saved" lintas-daftar (DONE):** `LocalMangaRepository.observeSavedIds()` (StateFlow, scan
+    sekali + refresh saat storage berubah) jadi sumber id manga terunduh; `MangaListDecorations` kini tambah
+    badge **saved** → muncul di RemoteList/Search/Local (gated `manga_list_badges` bit 2). (Counter "bab baru"
+    BadgeView Doki = area tracker, terpisah.)
 - **1D ✅ DONE (compile-green, belum run-verify) — Details**:
   - [x] `description_collapse` → sinopsis di DetailsScreen kini hormati setting: bila "ciutkan" OFF
     (`isDescriptionExpanded`), deskripsi tampil penuh default (tanpa tombol "Selengkapnya"); bila ON, terpotong 3 baris + "Selengkapnya".
   - [x] `details_tab` → sheet Detail (`ChaptersSheetContent`) buka di section default: `defaultDetailsTab==2` → Bookmarks,
     selain itu Chapters (index Pages jatuh ke Chapters karena sheet Nekuva tak punya view Pages terpisah).
-  - [ ] `pages_tab` (tab "Pages"/thumbnail halaman) → **fitur area Details**: Doki punya fragment
-    `details/ui/pager/pages/` (ViewPager). Nekuva pakai bottom-sheet (Chapters/Bookmarks) tanpa view Pages;
-    menambah preview thumbnail halaman = pekerjaan Details (muat halaman + grid). `isPagesTabEnabled` sudah
-    dipakai `defaultDetailsTab` (clamp), tapi view Pages-nya belum ada. **Ditunda ke area Details.**
+  - [x] `pages_tab` (tab "Pages"/thumbnail halaman) **DONE** (impact ke Details + Reader): sheet Detail kini
+    punya section **Pages** (ikon di toggle, hanya bila `isPagesTabEnabled`) → grid thumbnail halaman bab
+    sekarang/terakhir-dibaca (`DetailsViewModel.loadPagesPreview` muat via local/parser, lazy), tap → buka
+    Reader di halaman itu (`onPageClick` → `ReaderRoute(page)`). `details_tab==1` kini buka section Pages.
+    Doki ref: `details/ui/pager/pages/PagesFragment`.
 - **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
   `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).
 - **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.

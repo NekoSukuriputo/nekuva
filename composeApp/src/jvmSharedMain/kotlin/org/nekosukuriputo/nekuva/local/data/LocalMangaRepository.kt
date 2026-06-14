@@ -3,9 +3,14 @@ import java.net.URI
 
 
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toCollection
@@ -252,6 +257,24 @@ class LocalMangaRepository constructor(
 		}
 		return true
 	}
+
+	// Downloaded/local manga ids — Doki's LocalMangaIndex membership for the "saved" badge across lists.
+	// Lazily scanned once, then refreshed whenever local storage changes (download finished / deleted).
+	private val savedIdsScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+	private val savedIdsFlow: StateFlow<Set<Long>> by lazy {
+		val state = MutableStateFlow<Set<Long>>(emptySet())
+		savedIdsScope.launch {
+			state.value = scanSavedIds()
+			localStorageChanges.collect { state.value = scanSavedIds() }
+		}
+		state.asStateFlow()
+	}
+
+	/** Observe the set of downloaded manga ids (initial scan + refresh on storage changes). */
+	fun observeSavedIds(): StateFlow<Set<Long>> = savedIdsFlow
+
+	private suspend fun scanSavedIds(): Set<Long> =
+		runCatchingCancellable { getRawList().mapToSet { it.manga.id } }.getOrDefault(emptySet())
 
 	fun getRawListAsFlow(): Flow<LocalManga> = channelFlow {
 		val files = getAllFiles()

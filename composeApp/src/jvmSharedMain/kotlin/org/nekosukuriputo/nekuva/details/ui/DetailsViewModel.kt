@@ -111,6 +111,37 @@ class DetailsViewModel(
         }
     }
 
+    // Details "Pages" tab (Doki pages_tab): page thumbnails of the current/first chapter, loaded once.
+    private val _pagesState = MutableStateFlow<PagesPreviewState>(PagesPreviewState.Idle)
+    val pagesState: StateFlow<PagesPreviewState> = _pagesState.asStateFlow()
+
+    fun loadPagesPreview() {
+        if (_pagesState.value != PagesPreviewState.Idle) return // load once per screen
+        val m = loadedManga.value ?: return
+        _pagesState.value = PagesPreviewState.Loading
+        viewModelScope.launch {
+            try {
+                val chapters = m.chapters ?: emptyList()
+                if (chapters.isEmpty()) {
+                    _pagesState.value = PagesPreviewState.Empty
+                    return@launch
+                }
+                // Doki previews the current (last-read) chapter, else the first.
+                val targetId = history.value?.chapterId
+                val chapter = chapters.firstOrNull { it.id == targetId } ?: chapters.first()
+                val pages = localMangaRepository.getPagesIfDownloaded(m, chapter) ?: run {
+                    val source = MangaParserSource.entries.find { it.name == m.source.name }
+                        ?: throw IllegalStateException("Unknown source: ${m.source.name}")
+                    repositoryFactory.create(source).getPages(chapter)
+                }
+                _pagesState.value = if (pages.isEmpty()) PagesPreviewState.Empty
+                    else PagesPreviewState.Success(chapter.id, pages)
+            } catch (e: Exception) {
+                _pagesState.value = PagesPreviewState.Error(e)
+            }
+        }
+    }
+
     fun toggleCategory(categoryId: Long, isSelected: Boolean) {
         viewModelScope.launch {
             val state = _uiState.value
@@ -131,4 +162,16 @@ sealed interface DetailsUiState {
     data object Loading : DetailsUiState
     data class Success(val manga: Manga) : DetailsUiState
     data class Error(val exception: Throwable) : DetailsUiState
+}
+
+/** State of the Details "Pages" preview tab (Doki pages_tab). */
+sealed interface PagesPreviewState {
+    data object Idle : PagesPreviewState
+    data object Loading : PagesPreviewState
+    data object Empty : PagesPreviewState
+    data class Success(
+        val chapterId: Long,
+        val pages: List<org.nekosukuriputo.nekuva.parsers.model.MangaPage>,
+    ) : PagesPreviewState
+    data class Error(val error: Throwable) : PagesPreviewState
 }

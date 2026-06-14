@@ -151,6 +151,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             // From a bookmark -> incognito (Doki parity).
                             navController.navigate(ReaderRoute(mangaId, chapterId, page, incognito = true))
                         },
+                        onPageClick = { mangaId, chapterId, page ->
+                            // From the Details "Pages" preview -> open the reader at that page (not incognito).
+                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
+                        },
                         onOpenDownloads = { navController.navigate(DownloadsRoute) },
                         onBackClick = { navController.popBackStack() },
                         onManageCategoriesClick = {
