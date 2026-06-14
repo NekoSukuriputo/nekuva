@@ -592,8 +592,19 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     sekarang/terakhir-dibaca (`DetailsViewModel.loadPagesPreview` muat via local/parser, lazy), tap → buka
     Reader di halaman itu (`onPageClick` → `ReaderRoute(page)`). `details_tab==1` kini buka section Pages.
     Doki ref: `details/ui/pager/pages/PagesFragment`.
-- **1E — Main shell**: `nav_main`(NavConfig reorder) · `main_fab`(Resume FAB) · `nav_labels` · `nav_pinned` ·
-  `exit_confirm` · `dynamic_shortcuts` → MainScreen shell (+ Android shortcuts).
+- **1E — Main shell** [SEDANG]:
+  - [x] `nav_main` → `NavItem` diselaraskan ke 5 tab nyata (History/Favorites/Explore/Feed/Local); bottom-nav
+    + rail kini dibangun dari `settings.mainNavItems` (live via `observeNavItems`). **Editor** `NavConfigScreen`
+    (Appearance→"Bagian layar utama"): reorder (panah atas/bawah) + tambah/hapus section, min 1 (ala Doki `NavConfigFragment`).
+  - [x] `nav_labels` → `alwaysShowLabel`/label null di NavigationBar/Rail item (Doki LABELED/UNLABELED).
+  - [x] `main_fab` → FAB "Lanjut baca" (ExtendedFAB, ikon play) di shell saat ada history; tap → resume manga
+    terakhir (`observeLast` + `getOne` → ReaderRoute page -1). Muncul di kedua layout (Scaffold FAB + rail Box).
+  - [x] `exit_confirm` → `PlatformBackHandler` expect/actual (Android `androidx.activity.compose.BackHandler`,
+    Desktop no-op) saat di root (`previousBackStackEntry==null`): tekan back → snackbar "Press Back again";
+    back ke-2 dlm 2s → `exitApp()` (Android finish / Desktop exitProcess).
+  - [x] `nav_pinned` → di shell Compose bottom-bar/rail **selalu tampil** (tak auto-hide) = perilaku "pinned"
+    Doki sudah default; tak perlu kode tambahan (dicatat).
+  - [ ] `dynamic_shortcuts` → app-shortcuts Android (ShortcutManager + deep-link ke Detail) — SEDANG dikerjakan.
 - **1F — Privasi**: `screenshots_policy` → `FLAG_SECURE` (Android actual; Desktop N/A). `protect_app` → **Fase 7**.
 
 ### FASE 2–9 — ringkas (detail dirinci saat fase-nya tiba)

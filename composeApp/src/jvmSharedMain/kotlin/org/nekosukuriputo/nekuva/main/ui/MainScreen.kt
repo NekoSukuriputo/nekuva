@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
@@ -27,6 +30,7 @@ import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.list.ui.ListConfigSheet
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
@@ -40,13 +44,14 @@ data class TabItem(
     val icon: ImageVector
 )
 
-val tabs = listOf(
-    TabItem(HistoryTabRoute, Res.string.history, Icons.Filled.History),
-    TabItem(FavoritesTabRoute, Res.string.favourites, Icons.Filled.Favorite),
-    TabItem(ExploreRoute, Res.string.explore, Icons.Filled.Explore),
-    TabItem(FeedTabRoute, Res.string.feed, Icons.Filled.RssFeed),
-    TabItem(HomeRoute, Res.string.local_storage, Icons.Filled.SdStorage)
-)
+/** Map a configurable [NavItem] to its tab destination (Doki `nav_main` -> bottom nav). */
+fun navItemToTab(item: org.nekosukuriputo.nekuva.core.prefs.NavItem): TabItem = when (item) {
+    org.nekosukuriputo.nekuva.core.prefs.NavItem.HISTORY -> TabItem(HistoryTabRoute, Res.string.history, Icons.Filled.History)
+    org.nekosukuriputo.nekuva.core.prefs.NavItem.FAVORITES -> TabItem(FavoritesTabRoute, Res.string.favourites, Icons.Filled.Favorite)
+    org.nekosukuriputo.nekuva.core.prefs.NavItem.EXPLORE -> TabItem(ExploreRoute, Res.string.explore, Icons.Filled.Explore)
+    org.nekosukuriputo.nekuva.core.prefs.NavItem.FEED -> TabItem(FeedTabRoute, Res.string.feed, Icons.Filled.RssFeed)
+    org.nekosukuriputo.nekuva.core.prefs.NavItem.LOCAL -> TabItem(HomeRoute, Res.string.local_storage, Icons.Filled.SdStorage)
+}
 
 @Composable
 fun MainScreen(
@@ -64,6 +69,21 @@ fun MainScreen(
     val settings = koinInject<AppSettings>()
     var listConfigKey by remember { mutableStateOf<String?>(null) }
     val overflowItems = rememberOverflowItems(navController, currentDestination, onListOptions = { listConfigKey = it })
+    // Configurable bottom-nav (Doki nav_main) + label visibility (nav_labels), observed live.
+    val navItems by settings.observeNavItems().collectAsState(initial = settings.mainNavItems)
+    val tabs = remember(navItems) { navItems.map(::navItemToTab) }
+    val navLabelsVisible = settings.isNavLabelsVisible
+    // Resume FAB (Doki main_fab): jump back into the last-read manga (resumes via history -> page -1).
+    val historyRepo = koinInject<org.nekosukuriputo.nekuva.history.data.HistoryRepository>()
+    val lastReadManga by historyRepo.observeLast().collectAsState(initial = null)
+    val fabScope = androidx.compose.runtime.rememberCoroutineScope()
+    val onResume: () -> Unit = {
+        lastReadManga?.let { m ->
+            fabScope.launch {
+                historyRepo.getOne(m)?.let { h -> navController.navigate(ReaderRoute(m.id, h.chapterId, -1)) }
+            }
+        }
+    }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     // As-you-type search suggestions (Doki parity).
@@ -73,6 +93,24 @@ fun MainScreen(
         suggestionViewModel.onQueryChanged(searchQuery)
     }
     val showSuggestions = isTopLevel && (searchActive || searchQuery.isNotBlank())
+    val showResumeFab = isTopLevel && settings.isMainFabEnabled && lastReadManga != null && !showSuggestions
+
+    // Exit confirmation (Doki exit_confirm): at the root (nothing left to pop), a back press shows a
+    // "press back again" hint; a second press within 2s quits.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val confirmExitMsg = stringResource(Res.string.confirm_exit)
+    var lastBackMark by remember { mutableStateOf<kotlin.time.TimeSource.Monotonic.ValueTimeMark?>(null) }
+    org.nekosukuriputo.nekuva.core.ui.PlatformBackHandler(
+        enabled = isTopLevel && settings.isExitConfirmationEnabled && navController.previousBackStackEntry == null,
+    ) {
+        val mark = lastBackMark
+        if (mark != null && mark.elapsedNow() < kotlin.time.Duration.Companion.run { 2.seconds }) {
+            org.nekosukuriputo.nekuva.core.ui.exitApp()
+        } else {
+            lastBackMark = kotlin.time.TimeSource.Monotonic.markNow()
+            fabScope.launch { snackbarHostState.showSnackbar(confirmExitMsg) }
+        }
+    }
 
     fun dismissSearch() {
         searchQuery = ""
@@ -146,7 +184,8 @@ fun MainScreen(
                                     }
                                 },
                                 icon = { Icon(tab.icon, contentDescription = stringResource(tab.titleRes)) },
-                                label = { Text(stringResource(tab.titleRes)) }
+                                alwaysShowLabel = navLabelsVisible,
+                                label = if (navLabelsVisible) { { Text(stringResource(tab.titleRes)) } } else null
                             )
                         }
                     }
@@ -167,6 +206,9 @@ fun MainScreen(
                         content(PaddingValues())
                         if (showSuggestions) {
                             suggestionPanel()
+                        }
+                        if (showResumeFab) {
+                            ResumeFab(onResume, Modifier.align(Alignment.BottomEnd).padding(16.dp))
                         }
                     }
                 }
@@ -208,12 +250,15 @@ fun MainScreen(
                                         }
                                     },
                                     icon = { Icon(tab.icon, contentDescription = stringResource(tab.titleRes)) },
-                                    label = { Text(stringResource(tab.titleRes)) }
+                                    alwaysShowLabel = navLabelsVisible,
+                                    label = if (navLabelsVisible) { { Text(stringResource(tab.titleRes)) } } else null
                                 )
                             }
                         }
                     }
-                }
+                },
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                floatingActionButton = { if (showResumeFab) ResumeFab(onResume) },
             ) { paddingValues ->
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                     content(paddingValues)
@@ -228,6 +273,17 @@ fun MainScreen(
     listConfigKey?.let { key ->
         ListConfigSheet(settings = settings, listModeKey = key, onDismiss = { listConfigKey = null })
     }
+}
+
+/** Doki's main-screen "resume reading" FAB. */
+@Composable
+private fun ResumeFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+        text = { Text(stringResource(Res.string.resume)) },
+    )
 }
 
 /**

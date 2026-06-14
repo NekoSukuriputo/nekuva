@@ -113,17 +113,19 @@ class AppSettings(private val prefs: ObservableSettings) {
 	fun setPref(key: String, value: Set<String>) = prefs.putStringSet(key, value)
 
 	var mainNavItems: List<NavItem>
-		get() {
-			val raw = prefs.getStringOrNull(KEY_NAV_MAIN)?.split(',')
-			return if (raw.isNullOrEmpty()) {
-				listOf(NavItem.HISTORY, NavItem.FAVORITES, NavItem.EXPLORE, NavItem.UPDATES)
-			} else {
-				raw.mapNotNull { x -> NavItem.entries.find { it.name == x } }.ifEmpty { listOf(NavItem.EXPLORE) }
-			}
-		}
+		get() = parseNavItems(prefs.getStringOrNull(KEY_NAV_MAIN))
 		set(value) {
 			prefs.putString(KEY_NAV_MAIN, value.joinToString(",") { it.name })
 		}
+
+	@OptIn(com.russhwolf.settings.ExperimentalSettingsApi::class)
+	fun observeNavItems(): kotlinx.coroutines.flow.Flow<List<NavItem>> =
+		prefs.toFlowSettings().getStringOrNullFlow(KEY_NAV_MAIN).map { parseNavItems(it) }
+
+	private fun parseNavItems(raw: String?): List<NavItem> {
+		val parsed = raw?.split(',')?.mapNotNull { x -> NavItem.entries.find { it.name == x } }
+		return parsed?.ifEmpty { null } ?: NAV_ITEMS_DEFAULT
+	}
 
 	val isNavLabelsVisible: Boolean
 		get() = prefs.getBoolean(KEY_NAV_LABELS, true)
@@ -816,6 +818,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		const val KEY_DISABLE_NSFW = "no_nsfw"
 		const val KEY_RELATED_MANGA = "related_manga"
 		const val KEY_NAV_MAIN = "nav_main"
+		val NAV_ITEMS_DEFAULT = listOf(NavItem.HISTORY, NavItem.FAVORITES, NavItem.EXPLORE, NavItem.FEED, NavItem.LOCAL)
 		const val KEY_NAV_LABELS = "nav_labels"
 		const val KEY_NAV_PINNED = "nav_pinned"
 		const val KEY_MAIN_FAB = "main_fab"

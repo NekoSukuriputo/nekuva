@@ -224,6 +224,12 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<AppearanceSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.appearance.AppearanceSettingsScreen(
                         onBackClick = { navController.popBackStack() },
+                        onNavSections = { navController.navigate(NavConfigRoute) },
+                    )
+                }
+                composable<NavConfigRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.appearance.NavConfigScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<DownloadsSettingsRoute> {

@@ -42,6 +42,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSwitch
 @Composable
 fun AppearanceSettingsScreen(
     onBackClick: () -> Unit,
+    onNavSections: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     Scaffold(
@@ -157,7 +158,7 @@ fun AppearanceSettingsScreen(
                 settings, AppSettings.KEY_SEARCH_SUGGESTION_TYPES, stringResource(Res.string.search_suggestions),
                 emptyList(), emptySet(),
             )
-            SettingsItem(title = stringResource(Res.string.main_screen_sections), summary = stringResource(Res.string.coming_soon), enabled = false)
+            SettingsItem(title = stringResource(Res.string.main_screen_sections), onClick = onNavSections)
             BoolPref(settings, AppSettings.KEY_MAIN_FAB, stringResource(Res.string.main_screen_fab), stringResource(Res.string.main_screen_fab_summary), true)
             BoolPref(settings, AppSettings.KEY_NAV_LABELS, stringResource(Res.string.show_labels_in_navbar), null, true)
             BoolPref(settings, AppSettings.KEY_NAV_PINNED, stringResource(Res.string.pin_navigation_ui), null, false)
