@@ -85,4 +85,7 @@ data object SourcesManageRoute
 data object SourcesCatalogRoute
 
 @Serializable
+data class SourceSettingsRoute(val sourceName: String)
+
+@Serializable
 data object NavConfigRoute

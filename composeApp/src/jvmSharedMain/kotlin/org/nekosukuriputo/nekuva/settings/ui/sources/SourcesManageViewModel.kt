@@ -29,6 +29,15 @@ class SourcesManageViewModel(
         viewModelScope.launch { repository.setSourcesPinned(setOf(source), pinned) }
     }
 
+    /** Disable every source at once (Doki "Disable all"). */
+    fun disableAll() {
+        viewModelScope.launch { repository.disableAllSources() }
+    }
+
+    var isNsfwDisabled: Boolean
+        get() = settings.isNsfwContentDisabled
+        set(value) { settings.isNsfwContentDisabled = value }
+
     /** Move an item and persist the manual order (switches sort to MANUAL like Doki). */
     fun move(fromIndex: Int, toIndex: Int) {
         val current = sources.value.map { it.mangaSource }

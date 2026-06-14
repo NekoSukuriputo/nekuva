@@ -634,13 +634,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   **tambah** (+ → enable, refresh). Empty-state.
 - **2D ✅ DONE (compile-green) — Impact Explore:** overflow ⋮ Explore aktif → **Manage** + **Catalog**;
   **pin/unpin dari Explore** (long-press → `togglePin`, indikator pin); sumber off hilang dari Explore.
-- **2E — Per-source settings** (`SourceSettings`): domain/mirror, hapus cookies, sign-in (sebagian butuh
-  evaluateJs/WebView). **Berikutnya.**
+- **2E ✅ DONE (compile-green) — Per-source settings** (`SourceSettingsScreen`/VM): **domain/mirror** picker
+  (ConfigKey.Domain via `getAvailableMirrors`/`domain`+`invalidateCache`), **Sign in** (bila
+  `MangaParserAuthProvider` ada → buka `authUrl` di in-app Browser + tampil username), **Clear cookies**
+  (konfirmasi → `MutableCookieJar.clear`). Dibuka dari Manage (tap nama sumber → `SourceSettingsRoute(name)`).
+- **2F ✅ DONE — Manage app-bar (catatan user):** **search** + aksi **catalog** (+) + overflow ⋮
+  **Disable NSFW** (checkable) + **Disable all** (`disableAll`→`disableAllSources`). Ref Doki `opt_sources.xml`.
+- **SISA Fase 2 (jujur, butuh area lain):** sign-in web auto-capture token butuh `evaluateJs`/WebView
+  (sementara pakai in-app Browser); multi-select bulk di Manage (Doki `mode_source`).
+- **FASE 2 SELESAI** (compile-green Android+Desktop; belum run-verify).
 
 ### FASE 3–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 3 Reader:** audit sisa vs `pref_reader` (mayoritas sudah; cek `pages_preload`, `reader_multitask`, dll).
 - **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
-- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom location download in download dialog belum bisa.
+- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).

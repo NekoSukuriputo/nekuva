@@ -253,11 +253,19 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<SourcesManageRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageScreen(
                         onBackClick = { navController.popBackStack() },
+                        onCatalog = { navController.navigate(SourcesCatalogRoute) },
+                        onSourceSettings = { name -> navController.navigate(SourceSettingsRoute(name)) },
                     )
                 }
                 composable<SourcesCatalogRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogScreen(
                         onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<SourceSettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onOpenBrowser = { url -> navController.navigate(BrowserRoute(url)) },
                     )
                 }
                 composable<NavConfigRoute> {
