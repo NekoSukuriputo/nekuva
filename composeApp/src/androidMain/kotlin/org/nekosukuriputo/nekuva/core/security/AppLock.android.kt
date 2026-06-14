@@ -14,14 +14,25 @@ import kotlin.coroutines.resume
 actual fun isBiometricAvailable(): Boolean {
     if (Build.VERSION.SDK_INT < 29) return false
     val ctx = LocaleActivityHolder.current?.get() ?: return false
-    val manager = ctx.getSystemService(BiometricManager::class.java) ?: return false
-    @Suppress("DEPRECATION")
-    return manager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    // canAuthenticate() can throw (e.g. SecurityException on some OEMs) — never let it crash the app.
+    return runCatching {
+        val manager = ctx.getSystemService(BiometricManager::class.java) ?: return false
+        @Suppress("DEPRECATION")
+        manager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    }.getOrDefault(false)
 }
 
 actual suspend fun authenticateBiometric(title: String, subtitle: String): Boolean {
     if (Build.VERSION.SDK_INT < 28) return false
     val activity = LocaleActivityHolder.current?.get() ?: return false
+    return runCatching { promptBiometric(activity, title, subtitle) }.getOrDefault(false)
+}
+
+private suspend fun promptBiometric(
+    activity: android.app.Activity,
+    title: String,
+    subtitle: String,
+): Boolean {
     return suspendCancellableCoroutine { cont ->
         val cancellation = CancellationSignal()
         cont.invokeOnCancellation { cancellation.cancel() }
