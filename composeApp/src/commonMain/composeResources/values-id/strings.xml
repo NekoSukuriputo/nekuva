@@ -896,4 +896,6 @@
     <string name="content_type">Tipe konten</string>
     <string name="new_sources">Sumber baru</string>
     <string name="all_sources">Semua sumber</string>
+    <string name="move_up">Pindah ke atas</string>
+    <string name="move_down">Pindah ke bawah</string>
 </resources>

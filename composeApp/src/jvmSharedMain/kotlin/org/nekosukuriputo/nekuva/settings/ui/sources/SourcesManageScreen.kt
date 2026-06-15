@@ -1,22 +1,24 @@
 package org.nekosukuriputo.nekuva.settings.ui.sources
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,15 +40,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
+import org.nekosukuriputo.nekuva.core.i18n.localeDisplayName
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
+import org.nekosukuriputo.nekuva.core.ui.components.SourceFaviconImage
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 
 private fun title(source: org.nekosukuriputo.nekuva.core.model.MangaSourceInfo): String =
     (source.mangaSource as? MangaParserSource)?.title ?: source.name
+
+private fun prettify(name: String): String =
+    name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
 
 /** Manage enabled sources (Doki SourcesManageFragment): search, add (catalog), pin, reorder, disable,
  *  + overflow (disable NSFW / disable all). */
@@ -121,34 +129,81 @@ fun SourcesManageScreen(
         }
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
             itemsIndexed(shown, key = { _, s -> s.name }) { index, source ->
+                val parser = source.mangaSource as? MangaParserSource
+                var menu by remember(source.name) { mutableStateOf(false) }
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                        .clickable { onSourceSettings(source.name) }
+                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = title(source),
-                        modifier = Modifier.weight(1f)
-                            .clickable { onSourceSettings(source.name) }
-                            .padding(vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    SourceFaviconImage(
+                        sourceName = source.name,
+                        displayName = title(source),
+                        modifier = Modifier.size(40.dp),
+                        letterSize = 18.sp,
                     )
-                    IconButton(onClick = { viewModel.setPinned(source.mangaSource, !source.isPinned) }) {
-                        Icon(
-                            if (source.isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                            contentDescription = stringResource(if (source.isPinned) Res.string.unpin else Res.string.pin),
-                            tint = if (source.isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (source.isPinned) {
+                                Icon(
+                                    Icons.Filled.PushPin,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Text(
+                                text = title(source),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        val subtitle = listOfNotNull(
+                            parser?.contentType?.name?.let { prettify(it) },
+                            parser?.locale?.let { localeDisplayName(it) } ?: stringResource(Res.string.various_languages),
+                        ).joinToString(", ")
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    // Reorder is only meaningful without an active search filter.
-                    IconButton(onClick = { viewModel.move(index, index - 1) }, enabled = !searchActive && index > 0) {
-                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null)
+                    // Per-source overflow (pin, reorder, settings) — Doki's popup_source_config.
+                    Box {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(if (source.isPinned) Res.string.unpin else Res.string.pin)) },
+                                onClick = { viewModel.setPinned(source.mangaSource, !source.isPinned); menu = false },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.move_up)) },
+                                enabled = !searchActive && index > 0,
+                                onClick = { viewModel.move(index, index - 1); menu = false },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.move_down)) },
+                                enabled = !searchActive && index < shown.lastIndex,
+                                onClick = { viewModel.move(index, index + 1); menu = false },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.settings)) },
+                                onClick = { onSourceSettings(source.name); menu = false },
+                            )
+                        }
                     }
-                    IconButton(onClick = { viewModel.move(index, index + 1) }, enabled = !searchActive && index < shown.lastIndex) {
-                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+                    // Disable (remove from the active list -> back to catalog).
+                    IconButton(onClick = { viewModel.setEnabled(source.mangaSource, false) }) {
+                        Icon(Icons.Filled.Block, contentDescription = stringResource(Res.string.disable))
                     }
-                    Switch(checked = true, onCheckedChange = { viewModel.setEnabled(source.mangaSource, false) })
                 }
             }
         }

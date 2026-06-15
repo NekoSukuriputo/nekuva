@@ -38,7 +38,15 @@ fun App() {
             add(org.nekosukuriputo.nekuva.core.image.LocalImageFetcher.Factory())
             add(KtorNetworkFetcherFactory(createHttpClient()))
             add(org.nekosukuriputo.nekuva.core.image.FaviconFetcher.Factory(repositoryFactory))
-        }.crossfade(true).build()
+        }
+            // Persist images (esp. source favicons) on disk so they're fetched once, not every launch (Doki).
+            .diskCache {
+                coil3.disk.DiskCache.Builder()
+                    .directory(org.nekosukuriputo.nekuva.core.image.imageDiskCacheDir(context))
+                    .maxSizeBytes(128L * 1024 * 1024)
+                    .build()
+            }
+            .crossfade(true).build()
     }
     
     val parserContext = koinInject<AppMangaLoaderContext>()

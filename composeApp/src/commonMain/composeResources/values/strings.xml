@@ -921,4 +921,6 @@
     <string name="content_type">Content type</string>
     <string name="new_sources">New sources</string>
     <string name="all_sources">All sources</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
 </resources>

@@ -3,6 +3,7 @@ package org.nekosukuriputo.nekuva.explore.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -152,7 +153,7 @@ private fun SourceGridItem(
 	onClick: () -> Unit,
 	onLongClick: () -> Unit = {},
 ) {
-    val iconUrl = "favicon://${source.mangaSource.name}"
+    val displayTitle = (source.mangaSource as? MangaParserSource)?.title ?: source.mangaSource.name
 
 	Column(
 		modifier = Modifier
@@ -163,24 +164,11 @@ private fun SourceGridItem(
 		horizontalAlignment = Alignment.CenterHorizontally
 	) {
         Box(contentAlignment = Alignment.TopEnd) {
-            SubcomposeAsyncImage(
-                model = iconUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)),
-                loading = {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-                },
-                error = {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            org.nekosukuriputo.nekuva.core.ui.components.SourceFaviconImage(
+                sourceName = source.mangaSource.name,
+                displayName = displayTitle,
+                modifier = Modifier.size(72.dp),
+                letterSize = 34.sp,
             )
             // Pinned indicator (Doki) — toggled via long-press.
             if (source.isPinned) {
@@ -194,7 +182,7 @@ private fun SourceGridItem(
         }
         Spacer(modifier = Modifier.height(8.dp))
 		Text(
-            text = source.mangaSource.name,
+            text = displayTitle,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             maxLines = 1,
