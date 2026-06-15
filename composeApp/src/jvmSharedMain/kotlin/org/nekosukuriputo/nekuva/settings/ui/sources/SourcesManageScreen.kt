@@ -1,6 +1,8 @@
 package org.nekosukuriputo.nekuva.settings.ui.sources
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,9 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.PushPin as PushPinOutlined
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,7 +63,7 @@ private fun prettify(name: String): String =
 
 /** Manage enabled sources (Doki SourcesManageFragment): search, add (catalog), pin, reorder, disable,
  *  + overflow (disable NSFW / disable all). */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SourcesManageScreen(
     onBackClick: () -> Unit,
@@ -71,33 +76,57 @@ fun SourcesManageScreen(
     var query by remember { mutableStateOf("") }
     var overflow by remember { mutableStateOf(false) }
     var noNsfw by remember { mutableStateOf(viewModel.isNsfwDisabled) }
+    var selected by remember { mutableStateOf(setOf<String>()) }
     val shown = remember(sources, query) {
         if (query.isBlank()) sources else sources.filter { title(it).contains(query, ignoreCase = true) }
     }
+    val selectionMode = selected.isNotEmpty()
+    fun toggle(name: String) { selected = if (name in selected) selected - name else selected + name }
+    fun selectedSources() = shown.filter { it.name in selected }.map { it.mangaSource }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    if (searchActive) {
-                        TextField(
+                    when {
+                        selectionMode -> Text("${selected.size}")
+                        searchActive -> TextField(
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             placeholder = { Text(stringResource(Res.string.search)) },
                         )
-                    } else {
-                        Text(stringResource(Res.string.manage_sources))
+                        else -> Text(stringResource(Res.string.manage_sources))
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (searchActive) { searchActive = false; query = "" } else onBackClick() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    IconButton(onClick = {
+                        when {
+                            selectionMode -> selected = emptySet()
+                            searchActive -> { searchActive = false; query = "" }
+                            else -> onBackClick()
+                        }
+                    }) {
+                        Icon(
+                            if (selectionMode) Icons.Filled.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                        )
                     }
                 },
                 actions = {
-                    if (!searchActive) {
+                    if (selectionMode) {
+                        // Multi-select bulk actions (Doki mode_source): pin / unpin / disable.
+                        IconButton(onClick = { viewModel.setPinnedBulk(selectedSources(), true); selected = emptySet() }) {
+                            Icon(Icons.Filled.PushPin, contentDescription = stringResource(Res.string.pin))
+                        }
+                        IconButton(onClick = { viewModel.setPinnedBulk(selectedSources(), false); selected = emptySet() }) {
+                            Icon(Icons.Outlined.PushPinOutlined, contentDescription = stringResource(Res.string.unpin))
+                        }
+                        IconButton(onClick = { viewModel.setEnabledBulk(selectedSources(), false); selected = emptySet() }) {
+                            Icon(Icons.Filled.Block, contentDescription = stringResource(Res.string.disable))
+                        }
+                    } else if (!searchActive) {
                         IconButton(onClick = { searchActive = true }) {
                             Icon(Icons.Filled.Search, contentDescription = stringResource(Res.string.search))
                         }
@@ -131,9 +160,14 @@ fun SourcesManageScreen(
             itemsIndexed(shown, key = { _, s -> s.name }) { index, source ->
                 val parser = source.mangaSource as? MangaParserSource
                 var menu by remember(source.name) { mutableStateOf(false) }
+                val isSelected = source.name in selected
                 Row(
                     modifier = Modifier.fillMaxWidth()
-                        .clickable { onSourceSettings(source.name) }
+                        .background(if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+                        .combinedClickable(
+                            onClick = { if (selectionMode) toggle(source.name) else onSourceSettings(source.name) },
+                            onLongClick = { toggle(source.name) },
+                        )
                         .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

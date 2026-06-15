@@ -25,6 +25,15 @@ class SourcesManageViewModel(
         viewModelScope.launch { repository.setSourcesEnabled(setOf(source), enabled) }
     }
 
+    /** Bulk actions for multi-select (Doki mode_source): disable / pin / unpin the selected sources. */
+    fun setEnabledBulk(sources: Collection<MangaSource>, enabled: Boolean) {
+        viewModelScope.launch { repository.setSourcesEnabled(sources, enabled) }
+    }
+
+    fun setPinnedBulk(sources: Collection<MangaSource>, pinned: Boolean) {
+        viewModelScope.launch { repository.setSourcesPinned(sources, pinned) }
+    }
+
     fun setPinned(source: MangaSource, pinned: Boolean) {
         viewModelScope.launch { repository.setSourcesPinned(setOf(source), pinned) }
     }

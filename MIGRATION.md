@@ -640,9 +640,18 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   (konfirmasi → `MutableCookieJar.clear`). Dibuka dari Manage (tap nama sumber → `SourceSettingsRoute(name)`).
 - **2F ✅ DONE — Manage app-bar (catatan user):** **search** + aksi **catalog** (+) + overflow ⋮
   **Disable NSFW** (checkable) + **Disable all** (`disableAll`→`disableAllSources`). Ref Doki `opt_sources.xml`.
-- **SISA Fase 2 (jujur, butuh area lain):** sign-in web auto-capture token butuh `evaluateJs`/WebView
-  (sementara pakai in-app Browser); multi-select bulk di Manage (Doki `mode_source`).
-- **FASE 2 SELESAI** (compile-green Android+Desktop; belum run-verify).
+- **2G ✅ DONE — Multi-select bulk di Manage** (Doki `mode_source`): **long-press** sumber → masuk mode pilih
+  (highlight `secondaryContainer`), contextual app-bar (jumlah + Close + **Pin**/**Unpin**/**Disable** terpilih
+  via `setPinnedBulk`/`setEnabledBulk`), tap di mode pilih → toggle. `combinedClickable` (onClick/onLongClick).
+- **2H ✅ DONE — Favicon (gambar 1) + placeholder (gambar 2):** baris Doki-style (ikon 40dp + nama + tipe + bahasa);
+  favicon **di-fetch SEKALI** lalu di-cache file (`FaviconCache` app-scope + `FaviconFetcher` Coil + disk-cache),
+  dipakai di Manage/Catalog/**Explore**; placeholder = kotak membulat + huruf awal berwarna (`SourceIconPlaceholder`).
+  Bug fetch (ForgottenCoroutineScope) & bug Coil3 `painter.state` (StateFlow → selalu placeholder) sudah **FIXED & run-verified**.
+- **Sign-in sumber — SUDAH berfungsi (bukan sisa Fase 2):** login berbasis **cookie** jalan di Android karena
+  `AndroidCookieJar` berbagi `CookieManager` sistem dgn WebView (in-app Browser → cookie tersimpan → sumber login).
+  Yang BELUM = auto-capture **token/localStorage** (butuh `evaluateJs`) → dipindahkan ke **area browser/WebView**
+  (lihat "DEFERRED — evaluateJs/WebView"), bukan gap Sources.
+- **FASE 2 SELESAI** (compile-green Android+Desktop; 2H run-verified; sisanya belum run-verify).
 
 ### FASE 3–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 3 Reader:** audit sisa vs `pref_reader` (mayoritas sudah; cek `pages_preload`, `reader_multitask`, dll).
