@@ -168,8 +168,9 @@ fun SettingsSlider(
     onValueChange: (Int) -> Unit,
     step: Int = 1,
     valueLabel: String = value.toString(),
+    enabled: Boolean = true,
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).alpha(if (enabled) 1f else 0.5f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Text(valueLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -180,6 +181,7 @@ fun SettingsSlider(
             onValueChange = { onValueChange(it.toInt()) },
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
             steps = steps,
+            enabled = enabled,
         )
     }
 }
@@ -191,10 +193,11 @@ fun <T> SettingsMultiChoice(
     options: List<Pair<String, T>>,
     selected: Set<T>,
     onConfirm: (Set<T>) -> Unit,
+    emptySummary: String? = null,
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val summary = options.filter { it.second in selected }.joinToString(", ") { it.first }
-    SettingsItem(title = title, summary = summary.ifEmpty { null }, onClick = { showDialog = true })
+    SettingsItem(title = title, summary = summary.ifEmpty { emptySummary }, onClick = { showDialog = true })
     if (showDialog) {
         var working by remember { mutableStateOf(selected) }
         AlertDialog(

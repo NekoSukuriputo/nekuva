@@ -653,9 +653,41 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   (lihat "DEFERRED — evaluateJs/WebView"), bukan gap Sources.
 - **FASE 2 SELESAI** (compile-green Android+Desktop; 2H run-verified; sisanya belum run-verify).
 
-### FASE 3–9 — ringkas (detail dirinci saat fase-nya tiba)
-- **Fase 3 Reader:** audit sisa vs `pref_reader` (mayoritas sudah; cek `pages_preload`, `reader_multitask`, dll).
-- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview).
+### FASE 3 — Reader settings (`pref_reader.xml`) — parity checklist + impact
+> Ref Doki: `app/src/main/res/xml/pref_reader.xml` + `settings/ReaderSettingsFragment.kt`. Layar
+> `ReaderSettingsScreen` SUDAH memuat **ke-27 preference** Doki (dibangun di sesi reader sebelumnya).
+> Fase 3 = paritas **UI screen** (dependency/divider/summary spt Doki) + verifikasi **impact** tiap setting
+> ke reader. Reader Nekuva sudah cukup lengkap (mode, zoom_mode, controls, crop, enhanced colors,
+> fullscreen, orientation, keep-screen-on, volume keys, nav-inverted, autoscroll, pull-gesture, tap-grid,
+> background, page-numbers, info-bar, chapter-toast).
+- **3A ✅ DONE — Paritas UI screen (Doki ReaderSettingsFragment):**
+  - **Dependency disable** spt Doki: `reader_mode_detect` non-aktif saat default mode = **WEBTOON**;
+    `webtoon_zoom_out` (slider) tergantung `webtoon_zoom`; `reader_bar_transparent` tergantung `reader_bar`.
+    (state controlling di-hoist ke screen; `BoolPref`/`IndexListPref`/`SettingsSlider` dapat param `enabled`.)
+  - **Divider antar grup** (Doki `allowDividerAbove`): sebelum zoom_mode, reader_controls, enhanced_colors,
+    reader_fullscreen, reader_bar, reader_background.
+  - **Multi-select empty summary** (Doki MultiSummaryProvider): `reader_controls`→"None", `reader_crop`→"Disabled".
+  - `reader_actions` kini tampil summary (Doki `reader_actions_summary`).
+- **3B ✅ DONE — Impact baru di-wire ke reader (tidak ditunda):**
+  - **`reader_bar_transparent`** → `ReaderInfoBar(transparent=…)`: bar transparan (overlay) vs solid (surface).
+  - **`webtoon_zoom`** → gating pinch-zoom strip webtoon (off = fixed 1×, tak bisa pinch/double-tap).
+  - **`webtoon_zoom_out`** (0–50%) → strip webtoon rest/min di `1 − persen` (zoom-out default), pinch s/d 3×.
+  - (`reader_chapter_toast` SUDAH ter-wire sebelumnya: `ReaderViewModel` skip toast bab bila non-aktif.)
+- **MASIH DEFERRED (impact butuh fitur reader-engine / platform — area reader-advanced, BUKAN drop):**
+  - [ ] **`reader_zoom_buttons`** (overlay tombol +/− zoom): state zoom saat ini per-halaman lokal; butuh
+        hoist zoom global + overlay kontrol — fitur UI reader-engine, ditunda ke reader-advanced.
+  - [ ] **`reader_optimize`** ("kurangi memori beta" — turunkan kualitas halaman di luar layar): Coil/Skia tak
+        punya knob downsample khusus off-screen; path RGB_565 hemat-memori sudah dipakai saat `enhanced_colors`
+        OFF (Android). Semantik persis Doki (off-screen only) ditunda.
+  - [ ] **`reader_multitask`** (buka reader di window/task terpisah): fitur Activity launchMode/multi-window
+        Android (Desktop = window baru) — platform-berat, ditunda ke reader-advanced (Android).
+  - [ ] **`pages_preload`** (always/wifi/never) belum jadi *gate* preload jaringan (preload Coil belum
+        dibatasi policy) — terkait area network; nilai tersimpan, enforcement ditunda.
+- **FASE 3 SELESAI** (compile-green Android+Desktop; belum run-verify — minta user uji layar Reader settings +
+  efek info-bar transparan & webtoon zoom-out).
+
+### FASE 4–9 — ringkas (detail dirinci saat fase-nya tiba)
+- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement ikut di sini.)
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)

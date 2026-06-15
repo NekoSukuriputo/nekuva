@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -51,37 +52,53 @@ fun ReaderSettingsScreen(
             )
         },
     ) { padding ->
+        // Doki dependencies (ReaderSettingsFragment): detect-mode disabled in WEBTOON; webtoon_zoom_out
+        // depends on webtoon_zoom; reader_bar_transparent depends on reader_bar. Hoist the controlling
+        // values to screen state so the dependent rows recompose when they change.
+        var readerMode by remember { mutableStateOf(settings.defaultReaderMode) }
+        var webtoonZoom by remember { mutableStateOf(settings.prefBoolean("webtoon_zoom", true)) }
+        var readerBar by remember { mutableStateOf(settings.prefBoolean("reader_bar", false)) }
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
-            run {
-                var readerMode by remember { mutableStateOf(settings.defaultReaderMode) }
-                SettingsSingleChoice(
-                    title = stringResource(Res.string.default_mode),
-                    options = listOf(
-                        stringResource(Res.string.standard) to ReaderMode.STANDARD,
-                        stringResource(Res.string.right_to_left) to ReaderMode.REVERSED,
-                        stringResource(Res.string.vertical) to ReaderMode.VERTICAL,
-                        stringResource(Res.string.webtoon) to ReaderMode.WEBTOON,
-                    ),
-                    selected = readerMode,
-                    onSelect = { settings.defaultReaderMode = it; readerMode = it },
-                )
-            }
-            BoolPref(settings, "reader_mode_detect", stringResource(Res.string.detect_reader_mode), stringResource(Res.string.detect_reader_mode_summary), true)
+            SettingsSingleChoice(
+                title = stringResource(Res.string.default_mode),
+                options = listOf(
+                    stringResource(Res.string.standard) to ReaderMode.STANDARD,
+                    stringResource(Res.string.right_to_left) to ReaderMode.REVERSED,
+                    stringResource(Res.string.vertical) to ReaderMode.VERTICAL,
+                    stringResource(Res.string.webtoon) to ReaderMode.WEBTOON,
+                ),
+                selected = readerMode,
+                onSelect = { settings.defaultReaderMode = it; readerMode = it },
+            )
+            BoolPref(
+                settings, "reader_mode_detect", stringResource(Res.string.detect_reader_mode),
+                stringResource(Res.string.detect_reader_mode_summary), true,
+                enabled = readerMode != ReaderMode.WEBTOON,
+            )
+
+            HorizontalDivider()
             IndexListPref(
                 settings, "zoom_mode", stringResource(Res.string.scale_mode),
                 listOf(stringResource(Res.string.zoom_mode_fit_center), stringResource(Res.string.zoom_mode_fit_height), stringResource(Res.string.zoom_mode_fit_width), stringResource(Res.string.zoom_mode_keep_start)), 0,
             )
             BoolPref(settings, "reader_zoom_buttons", stringResource(Res.string.reader_zoom_buttons), stringResource(Res.string.reader_zoom_buttons_summary), false)
-            BoolPref(settings, "webtoon_zoom", stringResource(Res.string.webtoon_zoom), stringResource(Res.string.webtoon_zoom_summary), true)
+            BoolPref(
+                settings, "webtoon_zoom", stringResource(Res.string.webtoon_zoom),
+                stringResource(Res.string.webtoon_zoom_summary), true,
+                onChange = { webtoonZoom = it },
+            )
             run {
                 var v by remember { mutableStateOf(settings.prefInt("webtoon_zoom_out", 0)) }
                 SettingsSlider(
                     title = stringResource(Res.string.default_webtoon_zoom_out),
                     value = v, valueRange = 0..50, step = 10, valueLabel = "$v%",
+                    enabled = webtoonZoom,
                     onValueChange = { settings.setPref("webtoon_zoom_out", it); v = it },
                 )
             }
             BoolPref(settings, "webtoon_gaps", stringResource(Res.string.webtoon_gaps), stringResource(Res.string.webtoon_gaps_summary), false)
+
+            HorizontalDivider()
             MultiPref(
                 settings, "reader_controls", stringResource(Res.string.reader_controls_in_bottom_bar),
                 listOf(
@@ -90,8 +107,9 @@ fun ReaderSettingsScreen(
                     stringResource(Res.string.screen_orientation) to "4", stringResource(Res.string.save_page) to "5",
                     stringResource(Res.string.automatic_scroll) to "6", stringResource(Res.string.bookmark_add) to "7",
                 ),
+                emptySummary = stringResource(Res.string.none),
             )
-            SettingsItem(title = stringResource(Res.string.reader_actions), onClick = onTapActions)
+            SettingsItem(title = stringResource(Res.string.reader_actions), summary = stringResource(Res.string.reader_actions_summary), onClick = onTapActions)
             BoolPref(settings, "reader_taps_ltr", stringResource(Res.string.reader_control_ltr), stringResource(Res.string.reader_control_ltr_summary), false)
             BoolPref(settings, "reader_volume_buttons", stringResource(Res.string.switch_pages_volume_buttons), stringResource(Res.string.switch_pages_volume_buttons_summary), false)
             BoolPref(settings, "reader_navigation_inverted", stringResource(Res.string.reader_navigation_inverted), stringResource(Res.string.reader_navigation_inverted_summary), false)
@@ -100,12 +118,17 @@ fun ReaderSettingsScreen(
                 listOf(stringResource(Res.string.disabled), stringResource(Res.string.system_default), stringResource(Res.string.advanced)), 1,
             )
             BoolPref(settings, "webtoon_pull_gesture", stringResource(Res.string.enable_pull_gesture_title), stringResource(Res.string.enable_pull_gesture_summary), false)
+
+            HorizontalDivider()
             BoolPref(settings, "enhanced_colors", stringResource(Res.string.enhanced_colors), stringResource(Res.string.enhanced_colors_summary), false)
             BoolPref(settings, "reader_optimize", stringResource(Res.string.reader_optimize), stringResource(Res.string.reader_optimize_summary), false)
             MultiPref(
                 settings, "reader_crop", stringResource(Res.string.crop_pages),
                 listOf(stringResource(Res.string.pages) to "pages", stringResource(Res.string.webtoon) to "webtoon"),
+                emptySummary = stringResource(Res.string.disabled),
             )
+
+            HorizontalDivider()
             BoolPref(settings, "reader_fullscreen", stringResource(Res.string.fullscreen_mode), stringResource(Res.string.reader_fullscreen_summary), true)
             IndexListPref(
                 settings, "reader_orientation", stringResource(Res.string.screen_orientation),
@@ -113,9 +136,20 @@ fun ReaderSettingsScreen(
             )
             BoolPref(settings, "reader_screen_on", stringResource(Res.string.keep_screen_on), stringResource(Res.string.keep_screen_on_summary), true)
             BoolPref(settings, "reader_multitask", stringResource(Res.string.reader_multitask), stringResource(Res.string.reader_multitask_summary), false)
-            BoolPref(settings, "reader_bar", stringResource(Res.string.reader_info_bar), stringResource(Res.string.reader_info_bar_summary), false)
-            BoolPref(settings, "reader_bar_transparent", stringResource(Res.string.reader_info_bar_transparent), null, true)
+
+            HorizontalDivider()
+            BoolPref(
+                settings, "reader_bar", stringResource(Res.string.reader_info_bar),
+                stringResource(Res.string.reader_info_bar_summary), false,
+                onChange = { readerBar = it },
+            )
+            BoolPref(
+                settings, "reader_bar_transparent", stringResource(Res.string.reader_info_bar_transparent),
+                null, true, enabled = readerBar,
+            )
             BoolPref(settings, "reader_chapter_toast", stringResource(Res.string.reader_chapter_toast), stringResource(Res.string.reader_chapter_toast_summary), true)
+
+            HorizontalDivider()
             IndexListPref(
                 settings, "reader_background", stringResource(Res.string.background),
                 listOf(stringResource(Res.string.system_default), stringResource(Res.string.color_light), stringResource(Res.string.color_dark), stringResource(Res.string.color_white), stringResource(Res.string.color_black)), 0,

@@ -160,8 +160,12 @@ fun ReaderScreen(
         if (zoomMode == org.nekosukuriputo.nekuva.core.model.ZoomMode.KEEP_START) Alignment.TopCenter else Alignment.Center
     }
     val showInfoBar = remember { settings.prefBoolean("reader_bar", false) }
+    val infoBarTransparent = remember { settings.isReaderBarTransparent }
     val showPageNumbers = remember { settings.prefBoolean("pages_numbers", false) }
     val webtoonGaps = remember { settings.isWebtoonGapsEnabled }
+    // Webtoon zoom (Doki webtoon_zoom + webtoon_zoom_out): gate pinch-zoom + default zoom-out percent.
+    val webtoonZoomEnabled = remember { settings.prefBoolean("webtoon_zoom", true) }
+    val webtoonZoomOut = remember { settings.prefInt("webtoon_zoom_out", 0).coerceIn(0, 50) }
     val animatePages = remember { settings.readerAnimation != org.nekosukuriputo.nekuva.core.prefs.ReaderAnimation.NONE }
     val doubleOnLandscape = remember { settings.isReaderDoubleOnLandscape }
     val controls = remember { viewModel.readerControls }
@@ -299,6 +303,8 @@ fun ReaderScreen(
                         contentScale = pageContentScale,
                         pageAlignment = pageAlignment,
                         webtoonGaps = webtoonGaps,
+                        webtoonZoomEnabled = webtoonZoomEnabled,
+                        webtoonZoomOut = webtoonZoomOut,
                         animatePages = animatePages,
                         doubleOnLandscape = doubleOnLandscape,
                         tapGridSettings = tapGridSettings,
@@ -317,7 +323,7 @@ fun ReaderScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (showInfoBar && pageIndicator.total > 0) {
-                            ReaderInfoBar(indicator = pageIndicator)
+                            ReaderInfoBar(indicator = pageIndicator, transparent = infoBarTransparent)
                         } else if (showPageNumbers && pageIndicator.total > 0) {
                             Text(
                                 text = "${pageIndicator.page} / ${pageIndicator.total}",
@@ -891,6 +897,8 @@ fun ReaderContent(
     contentScale: ContentScale,
     pageAlignment: Alignment,
     webtoonGaps: Boolean,
+    webtoonZoomEnabled: Boolean,
+    webtoonZoomOut: Int,
     animatePages: Boolean,
     doubleOnLandscape: Boolean,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
@@ -909,7 +917,7 @@ fun ReaderContent(
             (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.STANDARD ||
                 mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED)
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
-            WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, navEvents, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
+            WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, webtoonZoomEnabled, webtoonZoomOut, navEvents, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
             PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, tapGridSettings, tapsReversed, navEvents, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
@@ -1091,10 +1099,11 @@ private fun readerBackgroundColor(bg: org.nekosukuriputo.nekuva.core.prefs.Reade
     org.nekosukuriputo.nekuva.core.prefs.ReaderBackground.BLACK -> Color.Black
 }
 
-/** Thin bottom info bar (Doki's ReaderInfoBarView): chapter name · clock · battery · page x/total. */
+/** Thin bottom info bar (Doki's ReaderInfoBarView): chapter name · clock · battery · page x/total.
+ *  [transparent] (Doki reader_bar_transparent) drops the background fill so it overlays the page. */
 @OptIn(kotlin.time.ExperimentalTime::class)
 @Composable
-private fun ReaderInfoBar(indicator: PageIndicator, modifier: Modifier = Modifier) {
+private fun ReaderInfoBar(indicator: PageIndicator, transparent: Boolean, modifier: Modifier = Modifier) {
     val battery = rememberBatteryPercent()
     var clock by remember { mutableStateOf(currentClockLabel()) }
     LaunchedEffect(Unit) {
@@ -1106,7 +1115,7 @@ private fun ReaderInfoBar(indicator: PageIndicator, modifier: Modifier = Modifie
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
+            .background(if (transparent) Color.Transparent else MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1152,6 +1161,8 @@ private fun WebtoonReader(
     autoScroll: Boolean,
     autoScrollSpeed: Float,
     webtoonGaps: Boolean,
+    webtoonZoomEnabled: Boolean,
+    webtoonZoomOut: Int,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
     onVisibleIndexChanged: (Int) -> Unit,
     onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
@@ -1196,12 +1207,15 @@ private fun WebtoonReader(
     }
     // Pinch-zoom for the continuous strip (Doki's webtoon zoom). The whole LazyColumn is scaled via
     // graphicsLayer; vertical drags fall through to the list scroll, while pinch + horizontal pan are
-    // handled here. Double-tap toggles 1× / 2×.
-    // Webtoon is full-width at rest (scale 1); the user can pinch up to 3×.
-    var scale by remember { mutableStateOf(1f) }
+    // handled here. Double-tap toggles minScale / 2×.
+    // Doki webtoon_zoom gates whether the strip is zoomable at all; webtoon_zoom_out lets the strip
+    // rest zoomed-OUT below 100% by that percent (minScale), so it starts there. Disabled → fixed 1×.
+    val minScale = if (webtoonZoomEnabled) (1f - webtoonZoomOut / 100f) else 1f
+    val maxScale = if (webtoonZoomEnabled) 3f else 1f
+    var scale by remember(minScale) { mutableStateOf(minScale) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-    fun maxPanX() = (size.width * (scale - 1f)) / 2f
+    fun maxPanX() = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
     Box(
         modifier = Modifier.fillMaxSize()
             .onSizeChanged { size = it }
@@ -1210,14 +1224,16 @@ private fun WebtoonReader(
                 detectTapGestures(
                     onTap = { onToggleControls() },
                     onDoubleTap = {
-                        if (scale > 1f) { scale = 1f; offsetX = 0f } else { scale = 2f }
+                        if (!webtoonZoomEnabled) return@detectTapGestures
+                        if (scale > minScale) { scale = minScale; offsetX = 0f } else { scale = 2f }
                     },
                     onLongPress = { onShowMenu() },
                 )
             }
             // Pinch (2 fingers) zooms; while zoomed a horizontal one-finger drag pans. Vertical drags
             // are NOT consumed, so the LazyColumn keeps scrolling normally.
-            .pointerInput(Unit) {
+            .pointerInput(webtoonZoomEnabled, minScale, maxScale) {
+                if (!webtoonZoomEnabled) return@pointerInput
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
                     do {
@@ -1226,7 +1242,7 @@ private fun WebtoonReader(
                         if (pressed >= 2) {
                             val zoom = event.calculateZoom()
                             if (zoom != 1f) {
-                                scale = (scale * zoom).coerceIn(1f, 3f)
+                                scale = (scale * zoom).coerceIn(minScale, maxScale)
                                 offsetX = offsetX.coerceIn(-maxPanX(), maxPanX())
                                 event.changes.forEach { if (it.positionChanged()) it.consume() }
                             }
