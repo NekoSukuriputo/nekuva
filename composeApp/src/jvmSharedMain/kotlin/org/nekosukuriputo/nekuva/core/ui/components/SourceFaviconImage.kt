@@ -15,15 +15,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.SubcomposeAsyncImageContent
-import coil3.compose.AsyncImagePainter
 
 /**
- * Source favicon (Doki FaviconView): loads `favicon://<name>` via Coil (disk-cached, fetched once),
- * falling back to a Doki-style letter placeholder while loading or on error.
+ * Source favicon (Doki FaviconView): loads `favicon://<name>` via Coil (file-cached, fetched once),
+ * falling back to a Doki-style letter placeholder while loading or on error. Uses the loading/error
+ * slots so the loaded image shows on success (Coil 3's `painter.state` is a StateFlow, so a
+ * `when (painter.state)` content lambda never matched and always showed the placeholder).
  */
 @Composable
 fun SourceFaviconImage(
@@ -35,13 +36,11 @@ fun SourceFaviconImage(
     SubcomposeAsyncImage(
         model = "favicon://$sourceName",
         contentDescription = displayName,
+        contentScale = ContentScale.Fit,
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
-    ) {
-        when (painter.state) {
-            is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
-            else -> SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize)
-        }
-    }
+        loading = { SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize) },
+        error = { SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize) },
+    )
 }
 
 /** Doki-style fallback: rounded square with a bold first letter, colour derived from the source name. */
