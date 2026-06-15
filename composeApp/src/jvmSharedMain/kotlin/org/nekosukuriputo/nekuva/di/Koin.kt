@@ -63,6 +63,13 @@ val appModule = module {
     single { org.nekosukuriputo.nekuva.core.cache.MemoryContentCache() }
     single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get()) }
     single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get()) }
+    single {
+        org.nekosukuriputo.nekuva.core.image.FaviconCache(
+            org.nekosukuriputo.nekuva.core.image.faviconCacheDir(),
+            get(), // MangaRepository.Factory
+            get(), // OkHttpClient
+        )
+    }
     single { org.nekosukuriputo.nekuva.core.parser.MangaDataRepository(get()) }
     single { 
         org.nekosukuriputo.nekuva.core.db.getRoomDatabase(
