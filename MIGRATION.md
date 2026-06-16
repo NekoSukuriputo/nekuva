@@ -773,14 +773,21 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   - **Info hint** (Doki downloads_settings_info) ditampilkan sebagai teks.
   - **Default page-save dir (Doki pages_dir):** VM `pageSaveDir`/`setPageSaveDir`; **DesktopPagePersister** kini simpan ke
     dir terkonfigurasi (fallback ~/Pictures/Nekuva) + hormati **"ask every time"** (`pages_dir_ask`) lewat AWT Save dialog.
-    Picker dir = Desktop (folder chooser); **Android picker = SAF (belum, supportsDirectoryPicker=false → baris read-only),
-    AndroidPagePersister tetap MediaStore** — gap SAF Android dicatat (sama spt custom manga-dir Android).
-- **FASE 5 SELESAI** (5A/5B compile + assembleDebug hijau; belum run-verify GUI). Deferred (gap SAF Android): page-save-dir
-  custom + ask-prompt di Android (butuh SAF launcher di reader save-flow), custom manga-dir Android di download dialog.
+- **5C ✅ DONE — Custom download location di Android (SAF) + fix duplikat (feedback user):**
+  - **`pickMangaDirectory()` Android** kini lewat SAF `OpenDocumentTree` (via `activityResultRegistry`), tree URI di-resolve
+    ke **path file** (`treeUriToPath`: primary→`getExternalStorageDirectory`, lainnya→`/storage/<vol>`) seperti Doki →
+    engine unduh berbasis `File` bisa tulis. `supportsDirectoryPicker = true` di Android → baris **"Specify directory"** di
+    settings DAN **"Destination directory → Specify directory"** di dialog unduh (halaman detail) kini aktif di Android.
+    Nudge **All-files access** (API 30+ `MANAGE_APP_ALL_FILES_ACCESS`) saat path di shared-storage & belum diizinkan.
+  - **Fix duplikat "manga":** baris direktori kini tampil **path sebagai summary** (Android + Desktop) → dua dir app
+    (internal/eksternal) tak lagi terlihat kembar; Android `getDirectoryDisplayName` pakai **nama volume** (`StorageManager.getDescription`).
+- **FASE 5 SELESAI** (5A/5B/5C compile + assembleDebug hijau; belum run-verify GUI). Catatan: struktur UI Doki memisah
+  "Downloads folder" (dialog) + "Local manga directories" (layar); Nekuva memakai satu daftar radio + path (fungsional setara).
+  Page-save-dir custom + ask-prompt di **Android** masih MediaStore (butuh SAF di reader save-flow) — dicatat.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
-- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png.
+- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

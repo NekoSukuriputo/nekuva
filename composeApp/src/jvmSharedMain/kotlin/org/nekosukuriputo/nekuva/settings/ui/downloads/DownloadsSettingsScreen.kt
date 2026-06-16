@@ -80,6 +80,7 @@ fun DownloadsSettingsScreen(
             for (dir in directories) {
                 SettingsItem(
                     title = dir.name,
+                    summary = dir.path,
                     onClick = { viewModel.setDefault(dir.path) },
                     trailing = {
                         if (dir.isCustom) {

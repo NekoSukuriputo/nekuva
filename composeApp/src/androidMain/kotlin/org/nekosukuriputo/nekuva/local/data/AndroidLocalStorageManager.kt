@@ -57,14 +57,19 @@ class AndroidLocalStorageManager(
 
     override suspend fun getDirectoryDisplayName(dir: File, isFullPath: Boolean): String = runInterruptible(Dispatchers.IO) {
         val packageName = context.packageName
-        if (dir.absolutePath.contains(packageName)) {
-            dir.name
-        } else if (isFullPath) {
-            dir.path
-        } else {
-            dir.name
+        when {
+            // App-private dirs (internal/external) share the name "manga"; use the volume's friendly name
+            // so they're distinguishable (Doki getStorageName), e.g. "Internal shared storage".
+            dir.absolutePath.contains(packageName) -> storageNameOf(dir)
+            isFullPath -> dir.path
+            else -> dir.name
         }
     }
+
+    private fun storageNameOf(dir: File): String = runCatching {
+        val sm = context.getSystemService(Context.STORAGE_SERVICE) as android.os.storage.StorageManager
+        sm.getStorageVolume(dir)?.getDescription(context)
+    }.getOrNull() ?: dir.name
 
     override fun createHttpCache(): Cache = Cache(File(context.cacheDir, "http_cache"), HTTP_CACHE_SIZE_BYTES)
 
