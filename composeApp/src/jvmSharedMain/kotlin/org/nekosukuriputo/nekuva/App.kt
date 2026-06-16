@@ -111,6 +111,17 @@ fun App() {
         }
     }
 
+    // Auto-delete read chapters on start (Doki chapters_clear_auto) to free space.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (settings.prefBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_CHAPTERS_CLEAR_AUTO, false)) {
+            runCatching {
+                org.koin.core.context.GlobalContext.get()
+                    .get<org.nekosukuriputo.nekuva.local.domain.DeleteReadChaptersUseCase>()
+                    .invoke()
+            }
+        }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()

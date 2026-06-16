@@ -20,6 +20,7 @@ val localModule = module {
         kotlinx.coroutines.flow.MutableSharedFlow(extraBufferCapacity = 16)
     }
     single { LocalMangaRepository(get(), get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.local.domain.DeleteReadChaptersUseCase(get(), get(), get()) }
     factory { LocalListViewModel(get(), get(), get()) }
 }
 
@@ -136,8 +137,8 @@ val downloadModule = module {
 val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.appearance.AppearanceViewModel(get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.downloads.DownloadsSettingsViewModel(get(), get()) }
-    factory { org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkViewModel(get(), get()) }
-    factory { org.nekosukuriputo.nekuva.settings.ui.network.DataCleanupViewModel(get(), get(), get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkViewModel(get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.network.DataCleanupViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogViewModel(get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageViewModel(get(), get()) }
     factory { params -> org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsViewModel(params.get(), get(), get()) }

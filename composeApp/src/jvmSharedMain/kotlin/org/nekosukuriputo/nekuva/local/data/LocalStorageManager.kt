@@ -18,6 +18,15 @@ interface LocalStorageManager {
     /** Bytes used by [cache] under the app cache root (Doki data-cleanup sizes). */
     suspend fun computeCacheSize(cache: CacheDir): Long
 
+    /** Total bytes of ALL app caches (thumbnails + favicons + pages + http + …) — Doki storage usage. */
+    suspend fun computeCacheSize(): Long
+
+    /** Total bytes of saved/downloaded manga (Doki "Saved manga" segment). */
+    suspend fun computeStorageSize(): Long
+
+    /** Free bytes available on the storage volume (Doki "Available" segment). */
+    suspend fun computeAvailableSize(): Long
+
     /** Deletes everything under [cache]'s directory (Doki data-cleanup). */
     suspend fun clearCache(cache: CacheDir)
 

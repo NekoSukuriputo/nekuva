@@ -1,10 +1,25 @@
 package org.nekosukuriputo.nekuva.settings.ui.network
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -53,22 +68,7 @@ fun StorageNetworkScreen(
 ) {
     val settings = koinInject<AppSettings>()
     val imagesProxy by viewModel.imagesProxy.collectAsState()
-    val storageManager = koinInject<org.nekosukuriputo.nekuva.local.data.LocalStorageManager>()
-    val httpCache = koinInject<okhttp3.Cache>()
-    val platformContext = LocalPlatformContext.current
-
-    // Storage usage (Doki StorageUsagePreference): total app cache = Coil image cache + HTTP cache +
-    // favicons + pages. Computed once; reopen the screen to refresh after clearing in Data removal.
-    var cacheTotal by remember { mutableStateOf(-1L) }
-    LaunchedEffect(Unit) {
-        cacheTotal = withContext(Dispatchers.IO) {
-            val loader = SingletonImageLoader.get(platformContext)
-            (runCatching { loader.diskCache?.size ?: 0L }.getOrDefault(0L)) +
-                runCatching { httpCache.size() }.getOrDefault(0L) +
-                storageManager.computeCacheSize(org.nekosukuriputo.nekuva.local.data.CacheDir.FAVICONS) +
-                storageManager.computeCacheSize(org.nekosukuriputo.nekuva.local.data.CacheDir.PAGES)
-        }
-    }
+    val storageUsage by viewModel.storageUsage.collectAsState()
 
     val networkPolicy = listOf(
         stringResource(Res.string.always),
@@ -91,10 +91,12 @@ fun StorageNetworkScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             // Storage usage meter + Data removal sub-screen (Doki "Storage usage" category).
             SettingsCategoryHeader(stringResource(Res.string.storage_usage))
-            SettingsItem(
-                title = stringResource(Res.string.storage_usage),
-                summary = if (cacheTotal < 0) stringResource(Res.string.computing_) else formatBytes(cacheTotal),
-            )
+            val usage = storageUsage
+            if (usage == null) {
+                SettingsItem(title = stringResource(Res.string.storage_usage), summary = stringResource(Res.string.computing_))
+            } else {
+                StorageUsageBar(usage)
+            }
             SettingsItem(
                 title = stringResource(Res.string.data_removal),
                 onClick = onDataRemoval,
@@ -123,5 +125,48 @@ fun StorageNetworkScreen(
             BoolPref(settings, AppSettings.KEY_OFFLINE_DISABLED, stringResource(Res.string.disable_connectivity_check), stringResource(Res.string.disable_connectivity_check_summary), false)
             BoolPref(settings, AppSettings.KEY_ADBLOCK, stringResource(Res.string.adblock), stringResource(Res.string.adblock_summary), false)
         }
+    }
+}
+
+/** Segmented storage-usage bar + legend (Doki StorageUsagePreference / SegmentedBarView). */
+@Composable
+private fun StorageUsageBar(usage: StorageUsage) {
+    val savedColor = Color(0xFF3B82F6)   // blue — saved manga
+    val pagesColor = Color(0xFFEF4444)   // red — pages cache
+    val otherColor = Color(0xFF22C55E)   // green — other cache
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant // available
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(trackColor),
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (usage.savedManga.percent > 0f) {
+                    Box(Modifier.weight(usage.savedManga.percent).fillMaxHeight().background(savedColor))
+                }
+                if (usage.pagesCache.percent > 0f) {
+                    Box(Modifier.weight(usage.pagesCache.percent).fillMaxHeight().background(pagesColor))
+                }
+                if (usage.otherCache.percent > 0f) {
+                    Box(Modifier.weight(usage.otherCache.percent).fillMaxHeight().background(otherColor))
+                }
+                if (usage.available.percent > 0f) {
+                    Spacer(Modifier.weight(usage.available.percent))
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        StorageLegendRow(savedColor, formatBytes(usage.savedManga.bytes), stringResource(Res.string.saved_manga))
+        StorageLegendRow(pagesColor, formatBytes(usage.pagesCache.bytes), stringResource(Res.string.pages_cache))
+        StorageLegendRow(otherColor, formatBytes(usage.otherCache.bytes), stringResource(Res.string.other_cache))
+        StorageLegendRow(trackColor, formatBytes(usage.available.bytes), stringResource(Res.string.available))
+    }
+}
+
+@Composable
+private fun StorageLegendRow(color: Color, size: String, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(12.dp))
+        Text("$size - $label", style = MaterialTheme.typography.bodyMedium)
     }
 }

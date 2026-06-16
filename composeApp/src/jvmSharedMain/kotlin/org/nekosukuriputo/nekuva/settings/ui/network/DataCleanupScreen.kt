@@ -35,6 +35,7 @@ import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
+import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSwitch
 
 /** Human-readable byte size; "…" while still computing (negative sentinel). */
 internal fun formatBytes(b: Long): String = when {
@@ -65,7 +66,10 @@ fun DataCleanupScreen(
     val faviconsSize by viewModel.faviconsSize.collectAsState()
     val pagesSize by viewModel.pagesSize.collectAsState()
     val httpCacheSize by viewModel.httpCacheSize.collectAsState()
+    val searchCount by viewModel.searchHistoryCount.collectAsState()
+    val feedCount by viewModel.feedItemsCount.collectAsState()
     val busy by viewModel.busy.collectAsState()
+    var autoDelete by remember { mutableStateOf(viewModel.autoDeleteReadChapters) }
 
     // Thumbnail cache is owned by Coil; size + clear go through the loader.
     val context = LocalPlatformContext.current
@@ -92,10 +96,12 @@ fun DataCleanupScreen(
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SettingsItem(
                 title = stringResource(Res.string.clear_search_history),
+                summary = if (searchCount < 0) computing else stringResource(Res.string.items_count, searchCount),
                 onClick = { viewModel.clearSearchHistory() },
             )
             SettingsItem(
                 title = stringResource(Res.string.clear_updates_feed),
+                summary = if (feedCount < 0) computing else stringResource(Res.string.items_count, feedCount),
                 onClick = { viewModel.clearUpdatesFeed() },
             )
 
@@ -141,6 +147,24 @@ fun DataCleanupScreen(
                 title = stringResource(Res.string.clear_cookies),
                 summary = stringResource(Res.string.clear_cookies_summary),
                 onClick = { viewModel.clearCookies() },
+            )
+            SettingsItem(
+                title = stringResource(Res.string.clear_browser_data),
+                summary = stringResource(Res.string.clear_browser_data_summary),
+                onClick = { viewModel.clearBrowserData() },
+            )
+
+            HorizontalDivider()
+            SettingsItem(
+                title = stringResource(Res.string.delete_read_chapters),
+                summary = stringResource(Res.string.delete_read_chapters_summary),
+                onClick = { viewModel.deleteReadChapters() },
+            )
+            SettingsSwitch(
+                title = stringResource(Res.string.delete_read_chapters_auto),
+                summary = stringResource(Res.string.runs_on_app_start),
+                checked = autoDelete,
+                onCheckedChange = { autoDelete = it; viewModel.autoDeleteReadChapters = it },
             )
         }
     }

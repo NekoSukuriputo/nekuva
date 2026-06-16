@@ -76,6 +76,19 @@ class AndroidLocalStorageManager(
         File(context.cacheDir, cache.dir).deleteContentsRecursively()
     }
 
+    // Android cacheDir is cache-only (saved manga lives in filesDir/external) → whole dir = total cache.
+    override suspend fun computeCacheSize(): Long = runInterruptible(Dispatchers.IO) {
+        context.cacheDir.dirSizeBytes()
+    }
+
+    override suspend fun computeStorageSize(): Long = runInterruptible(Dispatchers.IO) {
+        getAvailableStorageDirs().sumOf { it.dirSizeBytes() }
+    }
+
+    override suspend fun computeAvailableSize(): Long = runInterruptible(Dispatchers.IO) {
+        runCatching { context.filesDir.usableSpace }.getOrDefault(0L)
+    }
+
     override fun adblockListFile(): File = File(File(context.cacheDir, "adblock"), "easylist.txt")
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {

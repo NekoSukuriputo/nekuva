@@ -732,10 +732,16 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   - **`DataCleanupScreen`** (route `DataCleanupRoute`, dibuka dari Storage&Network) + **`DataCleanupViewModel`**: hapus
     **riwayat pencarian / umpan diperbarui / thumbnail (Coil disk+memory) / pages cache / network(http) cache / source-icons
     (favicon) / database (cleanupLocalManga+cleanupDatabase) / cookies** — ukuran cache live, dihitung ulang tiap clear.
-  - **Storage-usage meter** di layar induk: total = Coil image cache + http cache + favicons + pages (disederhanakan dari
-    bar-breakdown Doki). Aksi inline lama (clear thumbs/cookies) dipindah ke subscreen.
-  - **DEFERRED (butuh area lain, BUKAN drop):** *delete read chapters* (+auto on-start) → area **download/local**;
-    *clear browser data (webview)* → area **browser/KCEF**; live count riwayat/umpan (hanya aksi, tanpa badge angka).
+  - **Storage-usage meter (bar segmen Doki StorageUsagePreference)** — REVISI (feedback user gbr 1): bar berwarna
+    bersegmen + legenda **Saved manga (biru) / Pages cache (merah) / Other cache (hijau) / Available (track)**.
+    `LocalStorageManager` dapat `computeCacheSize()` (total), `computeStorageSize()` (manga tersimpan), `computeAvailableSize()`
+    (free space); breakdown dihitung di `StorageNetworkViewModel` (otherCache = total − pages), digambar `StorageUsageBar`.
+  - **De-deferred — masuk Data removal (feedback user gbr 2, sesuai Doki):**
+    - **Live count** riwayat pencarian + umpan diperbarui ("N items") via `getSearchHistoryCount`/`getLogsCount`.
+    - **Clear browser data** → `expect/actual clearBrowserData()`: Android `WebStorage.deleteAllData` + `CookieManager.removeAllCookies`;
+      Desktop KCEF `CefCookieManager.getGlobalManager().deleteCookies` (best-effort).
+    - **Delete read chapters** + **auto on-start** → `DeleteReadChaptersUseCase` di-port (jvmShared, pakai
+      `LocalMangaRepository`/`HistoryRepository`/`MangaRepository.Factory`); switch `chapters_clear_auto` + trigger di `App()`.
 - **4D ✅ DONE — adblock (WebView, atas keputusan user "kerjakan penuh"):** Doki `core/network/webview/adblock/*`.
   - **Engine EasyList di-port** ke jvmShared: `Rule` (Domain/ExactUrl/Path/WithModifiers) + `RulesList` (parser block/allow
     `@@`, modifiers script/third-party) + `AdBlock` (`shouldLoadUrl(url, baseUrl)` lazy-parse + `suspend updateList()`

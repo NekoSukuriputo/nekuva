@@ -77,6 +77,9 @@ class TrackingRepository(
 
     suspend fun clearLogs() = logsDao.clear()
 
+    /** Total updates-feed entries (Doki data-cleanup count). */
+    suspend fun getLogsCount(): Int = logsDao.count()
+
     suspend fun gc() {
         tracksDao.gc()
         logsDao.gc()

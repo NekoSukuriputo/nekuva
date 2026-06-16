@@ -90,6 +90,9 @@ class MangaSearchRepository(
         prefs.remove(KEY_SEARCH_HISTORY)
     }
 
+    /** Number of stored search-history queries (Doki data-cleanup count). */
+    fun getSearchHistoryCount(): Int = loadHistory().size
+
     private fun loadHistory(): List<String> = prefs.getStringOrNull(KEY_SEARCH_HISTORY)?.let {
         try {
             json.decodeFromString<List<String>>(it)

@@ -51,6 +51,20 @@ class DesktopLocalStorageManager(
         File(appDataDir, cache.dir).deleteContentsRecursively()
     }
 
+    // Desktop appDataDir mixes caches + saved manga + KCEF, so sum ONLY the known cache subdirs.
+    override suspend fun computeCacheSize(): Long = runInterruptible(Dispatchers.IO) {
+        listOf("image_cache", "favicons", CacheDir.PAGES.dir, "http_cache", "adblock")
+            .sumOf { File(appDataDir, it).dirSizeBytes() }
+    }
+
+    override suspend fun computeStorageSize(): Long = runInterruptible(Dispatchers.IO) {
+        getAvailableStorageDirs().sumOf { it.dirSizeBytes() }
+    }
+
+    override suspend fun computeAvailableSize(): Long = runInterruptible(Dispatchers.IO) {
+        runCatching { appDataDir.usableSpace }.getOrDefault(0L)
+    }
+
     override fun adblockListFile(): File = File(File(appDataDir, "adblock"), "easylist.txt")
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {
