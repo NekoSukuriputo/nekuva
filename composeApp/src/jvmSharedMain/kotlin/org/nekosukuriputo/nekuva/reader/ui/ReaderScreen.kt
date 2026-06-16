@@ -407,7 +407,13 @@ fun ReaderScreen(
             isIncognito = isIncognito,
             onToggleIncognito = { viewModel.toggleIncognito() },
             mode = readerMode,
-            onSelectMode = { viewModel.setReaderMode(it) },
+            onSelectMode = {
+                viewModel.setReaderMode(it)
+                // Close the sheet so the reader swaps modes WITHOUT the modal scrim still on top — leaving
+                // it open made the fresh paged reader compose under the modal and intermittently lost its
+                // taps/long-press (app bar + chapter button wouldn't toggle until an app restart).
+                showConfigSheet = false
+            },
             onToggleBookmark = {
                 viewModel.toggleBookmark()
                 showConfigSheet = false

@@ -700,9 +700,14 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   minta user uji: Reader settings (dependency/divider/summary), tombol zoom, info-bar transparan, webtoon zoom-out,
   preload, dan **reader_multitask** (Android: aktifkan "Buka reader di jendela terpisah" → buka 2 manga → 2 entri
   Recents; Desktop: 2 window reader)).
+- **BUGFIX (lapor user) — tap/long-press mati setelah ganti mode webtoon→paged:** ganti mode hanya bisa dari
+  config sheet (`ModalBottomSheet`); `onSelectMode` dulu TIDAK menutup sheet → reader paged baru tersusun di
+  bawah scrim modal → intermiten kehilangan tap (app bar/tombol chapter tak toggle) + long-press, sampai
+  restart. **Fix:** `onSelectMode` kini menutup sheet (`showConfigSheet = false`) sehingga reader pindah mode
+  tanpa modal di atasnya. (Perlu run-verify user.)
 
 ### FASE 4–9 — ringkas (detail dirinci saat fase-nya tiba)
-- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement SUDAH di Fase 3; di sini cukup pastikan layar Storage&Network pakai default index Wi-Fi yang sama.)
+- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH (None, Google, CloudFlare, AdGuard, 0ms), ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement SUDAH di Fase 3; di sini cukup pastikan layar Storage&Network pakai default index Wi-Fi yang sama.), image optimization proxy (None, wsrv.nl, 0ms.dev)
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
