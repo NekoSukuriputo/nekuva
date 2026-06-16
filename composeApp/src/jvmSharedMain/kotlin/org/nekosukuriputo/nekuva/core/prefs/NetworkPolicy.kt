@@ -5,9 +5,12 @@ enum class NetworkPolicy {
     ALL,
     NONE;
 
-    fun isNetworkAllowed(): Boolean = when (this) {
+    fun isNetworkAllowed(): Boolean = isNetworkAllowed(isMetered = true)
+
+    /** Doki parity: ALL always allows, NON_METERED only on un-metered (e.g. Wi-Fi), NONE never. */
+    fun isNetworkAllowed(isMetered: Boolean): Boolean = when (this) {
         ALL -> true
-        NON_METERED -> false // TODO: check if network metered
+        NON_METERED -> !isMetered
         NONE -> false
     }
 

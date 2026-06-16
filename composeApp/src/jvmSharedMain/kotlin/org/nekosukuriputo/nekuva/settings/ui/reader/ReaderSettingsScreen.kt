@@ -157,7 +157,7 @@ fun ReaderSettingsScreen(
             BoolPref(settings, "pages_numbers", stringResource(Res.string.show_pages_numbers), stringResource(Res.string.show_pages_numbers_summary), false)
             IndexListPref(
                 settings, "pages_preload", stringResource(Res.string.preload_pages),
-                listOf(stringResource(Res.string.always), stringResource(Res.string.only_using_wifi), stringResource(Res.string.never)), 2,
+                listOf(stringResource(Res.string.always), stringResource(Res.string.only_using_wifi), stringResource(Res.string.never)), 1,
             )
         }
     }

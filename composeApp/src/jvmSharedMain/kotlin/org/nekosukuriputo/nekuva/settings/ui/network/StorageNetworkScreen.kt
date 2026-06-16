@@ -99,7 +99,7 @@ fun StorageNetworkScreen(
             )
 
             IndexListPref(settings, AppSettings.KEY_PREFETCH_CONTENT, stringResource(Res.string.prefetch_content), networkPolicy, 0)
-            IndexListPref(settings, AppSettings.KEY_PAGES_PRELOAD, stringResource(Res.string.preload_pages), networkPolicy, 2)
+            IndexListPref(settings, AppSettings.KEY_PAGES_PRELOAD, stringResource(Res.string.preload_pages), networkPolicy, 1)
 
             // Proxy sub-screen (type/address/port/auth/test) — deferred
             SettingsItem(title = stringResource(Res.string.proxy), summary = stringResource(Res.string.coming_soon), enabled = false)

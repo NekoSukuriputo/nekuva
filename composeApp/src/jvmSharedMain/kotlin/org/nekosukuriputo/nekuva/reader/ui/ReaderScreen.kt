@@ -88,6 +88,9 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -166,6 +169,19 @@ fun ReaderScreen(
     // Webtoon zoom (Doki webtoon_zoom + webtoon_zoom_out): gate pinch-zoom + default zoom-out percent.
     val webtoonZoomEnabled = remember { settings.prefBoolean("webtoon_zoom", true) }
     val webtoonZoomOut = remember { settings.prefInt("webtoon_zoom_out", 0).coerceIn(0, 50) }
+    // On-screen zoom buttons (Doki reader_zoom_buttons / ZoomControl): +/- step the CURRENT page's zoom.
+    val zoomButtonsEnabled = remember { settings.isReaderZoomButtonsEnabled }
+    val zoomCommands = remember { MutableSharedFlow<Float>(extraBufferCapacity = 4) }
+    // Page preload policy (Doki pages_preload): always / only-on-Wi-Fi (non-metered) / never. The pref
+    // stores the entry index 0=always, 1=wifi, 2=never (Doki default = Wi-Fi). Mirrors Doki's prefetch gate.
+    val networkState = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.os.NetworkState>()
+    val preloadAllowed = remember {
+        when (settings.prefString("pages_preload", "1").toIntOrNull() ?: 1) {
+            0 -> true                      // always
+            1 -> !networkState.isMetered() // only on un-metered (Wi-Fi/Ethernet)
+            else -> false                  // never
+        }
+    }
     val animatePages = remember { settings.readerAnimation != org.nekosukuriputo.nekuva.core.prefs.ReaderAnimation.NONE }
     val doubleOnLandscape = remember { settings.isReaderDoubleOnLandscape }
     val controls = remember { viewModel.readerControls }
@@ -181,6 +197,7 @@ fun ReaderScreen(
         ReaderImageOptions(
             crop = settings.isPagesCropEnabled(readerMode),
             enhancedColors = settings.is32BitColorsEnabled,
+            optimize = settings.isReaderOptimizationEnabled,
         )
     }
     // Preferred image server / mirror (Doki's ImageServerDelegate) — shown only when the source has it.
@@ -310,6 +327,8 @@ fun ReaderScreen(
                         tapGridSettings = tapGridSettings,
                         tapsReversed = tapsReversed,
                         navEvents = navEvents,
+                        zoomCommands = zoomCommands,
+                        preloadAllowed = preloadAllowed,
                         onVisibleIndexChanged = { viewModel.onVisibleIndexChanged(it) },
                         onVisibleBounds = { first, last, allowPrepend -> viewModel.onVisibleBounds(first, last, allowPrepend) },
                         onChapter = { viewModel.goToChapter(it) },
@@ -360,6 +379,19 @@ fun ReaderScreen(
                                 onToggleAutoScroll = { autoScrollActive = !autoScrollActive },
                                 rotateSupported = windowController.supportsOrientation,
                                 onRotate = { windowController.toggleOrientationLock() },
+                            )
+                        }
+                    }
+                    // On-screen zoom buttons (Doki ZoomControl): bottom-end, shown with the controls.
+                    if (zoomButtonsEnabled) {
+                        AnimatedVisibility(
+                            visible = controlsVisible,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(paddingValues),
+                        ) {
+                            ZoomButtons(
+                                modifier = Modifier.padding(end = 16.dp, bottom = 88.dp),
+                                onZoomIn = { zoomCommands.tryEmit(1.2f) },
+                                onZoomOut = { zoomCommands.tryEmit(0.8f) },
                             )
                         }
                     }
@@ -904,6 +936,8 @@ fun ReaderContent(
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
+    zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
+    preloadAllowed: Boolean,
     onVisibleIndexChanged: (Int) -> Unit,
     onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
     onChapter: (Int) -> Unit,
@@ -917,9 +951,9 @@ fun ReaderContent(
             (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.STANDARD ||
                 mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED)
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
-            WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, webtoonZoomEnabled, webtoonZoomOut, navEvents, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
+            WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, webtoonZoomEnabled, webtoonZoomOut, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
-            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, tapGridSettings, tapsReversed, navEvents, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
+            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, tapGridSettings, tapsReversed, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
     }
 }
@@ -1151,6 +1185,43 @@ private fun currentClockLabel(): String {
     return "${pad(dt.hour)}:${pad(dt.minute)}"
 }
 
+/** Floating zoom +/- buttons (Doki's ZoomControl) — stacked vertically, bottom-end of the reader. */
+@Composable
+private fun ZoomButtons(modifier: Modifier = Modifier, onZoomIn: () -> Unit, onZoomOut: () -> Unit) {
+    Column(modifier = modifier) {
+        FilledTonalIconButton(onClick = onZoomIn) {
+            Icon(Icons.Filled.ZoomIn, contentDescription = stringResource(Res.string.zoom_in))
+        }
+        Spacer(Modifier.height(8.dp))
+        FilledTonalIconButton(onClick = onZoomOut) {
+            Icon(Icons.Filled.ZoomOut, contentDescription = stringResource(Res.string.zoom_out))
+        }
+    }
+}
+
+/**
+ * Warms Coil's cache for the next [PRELOAD_AHEAD] pages after [currentIndex] (Doki's PageLoader.prefetch),
+ * using the same request flags as the on-screen pages so they hit the cache. A no-op when preloading is
+ * not allowed by the network policy (Doki pages_preload).
+ */
+@Composable
+private fun ReaderPagePreloader(pages: List<LoadedPage>, currentIndex: Int, enabled: Boolean) {
+    if (!enabled) return
+    val context = coil3.compose.LocalPlatformContext.current
+    val options = LocalReaderImageOptions.current
+    val loader = remember(context) { coil3.SingletonImageLoader.get(context) }
+    LaunchedEffect(currentIndex, pages.size, options) {
+        val start = (currentIndex + 1).coerceAtLeast(0)
+        val end = (start + PRELOAD_AHEAD).coerceAtMost(pages.size)
+        for (i in start until end) {
+            val url = pages.getOrNull(i)?.page?.url ?: continue
+            loader.enqueue(buildReaderPageRequest(context, url, options, foreground = false))
+        }
+    }
+}
+
+private const val PRELOAD_AHEAD = 3
+
 /** Continuous vertical reader (full-width images, multi-chapter append). */
 @Composable
 private fun WebtoonReader(
@@ -1164,12 +1235,16 @@ private fun WebtoonReader(
     webtoonZoomEnabled: Boolean,
     webtoonZoomOut: Int,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
+    zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
+    preloadAllowed: Boolean,
     onVisibleIndexChanged: (Int) -> Unit,
     onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
     onToggleControls: () -> Unit,
     onShowMenu: () -> Unit,
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // Preload upcoming pages into Coil's cache (Doki prefetch), gated by the network policy.
+    ReaderPagePreloader(pages, listState.firstVisibleItemIndex, preloadAllowed)
     var ready by remember { mutableStateOf(false) }
     LaunchedEffect(scrollToken) {
         if (pages.isNotEmpty()) listState.scrollToItem(scrollToIndex.coerceIn(0, pages.lastIndex))
@@ -1216,6 +1291,14 @@ private fun WebtoonReader(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     fun maxPanX() = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
+    // On-screen zoom buttons (Doki ZoomControl) step the strip's scale, like a pinch.
+    LaunchedEffect(webtoonZoomEnabled, minScale, maxScale) {
+        if (!webtoonZoomEnabled) return@LaunchedEffect
+        zoomCommands.collect { factor ->
+            scale = (scale * factor).coerceIn(minScale, maxScale)
+            offsetX = offsetX.coerceIn(-maxPanX(), maxPanX())
+        }
+    }
     Box(
         modifier = Modifier.fillMaxSize()
             .onSizeChanged { size = it }
@@ -1295,6 +1378,8 @@ private fun PagedReader(
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
+    zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
+    preloadAllowed: Boolean,
     onVisibleIndexChanged: (Int) -> Unit,
     onVisibleBounds: (first: Int, last: Int, allowPrepend: Boolean) -> Unit,
     onChapter: (Int) -> Unit,
@@ -1336,6 +1421,8 @@ private fun PagedReader(
     var ready by remember { mutableStateOf(false) }
     // While a page is zoomed, disable pager swiping so panning the page doesn't flip pages.
     var pageZoomed by remember { mutableStateOf(false) }
+    // Preload upcoming pages into Coil's cache (Doki prefetch), gated by the network policy.
+    ReaderPagePreloader(pages, unitLastPage(pagerState.currentPage), preloadAllowed)
     LaunchedEffect(scrollToken) {
         if (units.isNotEmpty()) pagerState.scrollToPage(pageToUnitIdx(scrollToIndex).coerceIn(0, lastUnit))
         ready = true
@@ -1411,7 +1498,7 @@ private fun PagedReader(
                 modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = !pageZoomed,
             ) { u ->
-                ZoomablePage(pages.getOrNull(unitFirstPage(u))?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
+                ZoomablePage(pages.getOrNull(unitFirstPage(u))?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
             }
         } else {
             // Right-to-left is done by flipping the layout direction (reliable swipe paging),
@@ -1431,9 +1518,9 @@ private fun PagedReader(
                     ) {
                         val unitPages = units.getOrNull(u)
                         if (useDouble && unitPages != null && unitPages.size == 2) {
-                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, { pageZoomed = it }, onTapGrid)
+                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
                         } else {
-                            ZoomablePage(pages.getOrNull(unitPages?.firstOrNull() ?: 0)?.page?.url, colorFilter, contentScale, pageAlignment, { pageZoomed = it }, onTapGrid)
+                            ZoomablePage(pages.getOrNull(unitPages?.firstOrNull() ?: 0)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
                         }
                     }
                 }
@@ -1454,6 +1541,8 @@ private fun DoublePageSpread(
     isReversed: Boolean,
     colorFilter: ColorFilter?,
     contentScale: ContentScale,
+    active: Boolean,
+    zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit,
 ) {
@@ -1462,6 +1551,16 @@ private fun DoublePageSpread(
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val zoomed = scale > 1f
     LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
+    // On-screen zoom buttons (Doki ZoomControl) act on the current spread only.
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        zoomCommands.collect { factor ->
+            scale = (scale * factor).coerceIn(1f, 5f)
+            val maxX = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
+            val maxY = (size.height * (scale - 1f)).coerceAtLeast(0f) / 2f
+            offset = Offset(offset.x.coerceIn(-maxX, maxX), offset.y.coerceIn(-maxY, maxY))
+        }
+    }
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         scale = (scale * zoomChange).coerceIn(1f, 5f)
         offset = if (scale > 1f) {
@@ -1532,6 +1631,8 @@ private fun ZoomablePage(
     colorFilter: ColorFilter?,
     contentScale: ContentScale,
     pageAlignment: Alignment,
+    active: Boolean,
+    zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, isLongTap: Boolean) -> Unit,
 ) {
@@ -1541,6 +1642,16 @@ private fun ZoomablePage(
     val zoomed = scale > 1f
     // Tell the pager to stop owning drags while zoomed, so pan goes to this page (not page-flip).
     LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
+    // On-screen zoom buttons (Doki ZoomControl) act on the CURRENT page only.
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        zoomCommands.collect { factor ->
+            scale = (scale * factor).coerceIn(1f, 5f)
+            val maxX = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
+            val maxY = (size.height * (scale - 1f)).coerceAtLeast(0f) / 2f
+            offset = Offset(offset.x.coerceIn(-maxX, maxX), offset.y.coerceIn(-maxY, maxY))
+        }
+    }
     // Official transform gesture (pinch + pan). Enabled ONLY while zoomed so that at 1× a one-finger
     // drag stays with the HorizontalPager (page swipe). Enter zoom via double-tap.
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
@@ -1577,7 +1688,7 @@ private fun ZoomablePage(
         contentAlignment = pageAlignment,
     ) {
         SubcomposeAsyncImage(
-            model = rememberReaderPageModel(url),
+            model = rememberReaderPageModel(url, foreground = active),
             contentDescription = null,
             contentScale = contentScale,
             colorFilter = colorFilter,

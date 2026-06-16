@@ -673,21 +673,29 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   - **`webtoon_zoom`** → gating pinch-zoom strip webtoon (off = fixed 1×, tak bisa pinch/double-tap).
   - **`webtoon_zoom_out`** (0–50%) → strip webtoon rest/min di `1 − persen` (zoom-out default), pinch s/d 3×.
   - (`reader_chapter_toast` SUDAH ter-wire sebelumnya: `ReaderViewModel` skip toast bab bila non-aktif.)
-- **MASIH DEFERRED (impact butuh fitur reader-engine / platform — area reader-advanced, BUKAN drop):**
-  - [ ] **`reader_zoom_buttons`** (overlay tombol +/− zoom): state zoom saat ini per-halaman lokal; butuh
-        hoist zoom global + overlay kontrol — fitur UI reader-engine, ditunda ke reader-advanced.
-  - [ ] **`reader_optimize`** ("kurangi memori beta" — turunkan kualitas halaman di luar layar): Coil/Skia tak
-        punya knob downsample khusus off-screen; path RGB_565 hemat-memori sudah dipakai saat `enhanced_colors`
-        OFF (Android). Semantik persis Doki (off-screen only) ditunda.
-  - [ ] **`reader_multitask`** (buka reader di window/task terpisah): fitur Activity launchMode/multi-window
-        Android (Desktop = window baru) — platform-berat, ditunda ke reader-advanced (Android).
-  - [ ] **`pages_preload`** (always/wifi/never) belum jadi *gate* preload jaringan (preload Coil belum
-        dibatasi policy) — terkait area network; nilai tersimpan, enforcement ditunda.
-- **FASE 3 SELESAI** (compile-green Android+Desktop; belum run-verify — minta user uji layar Reader settings +
-  efek info-bar transparan & webtoon zoom-out).
+- **3C ✅ DONE — Sisa impact "deferred" dituntaskan (cek kode Doki dulu):**
+  - **`reader_zoom_buttons`** (Doki `ZoomControl` / `BasePageHolder.onZoomIn/Out` = scaleBy 1.2×/0.8×): tombol
+    +/− mengambang **bottom-end** (`ZoomButtons`, `FilledTonalIconButton`), tampil saat kontrol terlihat,
+    `SharedFlow<Float>` ke halaman AKTIF saja (paged/double) atau ke strip (webtoon, clamp minScale..maxScale).
+  - **`reader_optimize`** (Doki `applyDownSampling`: foreground full, off-screen ÷4): halaman NON-foreground
+    decode di `size(720)` lewat `ReaderImageOptions.optimize` + `rememberReaderPageModel(foreground=…)`; halaman
+    aktif tetap full-res (reload saat jadi foreground — trade-off sama dgn Doki).
+  - **`pages_preload`** (Doki `PageLoader.isPrefetchApplicable` + `NetworkPolicy`): `ReaderPagePreloader`
+    enqueue `PRELOAD_AHEAD=3` halaman berikut ke cache Coil (request identik via `buildReaderPageRequest`),
+    di-gate policy **always / wifi(non-metered) / never** pakai `NetworkState.isMetered()` (didaftarkan di
+    `platformModule`). **Default diperbaiki** ke index 1 (Wi-Fi) sesuai Doki (`NetworkPolicy` default `2`=NON_METERED),
+    fix `NetworkPolicy.isNetworkAllowed(isMetered)` (NON_METERED → `!isMetered`).
+- **`reader_multitask` — TERTUNDA, butuh keputusan arsitektur (BUKAN drop):** Doki = Android-only,
+  `AppRouter.openReader` menambah `Intent.FLAG_ACTIVITY_NEW_DOCUMENT` agar tiap manga buka di **task terpisah**
+  (entri Recents sendiri / multi-window). Nekuva reader = **destinasi Compose-Nav di dalam satu `MainActivity`**
+  (Desktop = satu window), tak ada Intent/Activity untuk diberi flag. Implementasi setia perlu **restrukturisasi**
+  reader jadi Activity sendiri (Android) / window kedua (Desktop) — perubahan navigasi yang berisiko ke reader
+  yang sudah jalan. Nilai pref tetap tersimpan; menunggu keputusan user (restrukturisasi vs tetap tunda).
+- **FASE 3 SELESAI** (3A/3B/3C compile-green Android+Desktop; belum run-verify — minta user uji layar Reader
+  settings + tombol zoom, info-bar transparan, webtoon zoom-out, preload). `reader_multitask` menunggu keputusan.
 
 ### FASE 4–9 — ringkas (detail dirinci saat fase-nya tiba)
-- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement ikut di sini.)
+- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement SUDAH di Fase 3; di sini cukup pastikan layar Storage&Network pakai default index Wi-Fi yang sama.)
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
