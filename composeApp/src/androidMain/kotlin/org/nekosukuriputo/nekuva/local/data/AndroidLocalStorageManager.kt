@@ -76,6 +76,8 @@ class AndroidLocalStorageManager(
         File(context.cacheDir, cache.dir).deleteContentsRecursively()
     }
 
+    override fun adblockListFile(): File = File(File(context.cacheDir, "adblock"), "easylist.txt")
+
     private fun getConfiguredStorageDirs(): MutableSet<File> {
         val set = getAvailableStorageDirs()
         settings.userSpecifiedMangaDirectories.forEach { set += File(it) }

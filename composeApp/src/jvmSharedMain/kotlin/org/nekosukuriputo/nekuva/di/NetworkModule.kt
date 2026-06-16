@@ -22,6 +22,14 @@ val networkModule = module {
     single { ProxyProvider(get<AppSettings>()) }
     // Shared OkHttp disk cache (Doki) — also clearable from Data removal ("Clear network cache").
     single<Cache> { get<LocalStorageManager>().createHttpCache() }
+    // EasyList ad blocker (Doki adblock) — consulted by the in-app browser's request interception.
+    single {
+        org.nekosukuriputo.nekuva.core.network.webview.adblock.AdBlock(
+            get<AppSettings>(),
+            get<LocalStorageManager>().adblockListFile(),
+            get<OkHttpClient>(),
+        )
+    }
 
     single<OkHttpClient> {
         val settings = get<AppSettings>()

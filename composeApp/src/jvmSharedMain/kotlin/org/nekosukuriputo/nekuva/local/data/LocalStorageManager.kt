@@ -20,4 +20,7 @@ interface LocalStorageManager {
 
     /** Deletes everything under [cache]'s directory (Doki data-cleanup). */
     suspend fun clearCache(cache: CacheDir)
+
+    /** File where the downloaded EasyList lives (Doki AdBlock). */
+    fun adblockListFile(): File
 }

@@ -99,6 +99,18 @@ fun App() {
         }
     }
 
+    // Ad blocker (Doki AdListUpdateService): download/refresh EasyList on launch when adblock is on, so
+    // the in-app browser's request interception has rules to match.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (settings.isAdBlockEnabled) {
+            runCatching {
+                org.koin.core.context.GlobalContext.get()
+                    .get<org.nekosukuriputo.nekuva.core.network.webview.adblock.AdBlock>()
+                    .updateList()
+            }
+        }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()

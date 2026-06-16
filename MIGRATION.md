@@ -736,9 +736,21 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     bar-breakdown Doki). Aksi inline lama (clear thumbs/cookies) dipindah ke subscreen.
   - **DEFERRED (butuh area lain, BUKAN drop):** *delete read chapters* (+auto on-start) → area **download/local**;
     *clear browser data (webview)* → area **browser/KCEF**; live count riwayat/umpan (hanya aksi, tanpa badge angka).
-- **4D ⏳ TODO — adblock** (Doki `core/network/webview/adblock/*`): fitur **WebView-layer** (browser), bukan interceptor OkHttp.
+- **4D ✅ DONE — adblock (WebView, atas keputusan user "kerjakan penuh"):** Doki `core/network/webview/adblock/*`.
+  - **Engine EasyList di-port** ke jvmShared: `Rule` (Domain/ExactUrl/Path/WithModifiers) + `RulesList` (parser block/allow
+    `@@`, modifiers script/third-party) + `AdBlock` (`shouldLoadUrl(url, baseUrl)` lazy-parse + `suspend updateList()`
+    unduh EasyList `If-Modified-Since`). CSSRuleBuilder dilewati (cosmetic, tak dipakai jalur match Doki).
+  - **File list:** `LocalStorageManager.adblockListFile()` (android `cacheDir/adblock/easylist.txt`, desktop `~/.nekuva/adblock/…`).
+    Refresh saat app start bila adblock ON (App() LaunchedEffect, Doki `AdListUpdateService`).
+  - **Intercept request di KEDUA webview:** Android `WebViewClient.shouldInterceptRequest` → blok = `WebResourceResponse`
+    kosong; Desktop **KCEF** `CefRequestHandler.getResourceRequestHandler` → `onBeforeResourceLoad` return true (cancel).
+    Base URL pakai `state.currentUrl` (hindari akses WebView.getUrl off-thread). `AdBlock` single di Koin.
+  - Toggle `adblock` di Storage&Network kini benar-benar memblokir iklan di in-app browser. (Run-verify GUI: buka browser,
+    aktifkan adblock, banding halaman beriklan.)
 - **Sudah ada sebelumnya:** `images_proxy` (RealImageProxyInterceptor), `no_offline` (NetworkState.isOfflineCheckDisabled),
-  `prefetch_content`/`pages_preload` (default Wi-Fi disamakan di Fase 3). (Verifikasi impact images_proxy di 4C/4D.)
+  `prefetch_content`/`pages_preload` (default Wi-Fi disamakan di Fase 3).
+- **FASE 4 SELESAI** (4A/4B/4C/4D compile + assembleDebug hijau; belum run-verify GUI). Deferred tercatat:
+  delete-read-chapters (download), webview-data clear (browser), live count riwayat/umpan.
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)

@@ -51,6 +51,8 @@ class DesktopLocalStorageManager(
         File(appDataDir, cache.dir).deleteContentsRecursively()
     }
 
+    override fun adblockListFile(): File = File(File(appDataDir, "adblock"), "easylist.txt")
+
     private fun getConfiguredStorageDirs(): MutableSet<File> {
         val set = getAvailableStorageDirs()
         // User-picked download folders (persisted) so they show in the picker and their manga appear in Local.

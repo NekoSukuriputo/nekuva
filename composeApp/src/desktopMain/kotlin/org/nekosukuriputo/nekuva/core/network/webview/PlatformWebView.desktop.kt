@@ -21,6 +21,13 @@ import org.cef.browser.CefFrame
 import org.cef.browser.CefRendering
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.handler.CefResourceRequestHandler
+import org.cef.handler.CefResourceRequestHandlerAdapter
+import org.cef.misc.BoolRef
+import org.cef.network.CefRequest
+import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.network.webview.adblock.AdBlock
 
 @Composable
 actual fun PlatformWebView(
@@ -30,10 +37,30 @@ actual fun PlatformWebView(
 ) {
     var browser by remember { mutableStateOf<KCEFBrowser?>(null) }
     val scope = rememberCoroutineScope()
+    val adBlock = koinInject<AdBlock>()
 
     DisposableEffect(url) {
         val job = scope.launch(Dispatchers.IO) {
             val client = KcefManager.newClient() ?: return@launch
+            // Ad blocking (Doki adblock): cancel matched sub-resource requests before they load.
+            client.addRequestHandler(object : CefRequestHandlerAdapter() {
+                override fun getResourceRequestHandler(
+                    b: CefBrowser?,
+                    frame: CefFrame?,
+                    request: CefRequest?,
+                    isNavigation: Boolean,
+                    isDownload: Boolean,
+                    requestInitiator: String?,
+                    disableDefaultHandling: BoolRef?,
+                ): CefResourceRequestHandler {
+                    return object : CefResourceRequestHandlerAdapter() {
+                        override fun onBeforeResourceLoad(rb: CefBrowser?, rf: CefFrame?, req: CefRequest?): Boolean {
+                            val u = req?.url ?: return false
+                            return !adBlock.shouldLoadUrl(u, state.currentUrl.ifEmpty { null })
+                        }
+                    }
+                }
+            })
             client.addDisplayHandler(object : CefDisplayHandlerAdapter() {
                 override fun onTitleChange(b: CefBrowser?, title: String?) {
                     title?.let { state.title = it }
