@@ -787,6 +787,11 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   ke tree via `DocumentsContract.createDocument` (tanpa dep androidx.documentfile); **fallback** → MediaStore (Pictures/Nekuva).
   Settings page-save-dir row pakai `pickPageSaveDir()` + label ramah (`pageSaveDirLabel`). Catatan kecil: prompt "ask" dari
   **reader di task terpisah (multitask)** pakai Activity foreground via `LocaleActivityHolder` (kasus umum = reader di MainActivity OK).
+- **BUGFIX Android download crash/stuck (ROOT CAUSE, dari logcat):** `MangaIndex` menulis `manga.rating`
+  (Float) + `chapter.number` (Float) via `JSONObject.put(String, Float)`. **org.json platform Android tak punya
+  overload `put(String, Float)`** (hanya Maven org.json yang dipakai compile/Desktop) → `NoSuchMethodError` (Error,
+  bukan Exception → lolos crash/stuck). Fix: `.toDouble()` pada kedua put (CLAUDE.md §4.6). + `runDownload` kini
+  catch `Throwable` (Error tampil sbg "Gagal" + pesan, bukan crash/hang). **Aturan:** JANGAN `put(String, Float)` ke org.json.
 - **BUGFIX (feedback user):** (1) **Android radio default tak respons** → `AndroidLocalStorageManager.getDefaultWriteableDir()`
   dulu hardcode `null` (abaikan `mangaStorageDir`); kini baca `mangaStorageDir` spt Desktop. (2) **Force-close saat unduh ke
   dir custom Android** → `DownloadManager.scope` dapat `CoroutineExceptionHandler` (uncaught di engine dicatat, bukan crash) +

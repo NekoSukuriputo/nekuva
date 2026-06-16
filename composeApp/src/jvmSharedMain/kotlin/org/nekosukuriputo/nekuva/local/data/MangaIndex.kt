@@ -48,7 +48,9 @@ class MangaIndex(source: String?) {
 		json.put(KEY_AUTHORS, JSONArray(manga.authors))
 		json.put(KEY_COVER, manga.coverUrl)
 		json.put(KEY_DESCRIPTION, manga.description)
-		json.put(KEY_RATING, manga.rating)
+		// .toDouble(): Android's platform org.json has no put(String, Float) overload (only Maven's does) —
+		// passing a Float crashes with NoSuchMethodError on Android (CLAUDE.md §4.6).
+		json.put(KEY_RATING, manga.rating.toDouble())
 		json.put(KEY_CONTENT_RATING, manga.contentRating?.name)
 		json.put(KEY_STATE, manga.state?.name)
 		json.put(KEY_SOURCE, manga.source.name)
@@ -104,7 +106,8 @@ class MangaIndex(source: String?) {
 		val chapters = json.getJSONObject(KEY_CHAPTERS)
 		if (!chapters.has(chapter.value.id.toString())) {
 			val jo = JSONObject()
-			jo.put(KEY_NUMBER, chapter.value.number)
+			// .toDouble(): MangaChapter.number is Float; Android's platform org.json has no put(String, Float).
+			jo.put(KEY_NUMBER, chapter.value.number.toDouble())
 			jo.put(KEY_VOLUME, chapter.value.volume)
 			jo.put(KEY_URL, chapter.value.url)
 			jo.put(KEY_NAME, chapter.value.title.orEmpty())
