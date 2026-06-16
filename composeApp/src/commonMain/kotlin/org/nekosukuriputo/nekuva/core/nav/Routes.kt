@@ -58,6 +58,9 @@ data object BackupSettingsRoute
 data object StorageNetworkSettingsRoute
 
 @Serializable
+data object ProxySettingsRoute
+
+@Serializable
 data object ReaderSettingsRoute
 
 @Serializable

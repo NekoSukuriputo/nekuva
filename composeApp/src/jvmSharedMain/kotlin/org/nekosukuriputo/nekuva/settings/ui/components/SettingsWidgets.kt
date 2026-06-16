@@ -17,11 +17,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -152,6 +157,52 @@ fun <T> SettingsSingleChoice(
                 }
             },
             confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
+    }
+}
+
+/**
+ * Text-entry preference (Doki's EditTextPreference): a row showing the current value as summary; tapping
+ * opens a dialog with a single-line field. [isPassword] masks both the summary and the field.
+ */
+@Composable
+fun SettingsEditText(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean = true,
+    isPassword: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    placeholder: String? = null,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val summary = when {
+        value.isEmpty() -> null
+        isPassword -> "•".repeat(value.length.coerceIn(1, 8))
+        else -> value
+    }
+    SettingsItem(title = title, summary = summary, enabled = enabled, onClick = { showDialog = true })
+    if (showDialog) {
+        var text by remember { mutableStateOf(value) }
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(title) },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    placeholder = placeholder?.let { { Text(it) } },
+                    visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false; onValueChange(text) }) { Text(stringResource(Res.string.save)) }
+            },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) { Text(stringResource(Res.string.cancel)) }
             },

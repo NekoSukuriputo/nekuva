@@ -707,7 +707,28 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   tanpa modal di atasnya. (Perlu run-verify user.)
 
 ### FASE 4–9 — ringkas (detail dirinci saat fase-nya tiba)
-- **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH (None, Google, CloudFlare, AdGuard, 0ms), ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement SUDAH di Fase 3; di sini cukup pastikan layar Storage&Network pakai default index Wi-Fi yang sama.), image optimization proxy (None, wsrv.nl, 0ms.dev)
+### FASE 4 — Storage & Network (`pref_network_storage.xml` + `pref_proxy.xml`) — checklist + impact
+> Ref Doki: `settings/StorageAndNetworkSettingsFragment` + `ProxySettingsFragment` + `core/network/NetworkModule`
+> (OkHttp builder), `DoHManager`, `SSLUtils`, `ProxyProvider`, `userdata/storage/*` (storage meter + cleanup).
+> **Temuan awal:** Nekuva sudah punya `DoHManager`/`SSLUtils` (androidMain, TAK terpakai) + accessor proxy/doh/ssl,
+> tapi OkHttp (`networkModule`) TIDAK memakai proxy/DoH/ssl, dan `dnsOverHttps` di-hardcode `NONE` → semua
+> setting itu "tersimpan tapi mati". Fase 4 = hidupkan impact-nya + lengkapi UI (proxy subscreen, data-cleanup, meter).
+- **4A ✅ DONE — Impact network di-wire ke OkHttp (inti "jangan cuma setting"):**
+  - `dnsOverHttps` kini baca `KEY_DOH` (index → `DoHProvider`); `DoHManager` dipindah ke **jvmShared** (cache opsional)
+    dan dipasang `.dns(DoHManager(settings))` → DoH live (None/Google/CloudFlare/AdGuard/0ms), fallback system DNS.
+  - **`ProxyProvider`** baru (jvmShared, JVM `ProxySelector`+`Authenticator`, baca settings live + set default JVM) →
+    `.proxySelector`/`.proxyAuthenticator` di OkHttp; config tak lengkap → degrade ke DIRECT (tak bikin semua request gagal).
+  - **`ssl_bypass`** → `.disableCertificateVerification()` (dipindah ke jvmShared, pure JVM) saat ON (build-time → efektif
+    setelah restart, sama spt Doki). `installExtraCertificates` tetap Android (`ExtraCertificates.kt`).
+- **4B ✅ DONE — Proxy subscreen** (`ProxySettingsScreen`, route `ProxySettingsRoute`, dibuka dari Storage&Network,
+  stub "coming soon" diganti): type (Disabled/HTTP/SOCKS), address, port (number), auth (username/password mask) —
+  address/port/auth redup saat Disabled (Doki dependency); **Test connection** = GET `neverssl.com` lewat OkHttp →
+  dialog "Connection is OK"/pesan error. Komponen baru **`SettingsEditText`** (≈ Doki EditTextPreference).
+- **4C ⏳ TODO — Data removal subscreen + storage-usage meter** (Doki `DataCleanupSettingsFragment` +
+  `StorageUsagePreference`): clear pages cache / thumbnails / http cache / cookies / search history / updates feed / webview.
+- **4D ⏳ TODO — adblock** (Doki `core/network/webview/adblock/*`): fitur **WebView-layer** (browser), bukan interceptor OkHttp.
+- **Sudah ada sebelumnya:** `images_proxy` (RealImageProxyInterceptor), `no_offline` (NetworkState.isOfflineCheckDisabled),
+  `prefetch_content`/`pages_preload` (default Wi-Fi disamakan di Fase 3). (Verifikasi impact images_proxy di 4C/4D.)
 - **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)

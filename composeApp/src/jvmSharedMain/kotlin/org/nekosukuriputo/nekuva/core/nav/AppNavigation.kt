@@ -227,6 +227,12 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<StorageNetworkSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.network.StorageNetworkScreen(
                         onBackClick = { navController.popBackStack() },
+                        onProxy = { navController.navigate(ProxySettingsRoute) },
+                    )
+                }
+                composable<ProxySettingsRoute> {
+                    org.nekosukuriputo.nekuva.settings.ui.network.ProxySettingsScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<BackupSettingsRoute> {

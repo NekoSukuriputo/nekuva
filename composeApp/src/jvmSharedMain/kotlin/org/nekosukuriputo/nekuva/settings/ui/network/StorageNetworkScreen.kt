@@ -46,6 +46,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsSingleChoice
 fun StorageNetworkScreen(
     viewModel: StorageNetworkViewModel = koinViewModel(),
     onBackClick: () -> Unit,
+    onProxy: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     val imagesProxy by viewModel.imagesProxy.collectAsState()
@@ -101,8 +102,8 @@ fun StorageNetworkScreen(
             IndexListPref(settings, AppSettings.KEY_PREFETCH_CONTENT, stringResource(Res.string.prefetch_content), networkPolicy, 0)
             IndexListPref(settings, AppSettings.KEY_PAGES_PRELOAD, stringResource(Res.string.preload_pages), networkPolicy, 1)
 
-            // Proxy sub-screen (type/address/port/auth/test) — deferred
-            SettingsItem(title = stringResource(Res.string.proxy), summary = stringResource(Res.string.coming_soon), enabled = false)
+            // Proxy sub-screen (type/address/port/auth/test) — Doki ProxySettingsFragment.
+            SettingsItem(title = stringResource(Res.string.proxy), onClick = onProxy)
 
             IndexListPref(
                 settings, AppSettings.KEY_DOH, stringResource(Res.string.dns_over_https),

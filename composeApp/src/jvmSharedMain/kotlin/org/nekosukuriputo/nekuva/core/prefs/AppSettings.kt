@@ -38,7 +38,14 @@ import kotlinx.coroutines.flow.map
 
 class AppSettings(private val prefs: ObservableSettings) {
 
-	val dnsOverHttps: org.nekosukuriputo.nekuva.core.network.DoHProvider get() = org.nekosukuriputo.nekuva.core.network.DoHProvider.NONE
+	// DNS-over-HTTPS provider (Doki `doh`). Stored as the entry index (0=None…4=0ms) by the settings UI.
+	val dnsOverHttps: org.nekosukuriputo.nekuva.core.network.DoHProvider
+		get() {
+			val idx = prefs.getStringOrNull(KEY_DOH)?.toIntOrNull() ?: 0
+			return org.nekosukuriputo.nekuva.core.network.DoHProvider.entries.getOrElse(idx) {
+				org.nekosukuriputo.nekuva.core.network.DoHProvider.NONE
+			}
+		}
 
 	// TODO: connectivityManager
 	private val mangaListBadgesDefault = setOf("1", "2", "4")

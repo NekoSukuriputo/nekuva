@@ -3,22 +3,36 @@ package org.nekosukuriputo.nekuva.di
 import okhttp3.OkHttpClient
 import org.koin.dsl.module
 import org.nekosukuriputo.nekuva.core.network.CloudFlareInterceptor
+import org.nekosukuriputo.nekuva.core.network.DoHManager
 import org.nekosukuriputo.nekuva.core.network.GZipInterceptor
+import org.nekosukuriputo.nekuva.core.network.ProxyProvider
 import org.nekosukuriputo.nekuva.core.network.RateLimitInterceptor
 import org.nekosukuriputo.nekuva.core.network.cookies.MutableCookieJar
 import org.nekosukuriputo.nekuva.core.network.cookies.createCookieJar
+import org.nekosukuriputo.nekuva.core.network.disableCertificateVerification
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import java.util.concurrent.TimeUnit
 
 val networkModule = module {
     // Platform-specific so WebView/KCEF and OkHttp share cookies (CloudFlare clearance).
     single<MutableCookieJar> { createCookieJar() }
-    
+    // User-configurable proxy (Doki). selector/authenticator read settings live → no client rebuild.
+    single { ProxyProvider(get<AppSettings>()) }
+
     single<OkHttpClient> {
+        val settings = get<AppSettings>()
         OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
             .cookieJar(get<MutableCookieJar>())
+            // Proxy (Doki proxy_type_2/address/port + auth) — live via ProxyProvider.
+            .proxySelector(get<ProxyProvider>().selector)
+            .proxyAuthenticator(get<ProxyProvider>().authenticator)
+            // DNS-over-HTTPS (Doki doh) — DoHManager reads the provider live, falls back to system DNS.
+            .dns(DoHManager(settings))
+            // SSL bypass (Doki ssl_bypass): trust-all when enabled (build-time → applies after restart).
+            .apply { if (settings.isSSLBypassEnabled) disableCertificateVerification() }
             .addInterceptor(GZipInterceptor())
             .addInterceptor(CloudFlareInterceptor())
             .addInterceptor(RateLimitInterceptor())

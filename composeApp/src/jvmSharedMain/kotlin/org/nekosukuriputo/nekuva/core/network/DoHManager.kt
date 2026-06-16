@@ -1,4 +1,4 @@
-﻿package org.nekosukuriputo.nekuva.core.network
+package org.nekosukuriputo.nekuva.core.network
 
 import okhttp3.Cache
 import okhttp3.Dns
@@ -9,12 +9,18 @@ import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import java.net.InetAddress
 import java.net.UnknownHostException
 
+/**
+ * DNS resolver that routes lookups through the user-selected DNS-over-HTTPS provider (Doki `doh`).
+ * Reads [AppSettings.dnsOverHttps] live, so changing the provider takes effect for new connections
+ * without rebuilding the client. Falls back to the system resolver on failure. Shared (jvm) so both
+ * Android and Desktop get the same behaviour.
+ */
 class DoHManager(
-	cache: Cache,
 	private val settings: AppSettings,
+	cache: Cache? = null,
 ) : Dns {
 
-	private val bootstrapClient = OkHttpClient.Builder().cache(cache).build()
+	private val bootstrapClient = OkHttpClient.Builder().apply { if (cache != null) cache(cache) }.build()
 
 	private var cachedDelegate: Dns? = null
 	private var cachedProvider: DoHProvider? = null
@@ -92,8 +98,6 @@ class DoHManager(
 	private fun tryGetByIp(ip: String): InetAddress? = try {
 		InetAddress.getByName(ip)
 	} catch (e: UnknownHostException) {
-		e.printStackTrace()
 		null
 	}
 }
-

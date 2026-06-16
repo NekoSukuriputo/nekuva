@@ -1,37 +1,14 @@
-﻿package org.nekosukuriputo.nekuva.core.network
+package org.nekosukuriputo.nekuva.core.network
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.AssetManager
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.tls.HandshakeCertificates
-import java.security.SecureRandom
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.X509TrustManager
 
-@SuppressLint("CustomX509TrustManager")
-fun OkHttpClient.Builder.disableCertificateVerification() = also { builder ->
-	runCatching {
-		val trustAllCerts = object : X509TrustManager {
-			override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) = Unit
-
-			override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) = Unit
-
-			override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-		}
-		val sslContext = SSLContext.getInstance("SSL")
-		sslContext.init(null, arrayOf(trustAllCerts), SecureRandom())
-		val sslSocketFactory: SSLSocketFactory = sslContext.socketFactory
-		builder.sslSocketFactory(sslSocketFactory, trustAllCerts)
-		builder.hostnameVerifier { _, _ -> true }
-	}.onFailure {
-		it.printStackTrace()
-	}
-}
+// disableCertificateVerification() lives in jvmShared SSLUtils (pure JVM, shared android+desktop).
 
 fun OkHttpClient.Builder.installExtraCertificates(context: Context) = also { builder ->
 	val certificatesBuilder = HandshakeCertificates.Builder()
@@ -59,5 +36,3 @@ private fun loadCert(context: Context, path: String): X509Certificate? = runCatc
 		Log.i("ExtraCerts", "Loaded cert $path")
 	}
 }.getOrNull()
-
-
