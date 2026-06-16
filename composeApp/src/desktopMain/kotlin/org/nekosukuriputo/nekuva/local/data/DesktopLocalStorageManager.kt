@@ -2,6 +2,7 @@ package org.nekosukuriputo.nekuva.local.data
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
+import okhttp3.Cache
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.util.ext.isReadable
 import java.io.File
@@ -38,6 +39,16 @@ class DesktopLocalStorageManager(
 
     override suspend fun getDirectoryDisplayName(dir: File, isFullPath: Boolean): String = runInterruptible(Dispatchers.IO) {
         if (isFullPath) dir.path else dir.name
+    }
+
+    override fun createHttpCache(): Cache = Cache(File(appDataDir, "http_cache"), HTTP_CACHE_SIZE_BYTES)
+
+    override suspend fun computeCacheSize(cache: CacheDir): Long = runInterruptible(Dispatchers.IO) {
+        File(appDataDir, cache.dir).dirSizeBytes()
+    }
+
+    override suspend fun clearCache(cache: CacheDir): Unit = runInterruptible(Dispatchers.IO) {
+        File(appDataDir, cache.dir).deleteContentsRecursively()
     }
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {

@@ -28,7 +28,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -47,17 +49,25 @@ fun StorageNetworkScreen(
     viewModel: StorageNetworkViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onProxy: () -> Unit = {},
+    onDataRemoval: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     val imagesProxy by viewModel.imagesProxy.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val storageManager = koinInject<org.nekosukuriputo.nekuva.local.data.LocalStorageManager>()
+    val httpCache = koinInject<okhttp3.Cache>()
     val platformContext = LocalPlatformContext.current
-    var confirmClearCookies by remember { mutableStateOf(false) }
 
-    val doneMsg = stringResource(Res.string.done)
+    // Storage usage (Doki StorageUsagePreference): total app cache = Coil image cache + HTTP cache +
+    // favicons + pages. Computed once; reopen the screen to refresh after clearing in Data removal.
+    var cacheTotal by remember { mutableStateOf(-1L) }
     LaunchedEffect(Unit) {
-        viewModel.onCookiesCleared.collect { snackbarHostState.showSnackbar(doneMsg) }
+        cacheTotal = withContext(Dispatchers.IO) {
+            val loader = SingletonImageLoader.get(platformContext)
+            (runCatching { loader.diskCache?.size ?: 0L }.getOrDefault(0L)) +
+                runCatching { httpCache.size() }.getOrDefault(0L) +
+                storageManager.computeCacheSize(org.nekosukuriputo.nekuva.local.data.CacheDir.FAVICONS) +
+                storageManager.computeCacheSize(org.nekosukuriputo.nekuva.local.data.CacheDir.PAGES)
+        }
     }
 
     val networkPolicy = listOf(
@@ -77,26 +87,17 @@ fun StorageNetworkScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
-            // Data removal (clear caches). Storage-usage meter is deferred (needs size computation).
-            SettingsCategoryHeader(stringResource(Res.string.data_removal))
+            // Storage usage meter + Data removal sub-screen (Doki "Storage usage" category).
+            SettingsCategoryHeader(stringResource(Res.string.storage_usage))
             SettingsItem(
-                title = stringResource(Res.string.clear_thumbs_cache),
-                onClick = {
-                    scope.launch {
-                        val loader = SingletonImageLoader.get(platformContext)
-                        loader.memoryCache?.clear()
-                        loader.diskCache?.clear()
-                        snackbarHostState.showSnackbar(doneMsg)
-                    }
-                },
+                title = stringResource(Res.string.storage_usage),
+                summary = if (cacheTotal < 0) stringResource(Res.string.computing_) else formatBytes(cacheTotal),
             )
             SettingsItem(
-                title = stringResource(Res.string.clear_cookies),
-                summary = stringResource(Res.string.clear_cookies_summary),
-                onClick = { confirmClearCookies = true },
+                title = stringResource(Res.string.data_removal),
+                onClick = onDataRemoval,
             )
 
             IndexListPref(settings, AppSettings.KEY_PREFETCH_CONTENT, stringResource(Res.string.prefetch_content), networkPolicy, 0)
@@ -122,21 +123,5 @@ fun StorageNetworkScreen(
             BoolPref(settings, AppSettings.KEY_OFFLINE_DISABLED, stringResource(Res.string.disable_connectivity_check), stringResource(Res.string.disable_connectivity_check_summary), false)
             BoolPref(settings, AppSettings.KEY_ADBLOCK, stringResource(Res.string.adblock), stringResource(Res.string.adblock_summary), false)
         }
-    }
-
-    if (confirmClearCookies) {
-        AlertDialog(
-            onDismissRequest = { confirmClearCookies = false },
-            title = { Text(stringResource(Res.string.clear_cookies)) },
-            text = { Text(stringResource(Res.string.clear_cookies_summary)) },
-            confirmButton = {
-                TextButton(onClick = { confirmClearCookies = false; viewModel.clearCookies() }) {
-                    Text(stringResource(Res.string.clear))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmClearCookies = false }) { Text(stringResource(Res.string.cancel)) }
-            },
-        )
     }
 }

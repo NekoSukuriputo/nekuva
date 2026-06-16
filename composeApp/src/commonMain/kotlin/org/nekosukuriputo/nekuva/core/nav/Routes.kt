@@ -61,6 +61,9 @@ data object StorageNetworkSettingsRoute
 data object ProxySettingsRoute
 
 @Serializable
+data object DataCleanupRoute
+
+@Serializable
 data object ReaderSettingsRoute
 
 @Serializable

@@ -724,8 +724,18 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   stub "coming soon" diganti): type (Disabled/HTTP/SOCKS), address, port (number), auth (username/password mask) —
   address/port/auth redup saat Disabled (Doki dependency); **Test connection** = GET `neverssl.com` lewat OkHttp →
   dialog "Connection is OK"/pesan error. Komponen baru **`SettingsEditText`** (≈ Doki EditTextPreference).
-- **4C ⏳ TODO — Data removal subscreen + storage-usage meter** (Doki `DataCleanupSettingsFragment` +
-  `StorageUsagePreference`): clear pages cache / thumbnails / http cache / cookies / search history / updates feed / webview.
+- **4C ✅ DONE — Data removal subscreen + storage-usage meter** (Doki `DataCleanupSettingsFragment` +
+  `StorageUsagePreference`):
+  - **HTTP cache** ditambahkan (Doki `createHttpCache`): `LocalStorageManager.createHttpCache()` (android `cacheDir/http_cache`,
+    desktop `~/.nekuva/http_cache`, 64 MB) → dipasang `.cache(cache)` di OkHttp + diumpankan ke `DoHManager` bootstrap.
+  - `LocalStorageManager` dapat `computeCacheSize(CacheDir)`/`clearCache(CacheDir)` (impl android+desktop, `CacheUtils`).
+  - **`DataCleanupScreen`** (route `DataCleanupRoute`, dibuka dari Storage&Network) + **`DataCleanupViewModel`**: hapus
+    **riwayat pencarian / umpan diperbarui / thumbnail (Coil disk+memory) / pages cache / network(http) cache / source-icons
+    (favicon) / database (cleanupLocalManga+cleanupDatabase) / cookies** — ukuran cache live, dihitung ulang tiap clear.
+  - **Storage-usage meter** di layar induk: total = Coil image cache + http cache + favicons + pages (disederhanakan dari
+    bar-breakdown Doki). Aksi inline lama (clear thumbs/cookies) dipindah ke subscreen.
+  - **DEFERRED (butuh area lain, BUKAN drop):** *delete read chapters* (+auto on-start) → area **download/local**;
+    *clear browser data (webview)* → area **browser/KCEF**; live count riwayat/umpan (hanya aksi, tanpa badge angka).
 - **4D ⏳ TODO — adblock** (Doki `core/network/webview/adblock/*`): fitur **WebView-layer** (browser), bukan interceptor OkHttp.
 - **Sudah ada sebelumnya:** `images_proxy` (RealImageProxyInterceptor), `no_offline` (NetworkState.isOfflineCheckDisabled),
   `prefetch_content`/`pages_preload` (default Wi-Fi disamakan di Fase 3). (Verifikasi impact images_proxy di 4C/4D.)

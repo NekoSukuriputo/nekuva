@@ -8,6 +8,7 @@ import android.os.Environment
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
+import okhttp3.Cache
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 
 import org.nekosukuriputo.nekuva.core.util.ext.isReadable
@@ -63,6 +64,16 @@ class AndroidLocalStorageManager(
         } else {
             dir.name
         }
+    }
+
+    override fun createHttpCache(): Cache = Cache(File(context.cacheDir, "http_cache"), HTTP_CACHE_SIZE_BYTES)
+
+    override suspend fun computeCacheSize(cache: CacheDir): Long = runInterruptible(Dispatchers.IO) {
+        File(context.cacheDir, cache.dir).dirSizeBytes()
+    }
+
+    override suspend fun clearCache(cache: CacheDir): Unit = runInterruptible(Dispatchers.IO) {
+        File(context.cacheDir, cache.dir).deleteContentsRecursively()
     }
 
     private fun getConfiguredStorageDirs(): MutableSet<File> {

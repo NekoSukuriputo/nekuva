@@ -214,6 +214,7 @@
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
     <string name="ok">OK</string>
+    <string name="source_icons">Source icons</string>
     <string name="reset_filter">Reset filter</string>
     <string name="enter_name">Enter name</string>
     <string name="pinned_sources_only">Pinned sources only</string>
