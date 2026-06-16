@@ -178,7 +178,9 @@ class DownloadManager(
             withContext(NonCancellable) {
                 updateState(id) { it.copy(status = DownloadStatus.CANCELLED, eta = -1L) }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Throwable (not just Exception): an Error (e.g. OOM / a platform error writing to a custom dir
+            // on Android) used to escape → force-close, then "stuck". Surface it as a visible Failed instead.
             e.printStackTraceDebug()
             updateState(id) {
                 it.copy(
