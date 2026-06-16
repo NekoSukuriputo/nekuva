@@ -148,7 +148,7 @@ val settingsModule = module {
 val trackerModule = module {
     single { org.nekosukuriputo.nekuva.tracker.domain.TrackingRepository(get(), get()) }
     single { org.nekosukuriputo.nekuva.tracker.domain.CheckNewChaptersUseCase(get(), get(), get(), get()) }
-    factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get(), get(), get(), get()) }
 }
 
 val scrobblingModule = module {

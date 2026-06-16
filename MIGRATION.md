@@ -800,10 +800,28 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   menentukan tujuan unduhan BARU; manga lama tetap di dir-nya → tetap tampil. Bukan bug.
 - **FASE 5 SELESAI** (5A/5B/5C/5D compile + assembleDebug hijau; belum run-verify GUI). Catatan struktur: Doki memisah
   "Downloads folder" (dialog) + "Local manga directories" (layar); Nekuva memakai satu daftar radio + path (fungsional setara).
-- **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
+### FASE 6 — Tracker (`pref_tracker.xml`) — checklist + impact
+> Ref Doki: `settings/tracker/TrackerSettingsFragment` + `pref_tracker.xml`. Model Nekuva: tracker **manual** via
+> tab Feed (`FeedViewModel.refresh`, pull-to-refresh) — TIDAK ada WorkManager/scheduler latar belakang (KMP/Desktop).
+- **6A ✅ DONE — Paritas UI + dependency:** `tracker_enabled` (master switch) men-disable semua sub-pref (Doki dependency).
+  Layar punya: wifi-only, frekuensi, track_sources, kategori, notifikasi, no_nsfw, download, + kategori **Debug** (battery + warning).
+- **6B ✅ DONE — track_categories:** entri "Kategori favorit" kini **navigate ke CategoriesRoute** (manajer kategori yang
+  SUDAH punya toggle "track" per kategori). Impact sudah jalan: `updateTracks` pakai `findIdsWithTrack` (favourites di
+  kategori `track=1`). Stub "coming soon" diganti.
+- **6C ✅ DONE — notifications_settings:** `rememberNotificationSettingsRequest()` expect/actual — Android buka
+  `ACTION_APP_NOTIFICATION_SETTINGS` (kanal sound/vibrate/light); Desktop null → baris disembunyikan. Battery = `ignore_dose`
+  (reuse `rememberBatteryOptimizationRequest`). Warning text (`track_warning`) ditampilkan.
+- **6D ✅ DONE — tracker_download impact + fix enum:** UI dulu `IndexListPref` (index) tapi `trackerDownloadStrategy` baca
+  `getEnum` (NAMA) → selalu DISABLED. Diganti `SettingsSingleChoice<TrackerDownloadStrategy>`. **Impact:** `FeedViewModel.refresh`
+  kini auto-unduh bab baru saat strategi=DOWNLOADED & manga sudah tersimpan lokal (`observeSavedIds`) → `DownloadManager.schedule`.
+- **Sudah ada:** `track_sources` (favourites/history) ter-wire di `updateTracks`.
+- **DEFERRED (butuh background scheduler — KMP/Desktop tak punya WorkManager, BUKAN drop):** `tracker_freq` (jadwal periodik),
+  `tracker_wifi` (constraint background), `tracker_enabled` sbg gate background, `tracker_no_nsfw` + notifikasi konten
+  (Nekuva belum kirim notifikasi latar), `tracker_debug` (log worker). Tracker Nekuva = manual via Feed; nilai pref tersimpan.
+- **FASE 6 SELESAI** (6A–6D compile + assembleDebug hijau; belum run-verify GUI).
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
-- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android.
+- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

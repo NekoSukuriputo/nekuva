@@ -222,6 +222,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<TrackerSettingsRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.tracker.TrackerSettingsScreen(
                         onBackClick = { navController.popBackStack() },
+                        onTrackCategories = { navController.navigate(CategoriesRoute) },
                     )
                 }
                 composable<StorageNetworkSettingsRoute> {
