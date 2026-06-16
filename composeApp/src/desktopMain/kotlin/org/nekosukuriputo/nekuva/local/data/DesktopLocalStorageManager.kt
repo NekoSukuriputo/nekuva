@@ -57,8 +57,10 @@ class DesktopLocalStorageManager(
             .sumOf { File(appDataDir, it).dirSizeBytes() }
     }
 
+    // Include user-specified custom download locations, not just the default dir (else custom-stored
+    // manga show as 0 B in the storage meter even though they appear in Local).
     override suspend fun computeStorageSize(): Long = runInterruptible(Dispatchers.IO) {
-        getAvailableStorageDirs().sumOf { it.dirSizeBytes() }
+        getConfiguredStorageDirs().sumOf { it.dirSizeBytes() }
     }
 
     override suspend fun computeAvailableSize(): Long = runInterruptible(Dispatchers.IO) {
