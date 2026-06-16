@@ -787,6 +787,12 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   ke tree via `DocumentsContract.createDocument` (tanpa dep androidx.documentfile); **fallback** → MediaStore (Pictures/Nekuva).
   Settings page-save-dir row pakai `pickPageSaveDir()` + label ramah (`pageSaveDirLabel`). Catatan kecil: prompt "ask" dari
   **reader di task terpisah (multitask)** pakai Activity foreground via `LocaleActivityHolder` (kasus umum = reader di MainActivity OK).
+- **BUGFIX (feedback user):** (1) **Android radio default tak respons** → `AndroidLocalStorageManager.getDefaultWriteableDir()`
+  dulu hardcode `null` (abaikan `mangaStorageDir`); kini baca `mangaStorageDir` spt Desktop. (2) **Force-close saat unduh ke
+  dir custom Android** → `DownloadManager.scope` dapat `CoroutineExceptionHandler` (uncaught di engine dicatat, bukan crash) +
+  manifest `requestLegacyExternalStorage=true`. (3) **Local masih tampil manga lama setelah ganti default** = **perilaku benar
+  (sama Doki)**: Local memindai SEMUA dir terkonfigurasi (app internal/eksternal + tiap folder custom), default hanya
+  menentukan tujuan unduhan BARU; manga lama tetap di dir-nya → tetap tampil. Bukan bug.
 - **FASE 5 SELESAI** (5A/5B/5C/5D compile + assembleDebug hijau; belum run-verify GUI). Catatan struktur: Doki memisah
   "Downloads folder" (dialog) + "Local manga directories" (layar); Nekuva memakai satu daftar radio + path (fungsional setara).
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
