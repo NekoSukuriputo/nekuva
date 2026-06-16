@@ -85,6 +85,8 @@ kotlin {
             dependencies {
                 implementation(libs.androidx.activity.compose)
                 implementation(libs.koin.android)
+                // Background tracker (Doki TrackWorker): periodic new-chapter check + notifications.
+                implementation(libs.androidx.work.runtime)
             }
         }
         val desktopMain by getting {

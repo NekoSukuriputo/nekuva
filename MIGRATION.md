@@ -815,10 +815,16 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   `getEnum` (NAMA) → selalu DISABLED. Diganti `SettingsSingleChoice<TrackerDownloadStrategy>`. **Impact:** `FeedViewModel.refresh`
   kini auto-unduh bab baru saat strategi=DOWNLOADED & manga sudah tersimpan lokal (`observeSavedIds`) → `DownloadManager.schedule`.
 - **Sudah ada:** `track_sources` (favourites/history) ter-wire di `updateTracks`.
-- **DEFERRED (butuh background scheduler — KMP/Desktop tak punya WorkManager, BUKAN drop):** `tracker_freq` (jadwal periodik),
-  `tracker_wifi` (constraint background), `tracker_enabled` sbg gate background, `tracker_no_nsfw` + notifikasi konten
-  (Nekuva belum kirim notifikasi latar), `tracker_debug` (log worker). Tracker Nekuva = manual via Feed; nilai pref tersimpan.
-- **FASE 6 SELESAI** (6A–6D compile + assembleDebug hijau; belum run-verify GUI).
+- **6E ✅ DONE — Background tracker Android (atas keputusan user "kerjakan penuh"):** `scheduleTracker()` expect/actual —
+  **Android** pakai **WorkManager** (`androidx.work.runtime` ditambah ke androidMain): `PeriodicWorkRequest` interval dari
+  `tracker_freq` (Manual=batal, Less=48j, Default=24j, More=8j) + constraint `NetworkType.UNMETERED` saat `tracker_wifi`;
+  **Desktop** = no-op (tetap manual). **`TrackerWorker`** (CoroutineWorker, deps via Koin): `updateTracks` → cek tiap track →
+  `saveUpdates` → auto-download (`tracker_download`=DOWNLOADED) → **notifikasi per-manga** (skip NSFW saat `tracker_no_nsfw`,
+  tap → buka manga via `EXTRA_MANGA_ID`). Dijadwalkan saat app start (`App()`) + di-reschedule saat keluar layar Tracker
+  (`DisposableEffect.onDispose`). `tracker_enabled`/`freq`/`wifi`/`no_nsfw`/`download` kini BENAR-BENAR berpengaruh di Android.
+- **DEFERRED kecil:** notifikasi grup + foreground-service progress (Doki) disederhanakan (notif per-manga saja); `tracker_debug`
+  (log worker) tak dibuat; Desktop tetap manual (N/A WorkManager). 
+- **FASE 6 SELESAI** (6A–6E compile + assembleDebug hijau; belum run-verify GUI).
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.

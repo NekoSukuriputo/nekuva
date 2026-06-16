@@ -122,6 +122,12 @@ fun App() {
         }
     }
 
+    // Background tracker (Doki TrackWorker): (re)schedule the periodic new-chapter check on launch per the
+    // current tracker settings. Android = WorkManager; Desktop = no-op (tracker stays manual via the Feed).
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()

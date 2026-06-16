@@ -45,6 +45,10 @@ fun TrackerSettingsScreen(
     val settings = koinInject<AppSettings>()
     // tracker_enabled is the master switch; everything else depends on it (Doki dependency).
     var trackerEnabled by remember { mutableStateOf(settings.prefBoolean(AppSettings.KEY_TRACKER_ENABLED, true)) }
+    // Reschedule the background tracker (Android WorkManager) when leaving, picking up enabled/freq/wifi changes.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() } }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
