@@ -39,5 +39,19 @@ fun main() {
         ) {
             App()
         }
+        // Standalone reader windows (Doki reader_multitask): one per open entry, closeable independently.
+        for (entry in org.nekosukuriputo.nekuva.reader.ui.DesktopReaderWindows.windows) {
+            androidx.compose.runtime.key(entry.id) {
+                Window(
+                    onCloseRequest = { org.nekosukuriputo.nekuva.reader.ui.DesktopReaderWindows.close(entry) },
+                    title = "Nekuva — Reader",
+                ) {
+                    org.nekosukuriputo.nekuva.reader.ui.ReaderWindowHost(
+                        args = entry.args,
+                        onClose = { org.nekosukuriputo.nekuva.reader.ui.DesktopReaderWindows.close(entry) },
+                    )
+                }
+            }
+        }
     }
 }

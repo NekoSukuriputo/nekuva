@@ -29,8 +29,13 @@ import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.read_later
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 
+/**
+ * Installs Nekuva's singleton Coil [ImageLoader] (local/zip + network + favicon fetchers, on-disk cache).
+ * Shared by [App] and the standalone reader window/Activity (Doki reader_multitask) so a reader opened in
+ * its own task still loads pages/favicons with the same pipeline.
+ */
 @Composable
-fun App() {
+fun InstallNekuvaImageLoader() {
     setSingletonImageLoaderFactory { context ->
         val faviconCache = org.koin.core.context.GlobalContext.get().get<org.nekosukuriputo.nekuva.core.image.FaviconCache>()
         ImageLoader.Builder(context).components {
@@ -48,7 +53,12 @@ fun App() {
             }
             .crossfade(true).build()
     }
-    
+}
+
+@Composable
+fun App() {
+    InstallNekuvaImageLoader()
+
     val parserContext = koinInject<AppMangaLoaderContext>()
     var dummyData by remember { mutableStateOf("Loading...") }
     

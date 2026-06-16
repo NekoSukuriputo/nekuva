@@ -62,5 +62,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Standalone reader task (Doki reader_multitask): documentLaunchMode=always gives each reader
+             its own Recents entry so multiple manga can be read concurrently. Launched via NEW_DOCUMENT. -->
+        <activity
+            android:name=".ReaderActivity"
+            android:exported="false"
+            android:documentLaunchMode="always"
+            android:autoRemoveFromRecents="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
     </application>
 </manifest>

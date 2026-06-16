@@ -685,14 +685,21 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     di-gate policy **always / wifi(non-metered) / never** pakai `NetworkState.isMetered()` (didaftarkan di
     `platformModule`). **Default diperbaiki** ke index 1 (Wi-Fi) sesuai Doki (`NetworkPolicy` default `2`=NON_METERED),
     fix `NetworkPolicy.isNetworkAllowed(isMetered)` (NON_METERED → `!isMetered`).
-- **`reader_multitask` — TERTUNDA, butuh keputusan arsitektur (BUKAN drop):** Doki = Android-only,
-  `AppRouter.openReader` menambah `Intent.FLAG_ACTIVITY_NEW_DOCUMENT` agar tiap manga buka di **task terpisah**
-  (entri Recents sendiri / multi-window). Nekuva reader = **destinasi Compose-Nav di dalam satu `MainActivity`**
-  (Desktop = satu window), tak ada Intent/Activity untuk diberi flag. Implementasi setia perlu **restrukturisasi**
-  reader jadi Activity sendiri (Android) / window kedua (Desktop) — perubahan navigasi yang berisiko ke reader
-  yang sudah jalan. Nilai pref tetap tersimpan; menunggu keputusan user (restrukturisasi vs tetap tunda).
-- **FASE 3 SELESAI** (3A/3B/3C compile-green Android+Desktop; belum run-verify — minta user uji layar Reader
-  settings + tombol zoom, info-bar transparan, webtoon zoom-out, preload). `reader_multitask` menunggu keputusan.
+- **3D ✅ DONE — `reader_multitask` (restrukturisasi, atas keputusan user):** reader bisa dibuka di
+  **task/window terpisah** (Doki `AppRouter.openReader` + `FLAG_ACTIVITY_NEW_DOCUMENT`).
+  - **Desain anti-regресi:** destinasi reader in-nav lama **tidak diubah** (multitask OFF = perilaku lama persis).
+    Semua titik buka-reader (History resume, Bookmarks, Details chapter/bookmark/page, FAB Resume) lewat
+    helper tunggal **`rememberOpenReader`** → multitask ON: buka task/window terpisah; else: nav in-app.
+  - **`ReaderWindowHost`** (jvmShared): host mandiri = `InstallNekuvaImageLoader` + `NekuvaTheme` + **mini NavHost**
+    (Reader + Reader settings + TapGrid) sehingga `ReaderViewModel.SavedStateHandle.toRoute<ReaderRoute>` tetap jalan.
+  - **Android:** `ReaderActivity` (`documentLaunchMode=always`, `autoRemoveFromRecents=false`, exported=false) di
+    manifest; launcher kirim Intent + `FLAG_ACTIVITY_NEW_DOCUMENT|MULTIPLE_TASK`; volume-key + locale spt MainActivity.
+  - **Desktop:** `DesktopReaderWindows` (state list) → `Main.kt` render satu `Window` per entri, bisa ditutup sendiri.
+  - `ReaderWindowLauncher` = `expect`(jvmShared) + actual Android/Desktop. `InstallNekuvaImageLoader` di-extract dari `App()`.
+- **FASE 3 SELESAI** (3A/3B/3C/3D compile-green Android+Desktop; Desktop smoke-run OK; **belum run-verify GUI** —
+  minta user uji: Reader settings (dependency/divider/summary), tombol zoom, info-bar transparan, webtoon zoom-out,
+  preload, dan **reader_multitask** (Android: aktifkan "Buka reader di jendela terpisah" → buka 2 manga → 2 entri
+  Recents; Desktop: 2 window reader)).
 
 ### FASE 4–9 — ringkas (detail dirinci saat fase-nya tiba)
 - **Fase 4 Storage & network:** Proxy subscreen (type/addr/port/auth/test)+wire OkHttp, Data Removal, DoH, ssl_bypass, adblock, no_offline, storage-meter, sisa data-cleanup (pages/http/db/webview). (`pages_preload` enforcement SUDAH di Fase 3; di sini cukup pastikan layar Storage&Network pakai default index Wi-Fi yang sama.)

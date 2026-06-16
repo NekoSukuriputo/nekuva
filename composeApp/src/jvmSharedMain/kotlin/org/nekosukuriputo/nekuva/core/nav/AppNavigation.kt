@@ -49,6 +49,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         topLevelRoutes.any { topRoute -> route.contains(topRoute ?: "") }
     } ?: true
 
+    // Central reader-open (Doki reader_multitask): separate task/window when enabled, else in-app nav.
+    val openReader = org.nekosukuriputo.nekuva.reader.ui.rememberOpenReader(navController)
+
     org.nekosukuriputo.nekuva.main.ui.MainScreen(
         navController = navController,
         isTopLevel = isTopLevel,
@@ -65,7 +68,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.navigate(MangaDetailsRoute(id))
                         },
                         onResumeClick = { mangaId, chapterId ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId, -1))
+                            openReader(mangaId, chapterId, -1, false)
                         }
                     )
                 }
@@ -115,7 +118,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                         onOpenReader = { mangaId, chapterId, page ->
                             // From a bookmark -> incognito (Doki parity): don't write history/progress.
-                            navController.navigate(ReaderRoute(mangaId, chapterId, page, incognito = true))
+                            openReader(mangaId, chapterId, page, true)
                         },
                         onBackClick = { navController.popBackStack() }
                     )
@@ -154,15 +157,15 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     val args = backStackEntry.toRoute<MangaDetailsRoute>()
                     org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
                         onChapterClick = { mangaId, chapterId ->
-                            navController.navigate(ReaderRoute(mangaId, chapterId, -1))
+                            openReader(mangaId, chapterId, -1, false)
                         },
                         onBookmarkClick = { mangaId, chapterId, page ->
                             // From a bookmark -> incognito (Doki parity).
-                            navController.navigate(ReaderRoute(mangaId, chapterId, page, incognito = true))
+                            openReader(mangaId, chapterId, page, true)
                         },
                         onPageClick = { mangaId, chapterId, page ->
                             // From the Details "Pages" preview -> open the reader at that page (not incognito).
-                            navController.navigate(ReaderRoute(mangaId, chapterId, page))
+                            openReader(mangaId, chapterId, page, false)
                         },
                         onOpenDownloads = { navController.navigate(DownloadsRoute) },
                         onBackClick = { navController.popBackStack() },

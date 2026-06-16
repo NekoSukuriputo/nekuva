@@ -77,10 +77,12 @@ fun MainScreen(
     val historyRepo = koinInject<org.nekosukuriputo.nekuva.history.data.HistoryRepository>()
     val lastReadManga by historyRepo.observeLast().collectAsState(initial = null)
     val fabScope = androidx.compose.runtime.rememberCoroutineScope()
+    // Central reader-open (Doki reader_multitask): separate task/window when enabled, else in-app nav.
+    val openReader = org.nekosukuriputo.nekuva.reader.ui.rememberOpenReader(navController)
     val onResume: () -> Unit = {
         lastReadManga?.let { m ->
             fabScope.launch {
-                historyRepo.getOne(m)?.let { h -> navController.navigate(ReaderRoute(m.id, h.chapterId, -1)) }
+                historyRepo.getOne(m)?.let { h -> openReader(m.id, h.chapterId, -1, false) }
             }
         }
     }
