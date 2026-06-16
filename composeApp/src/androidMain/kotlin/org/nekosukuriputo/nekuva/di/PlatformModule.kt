@@ -20,6 +20,6 @@ actual val platformModule: Module = module {
     }
     single<LocalStorageManager> { AndroidLocalStorageManager(get(), get()) }
     single<org.nekosukuriputo.nekuva.reader.domain.PagePersister> {
-        org.nekosukuriputo.nekuva.reader.data.AndroidPagePersister(get())
+        org.nekosukuriputo.nekuva.reader.data.AndroidPagePersister(get(), get())
     }
 }

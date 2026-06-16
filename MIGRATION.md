@@ -781,9 +781,14 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     Nudge **All-files access** (API 30+ `MANAGE_APP_ALL_FILES_ACCESS`) saat path di shared-storage & belum diizinkan.
   - **Fix duplikat "manga":** baris direktori kini tampil **path sebagai summary** (Android + Desktop) → dua dir app
     (internal/eksternal) tak lagi terlihat kembar; Android `getDirectoryDisplayName` pakai **nama volume** (`StorageManager.getDescription`).
-- **FASE 5 SELESAI** (5A/5B/5C compile + assembleDebug hijau; belum run-verify GUI). Catatan: struktur UI Doki memisah
+- **5D ✅ DONE — Page-save dir Android (SAF, tutup catatan 5B):** `pickPageSaveDir()` expect/actual (Android: SAF
+  `OpenDocumentTree` → simpan **tree URI** `content://`; Desktop: folder path). **AndroidPagePersister** ditulis ulang
+  (Doki parity): **ask-every-time** → SAF `CreateDocument` prompt per simpan; **dir terkonfigurasi** (tree URI) → tulis
+  ke tree via `DocumentsContract.createDocument` (tanpa dep androidx.documentfile); **fallback** → MediaStore (Pictures/Nekuva).
+  Settings page-save-dir row pakai `pickPageSaveDir()` + label ramah (`pageSaveDirLabel`). Catatan kecil: prompt "ask" dari
+  **reader di task terpisah (multitask)** pakai Activity foreground via `LocaleActivityHolder` (kasus umum = reader di MainActivity OK).
+- **FASE 5 SELESAI** (5A/5B/5C/5D compile + assembleDebug hijau; belum run-verify GUI). Catatan struktur: Doki memisah
   "Downloads folder" (dialog) + "Local manga directories" (layar); Nekuva memakai satu daftar radio + path (fungsional setara).
-  Page-save-dir custom + ask-prompt di **Android** masih MediaStore (butuh SAF di reader save-flow) — dicatat.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).

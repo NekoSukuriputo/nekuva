@@ -44,6 +44,8 @@ import org.nekosukuriputo.nekuva.core.prefs.DownloadFormat
 import org.nekosukuriputo.nekuva.core.prefs.TriStateOption
 import org.nekosukuriputo.nekuva.download.ui.dialog.pickMangaDirectory
 import org.nekosukuriputo.nekuva.download.ui.dialog.supportsDirectoryPicker
+import org.nekosukuriputo.nekuva.reader.data.pageSaveDirLabel
+import org.nekosukuriputo.nekuva.reader.data.pickPageSaveDir
 import org.koin.compose.koinInject
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.settings.ui.components.BoolPref
@@ -150,24 +152,18 @@ fun DownloadsSettingsScreen(
 
             SettingsCategoryHeader(stringResource(Res.string.pages_saving))
             // Default "save page" directory (Doki pages_dir). Empty = platform default (Pictures/Nekuva).
+            // Android = SAF tree URI; Desktop = folder path. Picker supported on both.
             val pageSaveDir by viewModel.pageSaveDir.collectAsState()
-            if (supportsDirectoryPicker) {
-                SettingsItem(
-                    title = stringResource(Res.string.default_page_save_dir),
-                    summary = pageSaveDir ?: stringResource(Res.string.not_set),
-                    onClick = {
-                        scope.launch {
-                            val path = pickMangaDirectory()
-                            if (path != null) viewModel.setPageSaveDir(path)
-                        }
-                    },
-                )
-            } else {
-                SettingsItem(
-                    title = stringResource(Res.string.default_page_save_dir),
-                    summary = pageSaveDir ?: stringResource(Res.string.not_set),
-                )
-            }
+            SettingsItem(
+                title = stringResource(Res.string.default_page_save_dir),
+                summary = pageSaveDir?.let { pageSaveDirLabel(it) } ?: stringResource(Res.string.not_set),
+                onClick = {
+                    scope.launch {
+                        val dir = pickPageSaveDir()
+                        if (dir != null) viewModel.setPageSaveDir(dir)
+                    }
+                },
+            )
             BoolPref(settings, AppSettings.KEY_PAGES_SAVE_ASK, stringResource(Res.string.ask_for_dest_dir_every_time), null, true)
         }
     }
