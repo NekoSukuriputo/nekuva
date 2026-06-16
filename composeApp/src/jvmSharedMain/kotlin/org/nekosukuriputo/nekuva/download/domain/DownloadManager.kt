@@ -66,7 +66,13 @@ class DownloadManager(
     private val networkState: org.nekosukuriputo.nekuva.core.os.NetworkState,
 ) {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Exception handler so an uncaught failure in any download coroutine is logged, never force-closing the
+    // app (e.g. a storage error writing to a custom dir on Android). Per-download failures are still handled
+    // in runDownload; this is the last-resort safety net for the whole engine scope.
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default +
+            kotlinx.coroutines.CoroutineExceptionHandler { _, e -> e.printStackTraceDebug() },
+    )
     private val queueSemaphore = Semaphore(1)
     private val controllers = ConcurrentHashMap<String, Controller>()
     private val tasks = ConcurrentHashMap<String, DownloadTask>() // kept so a download can be retried

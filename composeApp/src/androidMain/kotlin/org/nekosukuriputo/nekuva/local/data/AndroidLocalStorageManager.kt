@@ -30,7 +30,9 @@ class AndroidLocalStorageManager(
     }
 
     override suspend fun getDefaultWriteableDir(): File? = runInterruptible(Dispatchers.IO) {
-        val preferredDir = null
+        // Honor the user-chosen default (mangaStorageDir), incl. custom dirs — was hardcoded null, so the
+        // radio in Downloads settings never switched and custom dirs were never used as the download target.
+        val preferredDir = settings.mangaStorageDir?.let { File(it) }?.takeIf { it.canWrite() }
         preferredDir ?: getFallbackStorageDir()?.takeIf { it.canWrite() }
     }
 
