@@ -12,14 +12,20 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.unit.dp
+import org.nekosukuriputo.nekuva.core.os.rememberBatteryOptimizationRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
 import nekuva.composeapp.generated.resources.Res
@@ -35,6 +41,7 @@ import nekuva.composeapp.generated.resources.specify_directory
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.prefs.DownloadFormat
+import org.nekosukuriputo.nekuva.core.prefs.TriStateOption
 import org.nekosukuriputo.nekuva.download.ui.dialog.pickMangaDirectory
 import org.nekosukuriputo.nekuva.download.ui.dialog.supportsDirectoryPicker
 import org.koin.compose.koinInject
@@ -107,16 +114,59 @@ fun DownloadsSettingsScreen(
                 selected = format,
                 onSelect = { viewModel.setFormat(it) },
             )
-            IndexListPref(
-                settings, AppSettings.KEY_DOWNLOADS_METERED_NETWORK, stringResource(Res.string.download_over_cellular),
-                listOf(stringResource(Res.string.allow_always), stringResource(Res.string.ask_every_time), stringResource(Res.string.dont_allow)), 1,
+            // Metered-network policy (Doki downloads_metered_network) — stored as TriStateOption name so the
+            // download engine's gate (allowDownloadOnMeteredNetwork) reads it correctly.
+            run {
+                var metered by remember { mutableStateOf(settings.allowDownloadOnMeteredNetwork) }
+                SettingsSingleChoice(
+                    title = stringResource(Res.string.download_over_cellular),
+                    options = listOf(
+                        stringResource(Res.string.allow_always) to TriStateOption.ENABLED,
+                        stringResource(Res.string.ask_every_time) to TriStateOption.ASK,
+                        stringResource(Res.string.dont_allow) to TriStateOption.DISABLED,
+                    ),
+                    selected = metered,
+                    onSelect = { settings.allowDownloadOnMeteredNetwork = it; metered = it },
+                )
+            }
+            // Info hint (Doki downloads_settings_info): downloads run while the app is open.
+            Text(
+                text = stringResource(Res.string.downloads_settings_info),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            // Android battery-optimization exemption — platform-specific, deferred
-            SettingsItem(title = stringResource(Res.string.disable_battery_optimization), summary = stringResource(Res.string.coming_soon), enabled = false)
+
+            // Android battery-optimization exemption (Doki ignore_dose) — hidden on Desktop (N/A).
+            val batteryRequest = rememberBatteryOptimizationRequest()
+            if (batteryRequest != null) {
+                SettingsItem(
+                    title = stringResource(Res.string.disable_battery_optimization),
+                    summary = stringResource(Res.string.disable_battery_optimization_summary_downloads),
+                    onClick = batteryRequest,
+                )
+            }
 
             SettingsCategoryHeader(stringResource(Res.string.pages_saving))
-            // Save-page default dir belongs to the image-save area — deferred
-            SettingsItem(title = stringResource(Res.string.default_page_save_dir), summary = stringResource(Res.string.coming_soon), enabled = false)
+            // Default "save page" directory (Doki pages_dir). Empty = platform default (Pictures/Nekuva).
+            val pageSaveDir by viewModel.pageSaveDir.collectAsState()
+            if (supportsDirectoryPicker) {
+                SettingsItem(
+                    title = stringResource(Res.string.default_page_save_dir),
+                    summary = pageSaveDir ?: stringResource(Res.string.not_set),
+                    onClick = {
+                        scope.launch {
+                            val path = pickMangaDirectory()
+                            if (path != null) viewModel.setPageSaveDir(path)
+                        }
+                    },
+                )
+            } else {
+                SettingsItem(
+                    title = stringResource(Res.string.default_page_save_dir),
+                    summary = pageSaveDir ?: stringResource(Res.string.not_set),
+                )
+            }
             BoolPref(settings, AppSettings.KEY_PAGES_SAVE_ASK, stringResource(Res.string.ask_for_dest_dir_every_time), null, true)
         }
     }

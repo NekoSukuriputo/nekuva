@@ -124,6 +124,7 @@ val downloadModule = module {
             get(), // MangaRepository.Factory
             get(), // AppSettings
             get(), // MutableSharedFlow<LocalManga?> (local storage changes)
+            get(), // NetworkState (metered-network constraint)
         )
     }
     factory { params ->

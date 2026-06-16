@@ -757,7 +757,26 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   `prefetch_content`/`pages_preload` (default Wi-Fi disamakan di Fase 3).
 - **FASE 4 SELESAI** (4A/4B/4C/4D compile + assembleDebug hijau; belum run-verify GUI). Deferred tercatat:
   delete-read-chapters (download), webview-data clear (browser), live count riwayat/umpan.
-- **Fase 5 Downloads:** manga-directories (multi), page-save-dir + ask, battery-opt (Android), Android custom download location in download dialog belum bisa.
+  (Catatan: delete-read-chapters + webview clear + live count akhirnya DIKERJAKAN saat revisi Fase 4C; lihat di atas.)
+
+### FASE 5 — Downloads (`pref_downloads.xml`) — checklist + impact
+> Ref Doki: `settings/DownloadsSettingsFragment` + `pref_downloads.xml`. Nekuva sudah punya kelola direktori
+> (radio set-default + add custom via picker Desktop) + format unduhan dari Fase 1. Fase 5 = lengkapi + impact.
+- **5A ✅ DONE — Metered network (fix bug + impact):** UI dulu `IndexListPref` (simpan index "0/1/2") tapi
+  `allowDownloadOnMeteredNetwork` baca `getEnum` (NAMA enum) → selalu jatuh ke ASK. Diganti `SettingsSingleChoice<TriStateOption>`
+  (Allow always→ENABLED / Ask→ASK / Don't allow→DISABLED) supaya tersimpan benar. **Impact:** `DownloadManager` kini
+  inject `NetworkState`; `awaitMeteredAllowed()` menahan unduhan saat **DISABLED + jaringan metered** (tunggu sampai
+  Wi-Fi/Ethernet) sebelum ambil slot antrian. ENABLED/ASK lanjut. (Prompt ASK di dialog download = catatan, opsional.)
+- **5B ✅ DONE — Battery optimization + info + page-save dir:**
+  - **Battery-opt (Doki ignore_dose):** `rememberBatteryOptimizationRequest()` expect/actual — Android buka intent
+    `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Desktop null → baris **disembunyikan** (N/A). Stub "coming soon" diganti.
+  - **Info hint** (Doki downloads_settings_info) ditampilkan sebagai teks.
+  - **Default page-save dir (Doki pages_dir):** VM `pageSaveDir`/`setPageSaveDir`; **DesktopPagePersister** kini simpan ke
+    dir terkonfigurasi (fallback ~/Pictures/Nekuva) + hormati **"ask every time"** (`pages_dir_ask`) lewat AWT Save dialog.
+    Picker dir = Desktop (folder chooser); **Android picker = SAF (belum, supportsDirectoryPicker=false → baris read-only),
+    AndroidPagePersister tetap MediaStore** — gap SAF Android dicatat (sama spt custom manga-dir Android).
+- **FASE 5 SELESAI** (5A/5B compile + assembleDebug hijau; belum run-verify GUI). Deferred (gap SAF Android): page-save-dir
+  custom + ask-prompt di Android (butuh SAF launcher di reader save-flow), custom manga-dir Android di download dialog.
 - **Fase 6 Tracker:** track_categories (kategori favorit), notifications (sound/vibrate/light, Android), tracker_download/no_nsfw/debug.
 - **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).

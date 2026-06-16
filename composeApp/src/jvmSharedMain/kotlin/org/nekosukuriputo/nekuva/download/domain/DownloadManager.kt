@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.channelFlow
@@ -62,6 +63,7 @@ class DownloadManager(
     private val repositoryFactory: MangaRepository.Factory,
     private val settings: AppSettings,
     private val localStorageChanges: MutableSharedFlow<org.nekosukuriputo.nekuva.local.domain.model.LocalManga?>,
+    private val networkState: org.nekosukuriputo.nekuva.core.os.NetworkState,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -160,6 +162,9 @@ class DownloadManager(
         try {
             // Wait here if the download was added paused, so it doesn't occupy the single queue slot.
             awaitResume(id, controller)
+            // Metered-network constraint (Doki downloads_metered_network): when "Don't allow", hold the
+            // download until the network is no longer metered (Wi-Fi/Ethernet). ENABLED/ASK proceed.
+            awaitMeteredAllowed(id)
             queueSemaphore.withPermit {
                 downloadImpl(id, task, controller, retryOnly)
             }
@@ -176,6 +181,16 @@ class DownloadManager(
                     eta = -1L,
                 )
             }
+        }
+    }
+
+    /** Holds the download while "Don't allow on cellular" is set AND the network is metered. */
+    private suspend fun awaitMeteredAllowed(id: String) {
+        if (settings.allowDownloadOnMeteredNetwork != org.nekosukuriputo.nekuva.core.prefs.TriStateOption.DISABLED) return
+        if (!networkState.isMetered()) return
+        updateState(id) { it.copy(status = DownloadStatus.QUEUED, isIndeterminate = true) }
+        while (networkState.isMetered()) {
+            delay(5_000)
         }
     }
 

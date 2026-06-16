@@ -28,6 +28,15 @@ class DownloadsSettingsViewModel(
     private val _format = MutableStateFlow(settings.preferredDownloadFormat)
     val format: StateFlow<DownloadFormat> = _format.asStateFlow()
 
+    // Default "save page" directory (Doki pages_dir); null = platform default.
+    private val _pageSaveDir = MutableStateFlow(settings.getPagesSaveDirUri())
+    val pageSaveDir: StateFlow<String?> = _pageSaveDir.asStateFlow()
+
+    fun setPageSaveDir(path: String) {
+        settings.setPagesSaveDir(path)
+        _pageSaveDir.value = path
+    }
+
     init {
         loadDirectories()
     }

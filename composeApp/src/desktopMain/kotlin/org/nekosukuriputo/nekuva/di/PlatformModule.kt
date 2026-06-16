@@ -12,6 +12,6 @@ actual val platformModule: Module = module {
     single { org.nekosukuriputo.nekuva.core.os.NetworkState(get()) }
     single<LocalStorageManager> { DesktopLocalStorageManager(get()) }
     single<org.nekosukuriputo.nekuva.reader.domain.PagePersister> {
-        org.nekosukuriputo.nekuva.reader.data.DesktopPagePersister()
+        org.nekosukuriputo.nekuva.reader.data.DesktopPagePersister(get())
     }
 }

@@ -216,6 +216,7 @@
     <string name="ok">OK</string>
     <string name="source_icons">Source icons</string>
     <string name="items_count">%1$d items</string>
+    <string name="not_set">Not set</string>
     <string name="reset_filter">Reset filter</string>
     <string name="enter_name">Enter name</string>
     <string name="pinned_sources_only">Pinned sources only</string>
