@@ -67,6 +67,13 @@ val statsModule = module {
     factory { org.nekosukuriputo.nekuva.stats.ui.StatsViewModel(get(), get()) }
 }
 
+// Suggestions (Doki suggestions): stored list (SuggestionRepository) + on-demand generation + screen VM.
+val suggestionsModule = module {
+    single { org.nekosukuriputo.nekuva.suggestions.domain.SuggestionRepository(get(), get()) }
+    single { org.nekosukuriputo.nekuva.suggestions.domain.GenerateSuggestionsUseCase(get(), get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.suggestions.ui.SuggestionsViewModel(get(), get(), get()) }
+}
+
 val appModule = module {
     single { AppMangaLoaderContext(get(), get()) }
     single<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext> { get<AppMangaLoaderContext>() }
@@ -246,7 +253,7 @@ val syncModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule, syncModule, statsModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule, syncModule, statsModule, suggestionsModule)
     }
 
 

@@ -43,6 +43,9 @@ data object DiscordLoginRoute
 data object StatsRoute
 
 @Serializable
+data object SuggestionsRoute
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

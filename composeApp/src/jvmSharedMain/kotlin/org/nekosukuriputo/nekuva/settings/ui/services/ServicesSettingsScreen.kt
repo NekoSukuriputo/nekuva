@@ -43,6 +43,7 @@ fun ServicesSettingsScreen(
     onScrobblerLogin: (serviceId: Int) -> Unit = {},
     onDiscordLogin: () -> Unit = {},
     onSyncClick: () -> Unit = {},
+    onSuggestionsClick: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
     val soon = stringResource(Res.string.coming_soon)
@@ -66,7 +67,18 @@ fun ServicesSettingsScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
             SettingsItem(title = stringResource(Res.string.sync), summary = stringResource(Res.string.sync_title), onClick = onSyncClick)
-            SettingsItem(title = stringResource(Res.string.suggestions), summary = soon, enabled = false)
+            // Suggestions (Doki): enable toggle + open the generated list. List access enabled when on.
+            var suggestionsOn by remember { mutableStateOf(settings.isSuggestionsEnabled) }
+            BoolPref(
+                settings, AppSettings.KEY_SUGGESTIONS, stringResource(Res.string.suggestions),
+                stringResource(Res.string.suggestions_summary), false, onChange = { suggestionsOn = it },
+            )
+            SettingsItem(
+                title = stringResource(Res.string.suggestions),
+                summary = stringResource(Res.string.show_all),
+                enabled = suggestionsOn,
+                onClick = onSuggestionsClick,
+            )
             BoolPref(settings, AppSettings.KEY_RELATED_MANGA, stringResource(Res.string.related_manga), stringResource(Res.string.related_manga_summary), true)
             BoolPref(settings, AppSettings.KEY_STATS_ENABLED, stringResource(Res.string.reading_stats), null, false)
             BoolPref(settings, AppSettings.KEY_READING_TIME, stringResource(Res.string.reading_time_estimation), stringResource(Res.string.reading_time_estimation_summary), true)

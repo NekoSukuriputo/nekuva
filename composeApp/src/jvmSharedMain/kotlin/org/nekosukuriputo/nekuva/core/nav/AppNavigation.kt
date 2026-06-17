@@ -214,6 +214,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onScrobblerLogin = { serviceId -> navController.navigate(OAuthRoute(serviceId)) },
                         onDiscordLogin = { navController.navigate(DiscordLoginRoute) },
                         onSyncClick = { navController.navigate(SyncSettingsRoute) },
+                        onSuggestionsClick = { navController.navigate(SuggestionsRoute) },
                     )
                 }
                 composable<SyncSettingsRoute> {
@@ -348,6 +349,12 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<StatsRoute> {
                     org.nekosukuriputo.nekuva.stats.ui.StatsScreen(
                         onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<SuggestionsRoute> {
+                    org.nekosukuriputo.nekuva.suggestions.ui.SuggestionsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                     )
                 }
                 composable<DiscordLoginRoute> {
