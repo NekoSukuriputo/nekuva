@@ -825,7 +825,29 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 - **DEFERRED kecil:** notifikasi grup + foreground-service progress (Doki) disederhanakan (notif per-manga saja); `tracker_debug`
   (log worker) tak dibuat; Desktop tetap manual (N/A WorkManager). 
 - **FASE 6 SELESAI** (6A–6E compile + assembleDebug hijau; belum run-verify GUI).
-- **Fase 7 Services + Privacy:** Suggestions, Discord RPC (Android), stats/reading_time/related_manga, (AniList/MAL/Kitsu ikut scrobbling); + settings-search. (app-lock/biometric SUDAH selesai di 1F.)
+
+### FASE 7 — Services + Privacy — checklist + impact
+> Ref Doki: `scrobbling/*` (Shikimori/AniList/MAL/Kitsu + Discord) + `settings/.../ServicesSettingsFragment`.
+> Keputusan user: "Migrasikan semua kode, pakai client id dari doki dulu, lalu beritahu dimana akan saya ganti nanti".
+- **7-Scrobblers ✅ DONE (compile + assembleDebug hijau; belum run-verify, butuh OAuth nyata):** migrasi penuh
+  **AniList** (OAuth2 + GraphQL), **MAL** (OAuth2 PKCE plain + REST), **Kitsu** (OAuth2 password-grant + JSON:API),
+  melengkapi **Shikimori** yang sudah ada. Tiap service: `*Repository` (port dari Doki, JSON via org.json inline
+  helper, klien id dari `ScrobblerConfig`), `*Interceptor` (header + Bearer token + 401→re-login), `*Scrobbler`
+  (status map). Semua didaftarkan di Koin `scrobblingModule` (OkHttp + `ScrobblerStorage` per-service) dan masuk
+  `ScrobblerManager(listOf(...))` → muncul di **Settings ▸ Services ▸ Tracking** lewat `scrobblerItems` (status
+  login per-service: sign in / logout).
+- **Login UI:** AniList/MAL/Shikimori pakai webview OAuth (`OAuthScreen`, tangkap `code=` dari redirect
+  `nekuva://oauth`). **Kitsu** pakai *password grant* → **dialog username/password** baru di `ServicesSettingsScreen`
+  (`KitsuLoginDialog`), kirim `"username;password"` ke `completeAuth` (port `KitsuAuthActivity`).
+- **⚠️ KREDENSIAL (di mana diganti):** semua client id/secret ada di
+  `composeApp/src/jvmSharedMain/.../scrobbling/common/ScrobblerConfig.kt` (cari `TODO(credentials)`). Saat ini diisi
+  **client id publik Doki** sebagai placeholder — TERIKAT ke redirect URI Doki, jadi login OAuth nyata belum jalan
+  sampai user daftar app sendiri (AniList/MAL/Kitsu/Discord/Shikimori) dgn redirect = `nekuva://oauth` lalu ganti
+  nilainya di file itu.
+- **DEFERRED Fase 7 (increment berikut):** **Discord RPC** (gateway WebSocket + token webview, Android-only),
+  **Suggestions** (engine + layar), **reading stats** (layar), **reading_time** estimasi (saat ini hanya BoolPref),
+  **related_manga** section di Details. Catatan kompat OAuth-redirect untuk webview (`OAuthScreen`) bila skema
+  `nekuva://` ditelan engine tanpa URL-change → butuh navigation-intercept (uji saat client id nyata tersedia).
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 

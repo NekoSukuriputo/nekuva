@@ -163,9 +163,47 @@ val scrobblingModule = module {
         org.nekosukuriputo.nekuva.scrobbling.shikimori.data.ShikimoriRepository(client, storage, get())
     }
     single { org.nekosukuriputo.nekuva.scrobbling.shikimori.domain.ShikimoriScrobbler(get(), get(), get()) }
+    // AniList: dedicated OkHttp (JSON headers + token interceptor) + per-service token storage.
+    single {
+        val storage = org.nekosukuriputo.nekuva.scrobbling.common.data.ScrobblerStorage(
+            get(), org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.ANILIST,
+        )
+        val client = get<okhttp3.OkHttpClient>().newBuilder()
+            .addInterceptor(org.nekosukuriputo.nekuva.scrobbling.anilist.data.AniListInterceptor(storage))
+            .build()
+        org.nekosukuriputo.nekuva.scrobbling.anilist.data.AniListRepository(client, storage, get())
+    }
+    single { org.nekosukuriputo.nekuva.scrobbling.anilist.domain.AniListScrobbler(get(), get(), get()) }
+    // MyAnimeList: dedicated OkHttp (JSON headers + token interceptor) + per-service token storage.
+    single {
+        val storage = org.nekosukuriputo.nekuva.scrobbling.common.data.ScrobblerStorage(
+            get(), org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.MAL,
+        )
+        val client = get<okhttp3.OkHttpClient>().newBuilder()
+            .addInterceptor(org.nekosukuriputo.nekuva.scrobbling.mal.data.MALInterceptor(storage))
+            .build()
+        org.nekosukuriputo.nekuva.scrobbling.mal.data.MALRepository(client, storage, get())
+    }
+    single { org.nekosukuriputo.nekuva.scrobbling.mal.domain.MALScrobbler(get(), get(), get()) }
+    // Kitsu: dedicated OkHttp (JSON:API headers + token interceptor) + per-service token storage.
+    single {
+        val storage = org.nekosukuriputo.nekuva.scrobbling.common.data.ScrobblerStorage(
+            get(), org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerService.KITSU,
+        )
+        val client = get<okhttp3.OkHttpClient>().newBuilder()
+            .addInterceptor(org.nekosukuriputo.nekuva.scrobbling.kitsu.data.KitsuInterceptor(storage))
+            .build()
+        org.nekosukuriputo.nekuva.scrobbling.kitsu.data.KitsuRepository(client, storage, get())
+    }
+    single { org.nekosukuriputo.nekuva.scrobbling.kitsu.domain.KitsuScrobbler(get(), get(), get()) }
     single {
         org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager(
-            listOf(get<org.nekosukuriputo.nekuva.scrobbling.shikimori.domain.ShikimoriScrobbler>()),
+            listOf(
+                get<org.nekosukuriputo.nekuva.scrobbling.shikimori.domain.ShikimoriScrobbler>(),
+                get<org.nekosukuriputo.nekuva.scrobbling.anilist.domain.AniListScrobbler>(),
+                get<org.nekosukuriputo.nekuva.scrobbling.mal.domain.MALScrobbler>(),
+                get<org.nekosukuriputo.nekuva.scrobbling.kitsu.domain.KitsuScrobbler>(),
+            ),
         )
     }
     // Shared (single) so the Services screen + the OAuth screen see the same login state.
