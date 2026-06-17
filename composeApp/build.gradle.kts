@@ -87,6 +87,8 @@ kotlin {
                 implementation(libs.koin.android)
                 // Background tracker (Doki TrackWorker): periodic new-chapter check + notifications.
                 implementation(libs.androidx.work.runtime)
+                // Discord Rich Presence (Doki DiscordRpc): gateway WebSocket client — Android-only.
+                implementation(libs.kizzyrpc)
             }
         }
         val desktopMain by getting {

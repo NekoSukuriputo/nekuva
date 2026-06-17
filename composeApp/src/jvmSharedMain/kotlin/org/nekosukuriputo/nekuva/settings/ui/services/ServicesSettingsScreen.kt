@@ -41,6 +41,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 fun ServicesSettingsScreen(
     onBackClick: () -> Unit,
     onScrobblerLogin: (serviceId: Int) -> Unit = {},
+    onDiscordLogin: () -> Unit = {},
     onSyncClick: () -> Unit = {},
 ) {
     val settings = koinInject<AppSettings>()
@@ -90,8 +91,22 @@ fun ServicesSettingsScreen(
                     else -> SettingsItem(title = title, summary = signInLabel, onClick = { onScrobblerLogin(item.service.id) })
                 }
             }
-            // Discord Rich Presence is its own service (separate increment).
-            SettingsItem(title = stringResource(Res.string.discord_rpc), summary = stringResource(Res.string.discord_rpc_summary), enabled = false)
+            // Discord Rich Presence (Doki DiscordRpc): Android gateway via KizzyRPC; Desktop no-op.
+            // Enable toggle + token login (webview scrape) + skip-NSFW.
+            BoolPref(settings, AppSettings.KEY_DISCORD_RPC, stringResource(Res.string.discord_rpc), stringResource(Res.string.discord_rpc_summary), false)
+            val discordEnabled by settings.observeBoolean(AppSettings.KEY_DISCORD_RPC, false)
+                .collectAsState(initial = settings.isDiscordRpcEnabled)
+            if (discordEnabled) {
+                // Re-read the token whenever it changes (login/logout) so the row label stays live.
+                val tokenTick by settings.keyChangeFlow(AppSettings.KEY_DISCORD_TOKEN).collectAsState(initial = Unit)
+                val hasToken = remember(tokenTick) { settings.discordToken != null }
+                if (hasToken) {
+                    SettingsItem(title = stringResource(Res.string.discord_token), summary = logoutLabel, onClick = { settings.discordToken = null })
+                } else {
+                    SettingsItem(title = stringResource(Res.string.discord_token), summary = signInLabel, onClick = onDiscordLogin)
+                }
+                BoolPref(settings, AppSettings.KEY_DISCORD_RPC_SKIP_NSFW, stringResource(Res.string.discord_rpc_skip_nsfw), null, false)
+            }
         }
     }
 

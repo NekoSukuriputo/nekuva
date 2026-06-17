@@ -88,7 +88,7 @@ val readerModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.reader.TapGridConfigViewModel(get()) }
     single { org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper(get(), get(), get()) }
     single { org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase(get(), get(), get(), get()) }
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val bookmarksModule = module {
@@ -208,6 +208,9 @@ val scrobblingModule = module {
     }
     // Shared (single) so the Services screen + the OAuth screen see the same login state.
     single { org.nekosukuriputo.nekuva.settings.ui.services.ScrobblerConfigViewModel(get()) }
+    // Discord Rich Presence (Doki): REST glue + platform gateway controller (Android KizzyRPC / Desktop no-op).
+    single { org.nekosukuriputo.nekuva.scrobbling.discord.data.DiscordRepository(get(), get()) }
+    single { org.nekosukuriputo.nekuva.scrobbling.discord.DiscordRpcManager(get(), get()) }
 }
 
 val backupsModule = module {

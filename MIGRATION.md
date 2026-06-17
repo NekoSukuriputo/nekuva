@@ -844,10 +844,22 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   **client id publik Doki** sebagai placeholder — TERIKAT ke redirect URI Doki, jadi login OAuth nyata belum jalan
   sampai user daftar app sendiri (AniList/MAL/Kitsu/Discord/Shikimori) dgn redirect = `nekuva://oauth` lalu ganti
   nilainya di file itu.
-- **DEFERRED Fase 7 (increment berikut):** **Discord RPC** (gateway WebSocket + token webview, Android-only),
-  **Suggestions** (engine + layar), **reading stats** (layar), **reading_time** estimasi (saat ini hanya BoolPref),
-  **related_manga** section di Details. Catatan kompat OAuth-redirect untuk webview (`OAuthScreen`) bila skema
-  `nekuva://` ditelan engine tanpa URL-change → butuh navigation-intercept (uji saat client id nyata tersedia).
+- **7-Discord RPC ✅ DONE (compile + assembleDebug hijau; belum run-verify, butuh login Discord nyata):** port penuh
+  Doki DiscordRpc — **Android** pakai lib **KizzyRPC** (`com.github.dead8309:KizzyRPC`, sudah di `libs.versions.toml`,
+  ditambah ke androidMain) untuk presence via gateway WebSocket; **Desktop** = no-op actual (Kizzy Android-only).
+  `DiscordRpcManager` (expect/actual: updateRpc/setIdle/clearRpc), `DiscordRepository` (jvmShared: media-proxy
+  `mp:` resolve + checkToken). **Login** = `DiscordLoginScreen` (webview ke discord.com/login) yang **scrape token**
+  dari `window.localStorage.token` lewat hook **`WebViewState.evaluateJs`** baru (Android `evaluateJavascript`;
+  Desktop no-op) — port `DiscordTokenWebClient`. **Settings ▸ Services**: toggle enable (`discord_rpc`) + sign-in/logout
+  (token) + skip-NSFW (`discord_rpc_skip_nsfw`, string baru). **Reader wiring**: `ReaderViewModel.updateDiscordRpc`
+  dipanggil saat bab berganti (skip incognito) + `clearRpc()` di `onCleared`. **App ID** = placeholder Doki di
+  `ScrobblerConfig.DISCORD_APP_ID` (`TODO(credentials)`). Branding fix: `discord_rpc_description` "Doki/Kotatsu"→"Nekuva"
+  (en/id/in).
+- **DEFERRED Fase 7 (increment berikut):** **Suggestions** (engine + layar), **reading stats** (layar),
+  **reading_time** estimasi (saat ini hanya BoolPref), **related_manga** section di Details. Catatan kompat
+  OAuth-redirect untuk webview (`OAuthScreen`/Discord) bila skema `nekuva://` ditelan engine tanpa URL-change →
+  butuh navigation-intercept (uji saat client id/login nyata tersedia). Branding: `discord_rpc_description` masih
+  "Doki/Kotatsu" di ~19 locale lain (sweep katalog terpisah).
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 

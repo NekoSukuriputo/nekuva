@@ -69,6 +69,7 @@ actual fun PlatformWebView(
                 }
                 state.goBackAction = { if (canGoBack()) goBack() }
                 state.reloadAction = { reload() }
+                state.evaluateJsAction = { script, onResult -> evaluateJavascript(script) { onResult(it) } }
                 loadUrl(url)
             }
         },

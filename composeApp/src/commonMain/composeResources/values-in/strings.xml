@@ -853,7 +853,8 @@
 	<string name="discord_token_description">Masukkan Token Discord Anda atau klik %s untuk mendapatkannya melalui browser</string>
 	<string name="discord_token_hint">Tempelkan Token Discord Anda di sini</string>
 	<string name="discord_rpc_summary">Tampilkan status membaca Anda di Discord</string>
-	<string name="discord_rpc_description">Membaca manga di Kotatsu - aplikasi pembaca manga</string>
+	<string name="discord_rpc_skip_nsfw">Jangan tampilkan konten NSFW</string>
+	<string name="discord_rpc_description">Membaca manga di Nekuva - aplikasi pembaca manga</string>
 	<string name="manga_restricted_description">Manga ini tidak tersedia untuk dibaca di sumber ini. Coba cari di sumber lain atau buka di browser untuk informasi lebih lanjut</string>
 	<string name="chapters_load_failed">Gagal memuat daftar bab</string>
 	<string name="rpc_skip_nsfw_summary">Jangan gunakan RPC untuk konten dewasa</string>

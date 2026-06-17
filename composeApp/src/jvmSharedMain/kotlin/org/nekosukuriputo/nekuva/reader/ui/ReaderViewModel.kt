@@ -107,6 +107,7 @@ class ReaderViewModel(
     private val pageSaveHelper: org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper,
     private val scrobblerManager: org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager,
     private val detectReaderModeUseCase: org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase,
+    private val discordRpcManager: org.nekosukuriputo.nekuva.scrobbling.discord.DiscordRpcManager,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
@@ -304,6 +305,20 @@ class ReaderViewModel(
         viewModelScope.launch { runCatching { scrobblerManager.scrobble(m, chapterId) } }
     }
 
+    /** Update Discord Rich Presence for the read chapter (Doki DiscordRpc; skipped in incognito). */
+    private fun updateDiscordRpc(chapterId: Long) {
+        if (_isIncognito.value) return
+        val m = manga ?: return
+        val number = chapters.indexOfFirst { it.id == chapterId }.let { if (it >= 0) it + 1 else 1 }
+        runCatching { discordRpcManager.updateRpc(m, number, chapters.size) }
+    }
+
+    override fun onCleared() {
+        // Tear down the Discord presence when leaving the reader (Doki DiscordRpc.onCleared).
+        runCatching { discordRpcManager.clearRpc() }
+        super.onCleared()
+    }
+
     /** Save the currently visible page to platform storage (Doki's "save page"). */
     fun savePage() {
         val lp = loadedPages.getOrNull(currentVisibleIndex) ?: return
@@ -372,6 +387,7 @@ class ReaderViewModel(
                 loadedPages = pages.mapIndexed { i, p -> LoadedPage(p, chapter.id, i) }
                 currentChapterId = chapter.id
                 maybeScrobble(chapter.id)
+                updateDiscordRpc(chapter.id)
 
                 // Resume target: an explicit page (e.g. opened from a bookmark) overrides history.
                 val maxIndex = (loadedPages.size - 1).coerceAtLeast(0)
@@ -421,6 +437,7 @@ class ReaderViewModel(
             // without moving the scroll position (scrollToken unchanged).
             currentChapterId = lp.chapterId
             maybeScrobble(lp.chapterId)
+            updateDiscordRpc(lp.chapterId)
             emitChapterToast(lp.chapterId)
             emitSuccess()
         }

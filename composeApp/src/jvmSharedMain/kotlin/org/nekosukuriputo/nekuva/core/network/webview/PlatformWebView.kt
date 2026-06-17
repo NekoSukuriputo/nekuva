@@ -20,6 +20,7 @@ class WebViewState {
 
     internal var goBackAction: (() -> Unit)? = null
     internal var reloadAction: (() -> Unit)? = null
+    internal var evaluateJsAction: ((String, (String?) -> Unit) -> Unit)? = null
 
     fun goBack() {
         goBackAction?.invoke()
@@ -27,6 +28,14 @@ class WebViewState {
 
     fun reload() {
         reloadAction?.invoke()
+    }
+
+    /**
+     * Evaluate [script] in the page and deliver the JSON-encoded result (Discord token capture, Doki's
+     * DiscordTokenWebClient). No-op where the engine doesn't wire it (e.g. Desktop).
+     */
+    fun evaluateJs(script: String, onResult: (String?) -> Unit) {
+        evaluateJsAction?.invoke(script, onResult)
     }
 }
 

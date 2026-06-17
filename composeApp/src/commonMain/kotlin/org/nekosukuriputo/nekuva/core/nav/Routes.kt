@@ -37,6 +37,9 @@ data class CloudFlareRoute(val url: String)
 data class OAuthRoute(val serviceId: Int)
 
 @Serializable
+data object DiscordLoginRoute
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

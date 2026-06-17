@@ -211,6 +211,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     org.nekosukuriputo.nekuva.settings.ui.services.ServicesSettingsScreen(
                         onBackClick = { navController.popBackStack() },
                         onScrobblerLogin = { serviceId -> navController.navigate(OAuthRoute(serviceId)) },
+                        onDiscordLogin = { navController.navigate(DiscordLoginRoute) },
                         onSyncClick = { navController.navigate(SyncSettingsRoute) },
                     )
                 }
@@ -342,6 +343,18 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             onCancel = { navController.popBackStack() },
                         )
                     }
+                }
+                composable<DiscordLoginRoute> {
+                    val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+                    org.nekosukuriputo.nekuva.scrobbling.discord.ui.DiscordLoginScreen(
+                        onToken = { token ->
+                            // Capture = enable RPC (Doki: token presence drives enablement).
+                            settings.discordToken = token
+                            settings.setPref(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_DISCORD_RPC, true)
+                            navController.popBackStack()
+                        },
+                        onCancel = { navController.popBackStack() },
+                    )
                 }
                 composable<CloudFlareRoute> { backStackEntry ->
                     val args = backStackEntry.toRoute<CloudFlareRoute>()
