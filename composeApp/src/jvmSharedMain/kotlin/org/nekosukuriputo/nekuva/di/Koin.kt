@@ -1,4 +1,4 @@
-package org.nekosukuriputo.nekuva.di
+﻿package org.nekosukuriputo.nekuva.di
 
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
@@ -54,9 +54,17 @@ val detailsModule = module {
 			get(),
 			get(),
 			get(),
-			get()
+				get(),
+				get()
 		)
 	}
+}
+
+// Reading statistics (Doki stats): recording (StatsCollector) + queries (StatsRepository) + screen VM.
+val statsModule = module {
+    single { org.nekosukuriputo.nekuva.stats.data.StatsRepository(get(), get()) }
+    single { org.nekosukuriputo.nekuva.stats.domain.StatsCollector(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.stats.ui.StatsViewModel(get(), get()) }
 }
 
 val appModule = module {
@@ -89,7 +97,7 @@ val readerModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.reader.TapGridConfigViewModel(get()) }
     single { org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper(get(), get(), get()) }
     single { org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase(get(), get(), get(), get()) }
-    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel(params.get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val bookmarksModule = module {
@@ -238,7 +246,7 @@ val syncModule = module {
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) =
     startKoin {
         appDeclaration()
-        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule, syncModule)
+        modules(appModule, platformModule, localModule, networkModule, prefsModule, exploreModule, remoteListModule, searchModule, detailsModule, readerModule, bookmarksModule, favouritesModule, historyModule, downloadModule, settingsModule, backupsModule, trackerModule, scrobblingModule, syncModule, statsModule)
     }
 
 

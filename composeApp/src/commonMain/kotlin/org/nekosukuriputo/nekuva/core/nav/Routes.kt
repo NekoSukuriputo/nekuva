@@ -40,6 +40,9 @@ data class OAuthRoute(val serviceId: Int)
 data object DiscordLoginRoute
 
 @Serializable
+data object StatsRoute
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

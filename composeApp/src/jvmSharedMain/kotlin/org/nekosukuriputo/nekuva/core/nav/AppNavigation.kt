@@ -345,6 +345,11 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         )
                     }
                 }
+                composable<StatsRoute> {
+                    org.nekosukuriputo.nekuva.stats.ui.StatsScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
                 composable<DiscordLoginRoute> {
                     val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
                     org.nekosukuriputo.nekuva.scrobbling.discord.ui.DiscordLoginScreen(

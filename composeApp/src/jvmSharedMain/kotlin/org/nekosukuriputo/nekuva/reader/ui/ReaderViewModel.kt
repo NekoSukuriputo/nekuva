@@ -108,6 +108,7 @@ class ReaderViewModel(
     private val scrobblerManager: org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager,
     private val detectReaderModeUseCase: org.nekosukuriputo.nekuva.reader.domain.DetectReaderModeUseCase,
     private val discordRpcManager: org.nekosukuriputo.nekuva.scrobbling.discord.DiscordRpcManager,
+    private val statsCollector: org.nekosukuriputo.nekuva.stats.domain.StatsCollector,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ReaderRoute>()
@@ -313,9 +314,17 @@ class ReaderViewModel(
         runCatching { discordRpcManager.updateRpc(m, number, chapters.size) }
     }
 
+    /** Record reading time/pages for stats (Doki StatsCollector; skipped in incognito). */
+    private fun recordStats(lp: LoadedPage) {
+        if (_isIncognito.value) return
+        val m = manga ?: return
+        statsCollector.onStateChanged(m.id, lp.chapterId, lp.pageInChapter)
+    }
+
     override fun onCleared() {
-        // Tear down the Discord presence when leaving the reader (Doki DiscordRpc.onCleared).
+        // Tear down the Discord presence + end the stats session when leaving the reader.
         runCatching { discordRpcManager.clearRpc() }
+        runCatching { statsCollector.onPause(mangaId) }
         super.onCleared()
     }
 
@@ -432,6 +441,7 @@ class ReaderViewModel(
             _pageIndicator.value = PageIndicator(lp.pageInChapter + 1, total, chapterName)
         }
         writeHistory(lp)
+        recordStats(lp)
         if (lp.chapterId != currentChapterId) {
             // The visible page crossed into another (already-appended) chapter — update the toolbar
             // without moving the scroll position (scrollToken unchanged).

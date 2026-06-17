@@ -863,10 +863,22 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     **10 dtk/halaman × 20 × jml bab**, dikurangi `history.percent` bila di branch history; null bila off/<60dtk;
     tampil sebagai baris **"Waktu baca"** di info card (`formatReadingTime` pakai `*_short`). **Catatan:** integrasi
     `stats.getTimePerPage` ditunda sampai stats dimigrasi (pakai default dulu). String baru `reading_time` (en/id/in).
-- **DEFERRED Fase 7 (increment berikut):** **Suggestions** (engine + layar), **reading stats** (recording +
-  layar; nanti sambungkan ke reading_time `getTimePerPage`). Catatan kompat OAuth-redirect webview
-  (`OAuthScreen`/Discord) bila skema `nekuva://` ditelan engine tanpa URL-change → butuh navigation-intercept.
-  Branding: `discord_rpc_description` masih "Doki/Kotatsu" di ~19 locale lain (sweep katalog terpisah).
+- **7-reading stats ✅ DONE (compile + assembleDebug hijau; belum run-verify):** engine + layar penuh:
+  - **Recording** (Doki StatsCollector): `StatsCollector` (Koin single) akumulasi sesi baca per-manga →
+    `stats` table; reader panggil `onStateChanged(mangaId, chapterId, page)` di `onVisibleIndexChanged`
+    (skip incognito) + `onPause(mangaId)` di `ReaderViewModel.onCleared`.
+  - **StatsRepository** (port Doki): `getReadingStats(period, categories)` (bucket "Other" <5%), `getTimePerPage`,
+    `getTotalPagesRead`, `clearStats`, `observeHasStats`. DAO Nekuva sudah ada.
+  - **StatsScreen + StatsViewModel** (port StatsActivity): filter **period** (Day/Week/Month/3mo/All) +
+    filter **kategori favorit** (chips), list per-manga (cover+judul+durasi+bar proporsi), empty state,
+    aksi **clear** (dialog). Entry: overflow **"Statistik"** di tab History (dulu disabled) →
+    `StatsRoute`. String baru `other` (en/id/in).
+  - **Impact reading_time:** `DetailsViewModel` kini ambil `getTimePerPage` (ms→dtk, default 10) → estimasi
+    waktu baca jadi akurat saat stats terkumpul.
+- **DEFERRED Fase 7 (increment terakhir):** **Suggestions** (engine + layar). Catatan kompat OAuth-redirect
+  webview (`OAuthScreen`/Discord) bila skema `nekuva://` ditelan engine tanpa URL-change → butuh
+  navigation-intercept. Per-manga stats sheet (Doki MangaStatsSheet) + chart pie/timeline disederhanakan
+  (list+bar). Branding: `discord_rpc_description` masih "Doki/Kotatsu" di ~19 locale lain (sweep terpisah).
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 

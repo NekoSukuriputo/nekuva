@@ -35,6 +35,7 @@ class DetailsViewModel(
     private val bookmarksRepository: BookmarksRepository,
     private val localMangaRepository: org.nekosukuriputo.nekuva.local.data.LocalMangaRepository,
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
+    private val statsRepository: org.nekosukuriputo.nekuva.stats.data.StatsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -67,26 +68,30 @@ class DetailsViewModel(
     private val _relatedManga = MutableStateFlow<List<Manga>>(emptyList())
     val relatedManga: StateFlow<List<Manga>> = _relatedManga.asStateFlow()
 
+    /** Average seconds/page from stats (Doki getTimePerPage); 10 s default until stats accumulate. */
+    private val secondsPerPage = MutableStateFlow(10)
+
     /** Estimated reading time (Doki ReadingTimeUseCase): null when off / too short / no chapters. */
     val readingTime: StateFlow<ReadingTimeInfo?> =
-        kotlinx.coroutines.flow.combine(loadedManga, history) { m, h -> if (m == null) null else computeReadingTime(m, h) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        kotlinx.coroutines.flow.combine(loadedManga, history, secondsPerPage) { m, h, spp ->
+            if (m == null) null else computeReadingTime(m, h, spp)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         loadDetails()
     }
 
-    // Port of Doki's ReadingTimeUseCase, simplified: uses a default 10 s/page (stats integration deferred).
+    // Port of Doki's ReadingTimeUseCase: per-page time comes from stats (getTimePerPage), default 10 s.
     private fun computeReadingTime(
         manga: Manga,
         history: org.nekosukuriputo.nekuva.core.model.MangaHistory?,
+        secondsPerPage: Int,
     ): ReadingTimeInfo? {
         if (!settings.prefBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_READING_TIME, true)) return null
         val chapters = manga.chapters
         if (chapters.isNullOrEmpty()) return null
         val isOnHistoryBranch = history != null && chapters.any { it.id == history.chapterId }
-        val secondsPerPage = 10 // default; replaced by stats getTimePerPage once stats is migrated
-        var averageTimeSec = 20 /* pages */ * secondsPerPage * chapters.size
+        var averageTimeSec = 20 /* pages */ * secondsPerPage.coerceAtLeast(1) * chapters.size
         if (isOnHistoryBranch && history != null) {
             averageTimeSec = (averageTimeSec * (1f - history.percent)).roundToInt()
         }
@@ -139,6 +144,13 @@ class DetailsViewModel(
                 _uiState.value = DetailsUiState.Success(manga!!)
                 loadedManga.value = manga
                 loadRelatedManga(manga!!)
+                // Refine the reading-time estimate from recorded stats (Doki getTimePerPage), if any.
+                if (settings.isStatsEnabled) {
+                    runCatching {
+                        val ms = statsRepository.getTimePerPage(mangaId)
+                        if (ms > 0L) secondsPerPage.value = (ms / 1000L).toInt().coerceAtLeast(1)
+                    }
+                }
             } catch (e: Exception) {
                 _uiState.value = DetailsUiState.Error(e)
             }
