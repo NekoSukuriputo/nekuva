@@ -52,6 +52,7 @@ fun DetailsScreen(
     onOpenDownloads: () -> Unit,
     onBackClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
+    onRelatedClick: (mangaId: Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
@@ -60,6 +61,8 @@ fun DetailsScreen(
     val mangaCategories by viewModel.mangaCategories.collectAsState()
     val history by viewModel.history.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
+    val relatedManga by viewModel.relatedManga.collectAsState()
+    val readingTime by viewModel.readingTime.collectAsState()
 
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
@@ -191,6 +194,9 @@ fun DetailsScreen(
                             showCategoryDialog = true
                         }
                     },
+                    relatedManga = relatedManga,
+                    onRelatedClick = onRelatedClick,
+                    readingTimeText = readingTime?.let { formatReadingTime(it) },
                     paddingValues = paddingValues
                 )
             }
@@ -205,6 +211,9 @@ fun MangaDetailsContent(
     isFavorite: Boolean,
     favoriteText: String,
     onFavoriteClick: () -> Unit,
+    relatedManga: List<Manga> = emptyList(),
+    onRelatedClick: (mangaId: Long) -> Unit = {},
+    readingTimeText: String? = null,
     paddingValues: PaddingValues
 ) {
     val scrollState = androidx.compose.foundation.rememberScrollState()
@@ -300,6 +309,10 @@ fun MangaDetailsContent(
                 }
                 DetailRow(stringResource(Res.string.state), manga.state?.name ?: "-")
                 DetailRow(stringResource(Res.string.chapters), manga.chapters?.size?.toString() ?: "0")
+                // Estimated reading time (Doki ReadingTimeUseCase) — only when enabled & long enough.
+                if (readingTimeText != null) {
+                    DetailRow(stringResource(Res.string.reading_time), readingTimeText)
+                }
             }
         }
 
@@ -349,20 +362,26 @@ fun MangaDetailsContent(
             }
         }
         
-        // Related Manga (Deferred Placeholder)
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = stringResource(Res.string.related_manga), style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { /* Deferred */ }, contentPadding = PaddingValues(0.dp)) {
-                    Text(stringResource(Res.string.show_all))
+        // Related manga (Doki RelatedMangaUseCase): horizontal row of covers, tap → that manga's details.
+        if (relatedManga.isNotEmpty()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(Res.string.related_manga),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(relatedManga, key = { it.id }) { related ->
+                        RelatedMangaItem(manga = related, onClick = { onRelatedClick(related.id) })
+                    }
                 }
             }
         }
-        
+
         Spacer(Modifier.height(16.dp))
     }
 }
@@ -384,6 +403,45 @@ fun DetailRow(label: String, value: String) {
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+/** A related-manga cover + title in the Details horizontal row (Doki related). */
+@Composable
+private fun RelatedMangaItem(manga: Manga, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.width(104.dp).clickable(onClick = onClick),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(13f / 18f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            AsyncImage(
+                model = manga.coverUrl,
+                contentDescription = manga.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Text(
+            text = manga.title,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Format [ReadingTimeInfo] compactly using the short string resources (Doki ReadingTime.formatShort). */
+@Composable
+private fun formatReadingTime(info: ReadingTimeInfo): String = when {
+    info.hours == 0 && info.minutes == 0 -> stringResource(Res.string.less_than_minute)
+    info.hours == 0 -> stringResource(Res.string.minutes_short, info.minutes)
+    info.minutes == 0 -> stringResource(Res.string.hours_short, info.hours)
+    else -> stringResource(Res.string.hours_minutes_short, info.hours, info.minutes)
 }
 
 private enum class SheetView { CHAPTERS, PAGES, BOOKMARKS }

@@ -53,6 +53,7 @@ val detailsModule = module {
 			get(),
 			get(),
 			get(),
+			get(),
 			get()
 		)
 	}

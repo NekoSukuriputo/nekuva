@@ -565,6 +565,7 @@
     <string name="use_two_pages_landscape">Gunakan tata letak dua halaman pada orientasi lanskap (beta)</string>
     <string name="email_password_enter_hint">Masukkan surel dan kata sandi untuk melanjutkan</string>
     <string name="reading_time_estimation_summary">Perkiraan waktu mungkin tidak akurat</string>
+    <string name="reading_time">Waktu baca</string>
     <string name="suggestions_unavailable_text">Fitur saran dinonaktifkan</string>
     <string name="check_for_new_chapters_disabled">Memeriksa bab baru dinonaktifkan</string>
     <string name="show_labels_in_navbar">Tampilkan label di bilah navigasi</string>

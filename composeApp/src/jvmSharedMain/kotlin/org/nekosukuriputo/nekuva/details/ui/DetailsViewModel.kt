@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
+import kotlin.math.roundToInt
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DetailsViewModel(
@@ -33,6 +34,7 @@ class DetailsViewModel(
     private val historyRepository: org.nekosukuriputo.nekuva.history.data.HistoryRepository,
     private val bookmarksRepository: BookmarksRepository,
     private val localMangaRepository: org.nekosukuriputo.nekuva.local.data.LocalMangaRepository,
+    private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -61,8 +63,50 @@ class DetailsViewModel(
     val history: StateFlow<org.nekosukuriputo.nekuva.core.model.MangaHistory?> = historyRepository.observeOne(mangaId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    /** Related manga (Doki RelatedMangaUseCase): fetched from the parser when related_manga is on. */
+    private val _relatedManga = MutableStateFlow<List<Manga>>(emptyList())
+    val relatedManga: StateFlow<List<Manga>> = _relatedManga.asStateFlow()
+
+    /** Estimated reading time (Doki ReadingTimeUseCase): null when off / too short / no chapters. */
+    val readingTime: StateFlow<ReadingTimeInfo?> =
+        kotlinx.coroutines.flow.combine(loadedManga, history) { m, h -> if (m == null) null else computeReadingTime(m, h) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     init {
         loadDetails()
+    }
+
+    // Port of Doki's ReadingTimeUseCase, simplified: uses a default 10 s/page (stats integration deferred).
+    private fun computeReadingTime(
+        manga: Manga,
+        history: org.nekosukuriputo.nekuva.core.model.MangaHistory?,
+    ): ReadingTimeInfo? {
+        if (!settings.prefBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_READING_TIME, true)) return null
+        val chapters = manga.chapters
+        if (chapters.isNullOrEmpty()) return null
+        val isOnHistoryBranch = history != null && chapters.any { it.id == history.chapterId }
+        val secondsPerPage = 10 // default; replaced by stats getTimePerPage once stats is migrated
+        var averageTimeSec = 20 /* pages */ * secondsPerPage * chapters.size
+        if (isOnHistoryBranch && history != null) {
+            averageTimeSec = (averageTimeSec * (1f - history.percent)).roundToInt()
+        }
+        if (averageTimeSec < 60) return null
+        return ReadingTimeInfo(
+            hours = averageTimeSec / 3600,
+            minutes = (averageTimeSec / 60) % 60,
+            isContinue = isOnHistoryBranch,
+        )
+    }
+
+    private fun loadRelatedManga(manga: Manga) {
+        if (manga.isLocal) return
+        if (!settings.prefBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_RELATED_MANGA, true)) return
+        viewModelScope.launch {
+            runCatching {
+                val source = MangaParserSource.entries.find { it.name == manga.source.name } ?: return@launch
+                _relatedManga.value = repositoryFactory.create(source).getRelated(manga)
+            }
+        }
     }
 
     private fun loadDetails() {
@@ -94,6 +138,7 @@ class DetailsViewModel(
 
                 _uiState.value = DetailsUiState.Success(manga!!)
                 loadedManga.value = manga
+                loadRelatedManga(manga!!)
             } catch (e: Exception) {
                 _uiState.value = DetailsUiState.Error(e)
             }
@@ -157,6 +202,13 @@ class DetailsViewModel(
         }
     }
 }
+
+/** Estimated reading time (Doki ReadingTime), formatted in the Composable via string resources. */
+data class ReadingTimeInfo(
+    val hours: Int,
+    val minutes: Int,
+    val isContinue: Boolean,
+)
 
 sealed interface DetailsUiState {
     data object Loading : DetailsUiState

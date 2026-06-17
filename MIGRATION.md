@@ -855,13 +855,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   dipanggil saat bab berganti (skip incognito) + `clearRpc()` di `onCleared`. **App ID** = placeholder Doki di
   `ScrobblerConfig.DISCORD_APP_ID` (`TODO(credentials)`). Branding fix: `discord_rpc_description` "Doki/Kotatsu"→"Nekuva"
   (en/id/in).
-- **DEFERRED Fase 7 (increment berikut):** **Suggestions** (engine + layar), **reading stats** (layar),
-  **reading_time** estimasi (saat ini hanya BoolPref), **related_manga** section di Details. Catatan kompat
-  OAuth-redirect untuk webview (`OAuthScreen`/Discord) bila skema `nekuva://` ditelan engine tanpa URL-change →
-  butuh navigation-intercept (uji saat client id/login nyata tersedia). Branding: `discord_rpc_description` masih
-  "Doki/Kotatsu" di ~19 locale lain (sweep katalog terpisah).
+- **7-related_manga + reading_time ✅ DONE (compile + assembleDebug hijau; belum run-verify):** di **Details**:
+  - **related_manga** (Doki RelatedMangaUseCase): `DetailsViewModel.relatedManga` fetch `repositoryFactory.create(source).getRelated(manga)`
+    saat `related_manga` on & bukan local; UI = **LazyRow cover** (ganti placeholder "Show all") di DetailsScreen,
+    tap → Details manga itu (`onRelatedClick` → `MangaDetailsRoute`).
+  - **reading_time** (Doki ReadingTimeUseCase): `DetailsViewModel.readingTime` (combine manga+history) — default
+    **10 dtk/halaman × 20 × jml bab**, dikurangi `history.percent` bila di branch history; null bila off/<60dtk;
+    tampil sebagai baris **"Waktu baca"** di info card (`formatReadingTime` pakai `*_short`). **Catatan:** integrasi
+    `stats.getTimePerPage` ditunda sampai stats dimigrasi (pakai default dulu). String baru `reading_time` (en/id/in).
+- **DEFERRED Fase 7 (increment berikut):** **Suggestions** (engine + layar), **reading stats** (recording +
+  layar; nanti sambungkan ke reading_time `getTimePerPage`). Catatan kompat OAuth-redirect webview
+  (`OAuthScreen`/Discord) bila skema `nekuva://` ditelan engine tanpa URL-change → butuh navigation-intercept.
+  Branding: `discord_rpc_description` masih "Doki/Kotatsu" di ~19 locale lain (sweep katalog terpisah).
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
-- **Fase 9 About:** changelog + app-update checker + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
+- **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

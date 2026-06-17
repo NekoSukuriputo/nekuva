@@ -171,7 +171,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onBackClick = { navController.popBackStack() },
                         onManageCategoriesClick = {
                             navController.navigate(CategoriesRoute)
-                        }
+                        },
+                        onRelatedClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                     )
                 }
                 composable<ReaderRoute> {
