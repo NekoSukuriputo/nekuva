@@ -7,53 +7,43 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
 import org.nekosukuriputo.nekuva.list.domain.ListFilterOption
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class FavouritesListViewModel(
     private val categoryId: Long,
     private val repository: FavouritesRepository,
     private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
+    private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
 ) : ViewModel() {
-
-    private val _uiState = MutableStateFlow<FavouritesUiState>(FavouritesUiState.Loading)
-    val uiState: StateFlow<FavouritesUiState> = _uiState.asStateFlow()
 
     val categories: StateFlow<List<FavouriteCategory>> = repository.observeCategories()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        loadFavourites()
-    }
-
-    private fun loadFavourites() {
-        viewModelScope.launch {
-            val order = ListSortOrder.NEWEST // Using a default since we simplified
+    // Reactive on the global favourites sort (Doki KEY_FAVORITES_ORDER): re-query when it changes.
+    val uiState: StateFlow<FavouritesUiState> = settings.keyChangeFlow(AppSettings.KEY_FAVORITES_ORDER)
+        .onStart { emit(Unit) }
+        .flatMapLatest {
+            val order = settings.allFavoritesSortOrder
             val flow = if (categoryId == -1L) {
-                repository.observeAll(order, emptySet(), Int.MAX_VALUE) // All favourites
+                repository.observeAll(order, emptySet(), Int.MAX_VALUE)
             } else {
-                repository.observeAll(categoryId, order, emptySet(), Int.MAX_VALUE) // Specific category, 0L is Default
+                repository.observeAll(categoryId, order, emptySet(), Int.MAX_VALUE)
             }
-
-            flow.catch { e ->
-                _uiState.value = FavouritesUiState.Error(e)
-            }.collect { mangas ->
-                if (mangas.isEmpty()) {
-                    _uiState.value = FavouritesUiState.Empty
-                } else {
-                    _uiState.value = FavouritesUiState.Success(mangas)
-                }
-            }
+            flow.map<List<Manga>, FavouritesUiState> { if (it.isEmpty()) FavouritesUiState.Empty else FavouritesUiState.Success(it) }
+                .catch { e -> emit(FavouritesUiState.Error(e)) }
         }
-    }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FavouritesUiState.Loading)
 
     fun removeFromFavourites(ids: Set<Long>) {
         if (ids.isEmpty()) return

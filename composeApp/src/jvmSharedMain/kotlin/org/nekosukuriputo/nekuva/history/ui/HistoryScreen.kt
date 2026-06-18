@@ -188,73 +188,16 @@ fun HistoryScreen(
     }
 
     if (showSortDialog) {
-        HistorySortDialog(
+        org.nekosukuriputo.nekuva.core.ui.components.SortOrderDialog(
             current = sortOrder,
-            grouping = grouping,
+            options = org.nekosukuriputo.nekuva.list.domain.ListSortOrder.HISTORY,
             onSelect = { viewModel.setSortOrder(it) },
+            grouping = grouping,
             onGroupingChange = { settings.isHistoryGroupingEnabled = it; grouping = it },
             onDismiss = { showSortDialog = false },
         )
     }
 }
-
-/** Sort + "group by date" picker (Doki history sort sheet). */
-@Composable
-private fun HistorySortDialog(
-    current: org.nekosukuriputo.nekuva.list.domain.ListSortOrder,
-    grouping: Boolean,
-    onSelect: (org.nekosukuriputo.nekuva.list.domain.ListSortOrder) -> Unit,
-    onGroupingChange: (Boolean) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.sort_order)) },
-        text = {
-            Column(
-                modifier = Modifier.heightIn(max = 460.dp)
-                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
-            ) {
-                org.nekosukuriputo.nekuva.list.domain.ListSortOrder.HISTORY.forEach { order ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onSelect(order) }.padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = order == current, onClick = { onSelect(order) })
-                        Spacer(Modifier.width(8.dp))
-                        Text(sortLabel(order))
-                    }
-                }
-                HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onGroupingChange(!grouping) }.padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(Res.string.group_by_date), modifier = Modifier.weight(1f))
-                    Switch(checked = grouping, onCheckedChange = { onGroupingChange(it) })
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.done)) } },
-    )
-}
-
-@Composable
-private fun sortLabel(order: org.nekosukuriputo.nekuva.list.domain.ListSortOrder): String = stringResource(
-    when (order) {
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LAST_READ -> Res.string.last_read
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LONG_AGO_READ -> Res.string.long_ago_read
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEWEST -> Res.string.newest
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.OLDEST -> Res.string.oldest
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.PROGRESS -> Res.string.progress
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.UNREAD -> Res.string.unread
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.ALPHABETIC -> Res.string.by_name
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.ALPHABETIC_REVERSE -> Res.string.by_name_reverse
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEW_CHAPTERS -> Res.string.new_chapters
-        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.UPDATED -> Res.string.updated
-        else -> Res.string.sort_order
-    },
-)
 
 @Composable
 private fun DateHeader(epochMillis: Long) {

@@ -114,7 +114,7 @@ val bookmarksModule = module {
 
 val favouritesModule = module {
     single { org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository(get()) }
-    factory { params -> org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListViewModel(params.get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListViewModel(params.get(), get(), get(), get()) }
     factory { FavouritesViewModel(get(), get()) }
     factory { CategoryListViewModel(get(), get()) }
 }
