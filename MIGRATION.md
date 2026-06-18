@@ -954,7 +954,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   sama seperti Doki). Telegram nyata butuh bot token user.
 - **FASE 8 SELESAI** (8A periodic + Telegram + 8B restore picker + 8C section/Desktop; compile + assembleDebug
   hijau, belum run-verify GUI).
-- **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
+### FASE 9 — About — checklist + impact
+> Ref Doki: `pref_about.xml` + `settings/about/*` + `core/github/AppUpdateRepository`. Nekuva sudah punya model
+> `AppVersion`/`VersionId` (port), tapi `AppUpdateRepository` masih STUB.
+- **9A ✅ DONE — About screen + update checker (setting + impact; compile + assembleDebug hijau):**
+  - **AboutSettingsScreen (port pref_about):** baris **versi app** (tap → cek update), **Changelog** (disabled —
+    Doki pun disabled/TODO), **User manual** (→ link Kotatsu `https://kotatsu.app/manuals/...` sesuai catatan),
+    **Source code** (→ GitHub Nekuva), **Translate this app** (disabled — belum ada Weblate Nekuva). Ikon per baris.
+  - **Impact — update checker:** `AppUpdateRepository` (jvmShared) diimplementasi (dulu stub): query
+    `api.github.com/repos/NekoSukuriputo/nekuva/releases/latest`, bandingkan tag via `VersionId`, return
+    `AppVersion?`. `AboutSettingsViewModel.checkForUpdates` → snackbar **"Versi baru: X"** (aksi ↗ buka rilis)
+    atau **"Anda menggunakan versi terbaru"**. String baru `youre_using_the_latest_version` (en/id/in).
+- **DEFERRED Fase 9 (increment berikut):** **ikon app + splash** (desktop win/linux/mac + android) dari
+  `logo/logo.png` — perlu generate aset (instruksi + wiring); **README** refactor (Desktop+Linux + logo di atas
+  judul). Changelog functional (release notes) + auto-update-check saat launch (Doki) bisa menyusul.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

@@ -159,6 +159,9 @@ val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogViewModel(get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageViewModel(get(), get()) }
     factory { params -> org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsViewModel(params.get(), get(), get()) }
+    // About: GitHub release update checker (Doki AppUpdateRepository) + screen VM.
+    single { org.nekosukuriputo.nekuva.core.github.AppUpdateRepository(get()) }
+    factory { org.nekosukuriputo.nekuva.settings.ui.about.AboutSettingsViewModel(get()) }
 }
 
 val trackerModule = module {
