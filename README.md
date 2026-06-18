@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="logo/logo.png" alt="Nekuva logo" width="128" height="128" />
+<img src=".github/logo.png" alt="Nekuva logo" width="128" height="128" />
 
 # Nekuva
 
