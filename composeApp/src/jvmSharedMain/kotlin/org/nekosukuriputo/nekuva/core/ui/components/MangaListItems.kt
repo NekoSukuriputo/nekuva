@@ -90,6 +90,7 @@ fun MangaListContent(
     onLongClick: (Manga) -> Unit = {},
     progressOf: (Manga) -> Float? = { null },
     badgesOf: (Manga) -> MangaBadges = { MangaBadges() },
+    selectedIds: Set<Long> = emptySet(),
 ) {
     if (listMode == ListMode.GRID) {
         LazyVerticalGrid(
@@ -100,14 +101,14 @@ fun MangaListContent(
             modifier = modifier.fillMaxSize(),
         ) {
             gridItems(mangas, key = { it.id }) { m ->
-                MangaGridItem(m, { onClick(m) }, { onLongClick(m) }, progressOf(m), badgesOf(m))
+                MangaGridItem(m, { onClick(m) }, { onLongClick(m) }, progressOf(m), badgesOf(m), m.id in selectedIds)
             }
         }
     } else {
         val detailed = listMode == ListMode.DETAILED_LIST
         LazyColumn(contentPadding = contentPadding, modifier = modifier.fillMaxSize()) {
             items(mangas, key = { it.id }) { m ->
-                MangaListRow(m, { onClick(m) }, { onLongClick(m) }, detailed, progressOf(m), badgesOf(m))
+                MangaListRow(m, { onClick(m) }, { onLongClick(m) }, detailed, progressOf(m), badgesOf(m), m.id in selectedIds)
             }
         }
     }
@@ -168,12 +169,14 @@ fun MangaListRow(
     detailed: Boolean = false,
     progress: Float? = null,
     badges: MangaBadges = MangaBadges(),
+    selected: Boolean = false,
 ) {
     val coverWidth = if (detailed) 64.dp else 44.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

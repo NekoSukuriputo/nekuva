@@ -1049,26 +1049,28 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 
 ## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
-> **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-5 ✅, CORE-6 ✅. Sisa: CORE-1/2(wiring)/3(wiring)/4/7/8/9 + area.
+> **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-2 ✅, CORE-3 ✅, CORE-5 ✅, CORE-6 ✅,
+> CORE-1 🟡 (History/Favourites/Local ✅, Downloads pending). Sisa: CORE-1(Downloads), CORE-4, CORE-7, CORE-8, CORE-9 + area.
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
   `calculateTimeAgo` (Composable). Absolute = "d MMMM yyyy" ("24 Mei 2026"). **History** group header kini
   relatif (Hari ini/Kemarin/N hari lalu/→ tanggal), **chapter list** (Details) ikut. compile+assembleDebug hijau.
-- **CORE-1 — Selection mode (long-press multi-select)** 🟡 (komponen ✅ + History ✅; Favourites/Local/Downloads pending)
-  Komponen reusable `core/ui/selection/SelectionState` (`rememberSelectionState`: selected ids, toggle/selectAll/
-  clear/isActive) ✅. `MangaGridItem` dapat overlay `selected` (scrim + check) ✅. **History ✅ wired** (commit
-  `feat(core): selection mode`): long-press → masuk seleksi; top bar kontekstual (Close + jumlah + **Select-all /
-  Share / Mark-completed / Remove**) memakai CORE-5 `shareMangas` + CORE-6 `markAsRead` + multi-delete history;
-  item grid+list tampil ter-seleksi; menu single-item lama dihapus. **Sisa:** wiring Favourites (mode_favourites:
-  +categories), Local (mode_local: +delete/edit), Downloads. action favourite/save/edit di History menunggu
-  CORE-7/image (per-layar).
-- **CORE-2 — Overlay cover manga (parity grid item)** 🔴
-  Ikon hati (favorit) + badge progres baca (%/✓ "sudah tamat") + badge "baru" di atas cover. Doki `ListModel`/cover
-  overlay. Dipakai Explore, Favourites, History, RemoteList, hasil Search, Suggestions. (ledger "Parity item grid".)
-- **CORE-3 — Mode tampilan daftar (list/grid/detailed) + grid size + badges** 🟡
-  Key `KEY_LIST_MODE_*`/grid-size SUDAH tersimpan, tapi layar daftar masih render 1 layout. Terapkan ke
-  Explore/Favourites/History/Local/RemoteList (grid kolom adaptif, list, detailed-list).
+- **CORE-1 — Selection mode (long-press multi-select)** 🟡 (komponen ✅ + History/Favourites/Local ✅; Downloads pending)
+  Komponen reusable `core/ui/selection/SelectionState` (`rememberSelectionState`: toggle/selectAll/clear/isActive) ✅.
+  `MangaGridItem` overlay `selected` (scrim+check) + `MangaListRow` highlight + `MangaListContent(selectedIds=)` ✅.
+  **History ✅** (Select-all/Share/Mark-completed/Remove), **Favourites ✅** (FavouritesListScreen: +remove-from-fav/
+  category), **Local ✅** (mode_local: Select-all/Share/Delete + konfirmasi). Pakai CORE-5 `shareMangas` + CORE-6
+  `markAsRead`. **Sisa:** Downloads multi-select; action favourite/save/edit (History) & categories (Favourites) &
+  edit (Local) menunggu CORE-7/image (per-layar).
+- **CORE-2 — Overlay cover manga (parity grid item)** ✅ DONE (komponen + wiring layar utama)
+  `MangaListItems` (badge favorit/saved/bookmark + bar progres) + `MangaListDecorations` (`rememberMangaListDecorations`:
+  observe favourite-ids + history-progress). **Sudah dipakai** di Local/Favourites/RemoteList/GlobalSearch via
+  `MangaListContent` (progressOf+badgesOf). History pakai progress sendiri. **Sisa kecil:** badge favorit di History +
+  badge "baru"/unread (Doki) — opsional.
+- **CORE-3 — Mode tampilan daftar (list/grid/detailed) + grid size** ✅ DONE (komponen + wiring)
+  `rememberMangaListMode`/`rememberGridSize` + `MangaListContent` (GRID/LIST/DETAILED_LIST) dipakai
+  Local/Favourites/RemoteList/GlobalSearch; History punya GRID/LIST sendiri. Live dari `KEY_LIST_MODE_*`/grid-size.
 - **CORE-4 — Sort order + quick-filter + grouping generik** 🟡
   Untuk layar daftar (History/Favourites/Local). Doki `*ListQuickFilter` + menu sort + header grouping. Saat ini
   banyak hardcoded (mis. History = LAST_READ saja, no grouping/quick-filter).

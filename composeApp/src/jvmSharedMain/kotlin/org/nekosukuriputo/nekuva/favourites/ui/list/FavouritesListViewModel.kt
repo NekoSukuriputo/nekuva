@@ -21,6 +21,7 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 class FavouritesListViewModel(
     private val categoryId: Long,
     private val repository: FavouritesRepository,
+    private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<FavouritesUiState>(FavouritesUiState.Loading)
@@ -63,6 +64,12 @@ class FavouritesListViewModel(
                 repository.removeFromCategory(categoryId, ids)
             }
         }
+    }
+
+    /** Selection-mode: mark several favourites as fully read (Doki action_mark_current). */
+    fun markAsRead(mangas: Collection<Manga>) {
+        if (mangas.isEmpty()) return
+        viewModelScope.launch { runCatching { markAsReadUseCase(mangas) } }
     }
 
     fun removeCategories(ids: Collection<Long>) {

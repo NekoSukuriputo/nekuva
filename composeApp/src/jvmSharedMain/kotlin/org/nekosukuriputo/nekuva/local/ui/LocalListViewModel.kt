@@ -36,6 +36,14 @@ class LocalListViewModel(
         }
     }
 
+    /** Selection-mode: delete several local manga (Doki mode_local action_remove). */
+    fun deleteManga(mangas: Collection<org.nekosukuriputo.nekuva.parsers.model.Manga>) {
+        viewModelScope.launch {
+            mangas.forEach { runCatching { localMangaRepository.delete(it) } }
+            loadManga()
+        }
+    }
+
     fun loadManga() {
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading

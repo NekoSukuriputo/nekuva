@@ -1,7 +1,15 @@
 package org.nekosukuriputo.nekuva.local.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,20 +35,49 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun LocalListScreen(
     viewModel: LocalListViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var mangaToDelete by remember { mutableStateOf<Manga?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val settings = koinInject<AppSettings>()
     val listMode = rememberMangaListMode(settings)          // Local follows the global list mode
     val gridSize = rememberGridSize(settings)
     val showSavedBadge = (settings.getMangaListBadges() and 2) != 0 // downloaded == "saved"
     val deco = rememberMangaListDecorations() // reading progress + favourite badge (Doki indicators)
+    // Multi-select (Doki mode_local): long-press enters; contextual bar select-all/share/delete.
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
+    val mangas = (uiState as? LocalListUiState.Success)?.mangaList.orEmpty()
+    fun selected() = mangas.filter { selection.isSelected(it.id) }
 
-    Scaffold { paddingValues ->
+    Scaffold(
+        topBar = {
+            if (selection.isActive) {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { selection.clear() }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.cancel))
+                        }
+                    },
+                    title = { Text(selection.count.toString()) },
+                    actions = {
+                        IconButton(onClick = { selection.selectAll(mangas.map { it.id }) }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = stringResource(Res.string.select_all))
+                        }
+                        IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selected()); selection.clear() }) {
+                            Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.delete))
+                        }
+                    },
+                )
+            }
+        },
+    ) { paddingValues ->
         when (val state = uiState) {
             is LocalListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
             is LocalListUiState.Empty -> EmptyState(message = stringResource(Res.string.nothing_here), modifier = Modifier.padding(paddingValues))
@@ -51,28 +88,31 @@ fun LocalListScreen(
                     listMode = listMode,
                     gridSize = gridSize,
                     modifier = Modifier.padding(paddingValues),
-                    onClick = { onMangaClick(it.id) },
-                    onLongClick = { mangaToDelete = it },
+                    onClick = { if (selection.isActive) selection.toggle(it.id) else onMangaClick(it.id) },
+                    onLongClick = { selection.toggle(it.id) },
                     progressOf = { deco.progressOf(it) },
                     badgesOf = { MangaBadges(saved = showSavedBadge, favourite = deco.badgesOf(it).favourite) },
+                    selectedIds = selection.selected,
                 )
             }
         }
     }
 
-    mangaToDelete?.let { target ->
+    if (showDeleteConfirm) {
+        val toDelete = selected()
         AlertDialog(
-            onDismissRequest = { mangaToDelete = null },
+            onDismissRequest = { showDeleteConfirm = false },
             title = { Text(stringResource(Res.string.delete)) },
-            text = { Text(target.title) },
+            text = { Text(toDelete.joinToString("\n") { it.title }) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.deleteManga(target)
-                    mangaToDelete = null
+                    viewModel.deleteManga(toDelete)
+                    showDeleteConfirm = false
+                    selection.clear()
                 }) { Text(stringResource(Res.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { mangaToDelete = null }) { Text(stringResource(Res.string.cancel)) }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(Res.string.cancel)) }
             },
         )
     }
