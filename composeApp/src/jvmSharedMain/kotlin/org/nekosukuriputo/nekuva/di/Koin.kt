@@ -42,6 +42,12 @@ val searchModule = module {
             params.get(), get(), get(), get(), get(), get(), get(), get(),
         )
     }
+    // "Find similar in other sources" (Doki Alternatives): savedStateHandle + repo factory + data + sources + settings.
+    factory { params ->
+        org.nekosukuriputo.nekuva.alternatives.ui.AlternativesViewModel(
+            params.get(), get(), get(), get(), get(),
+        )
+    }
 }
 
 val detailsModule = module {

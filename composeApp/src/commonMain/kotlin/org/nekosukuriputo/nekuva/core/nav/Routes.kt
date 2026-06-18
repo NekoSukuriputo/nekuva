@@ -27,6 +27,10 @@ data object HistoryRoute
 @Serializable
 data class GlobalSearchRoute(val query: String)
 
+// "Find similar in other sources" (Doki AlternativesActivity): same manga title searched across sources.
+@Serializable
+data class AlternativesRoute(val mangaId: Long)
+
 @Serializable
 data class BrowserRoute(val url: String, val title: String? = null)
 

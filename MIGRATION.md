@@ -1117,8 +1117,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-9 — Create launcher shortcut (pin manga)** 🔴 Android (`action_shortcut`); Desktop N/A.
 
 ### Area mandiri yang BELUM ada (masuk prioritas core)
-- **AREA `alternatives`** 🔴 — "Find similar / Alternatives / Online variant" (Details `action_related`/`action_alternatives`/`action_online`).
-  Doki `details/ui/related` + alternatives: cari manga sama di sumber lain + daftar alternatif. (related-row sudah ✅, ini layar/aksi terpisah.)
+- **AREA `alternatives`** 🟡 — "Find similar / Alternatives / Online variant" (Details `action_related`/`action_alternatives`/`action_online`).
+  related-row ✅. **Alternatives ✅**: `alternatives/ui/AlternativesViewModel` + `AlternativesScreen` (route
+  `AlternativesRoute(mangaId)`, overflow Details `action_alternatives`). Port `AlternativesUseCase`: cari judul
+  manga di tiap sumber enabled paralel (Semaphore 4), stream hasil flat (exclude id & sumber sendiri), tombol
+  "Search through disabled sources" (throughDisabledSources). Tap hasil → Details. **Defer (dicatat):** Migrate +
+  AutoFix (pindahkan favourite/history ke sumber lain, `MigrateUseCase`/`AutoFixUseCase`/`AutoFixService`) — operasi
+  tulis lintas-sumber, langkah tersendiri. `action_online` (buka varian online manga lokal) belum.
 - **AREA `image`** 🔴 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman tersimpan → fullscreen zoom + share + save.
 - **AREA `picker` / import lokal** 🔴 — import `.cbz`/folder ke library (`opt_local action_import`). (directory/page-save picker sudah ada, IMPORT belum.)
 - **AREA `widget`** 🔴 — home-screen widget Android (Doki `widget/`: shelf/recent). Android `actual` saja; Desktop/iOS N/A.

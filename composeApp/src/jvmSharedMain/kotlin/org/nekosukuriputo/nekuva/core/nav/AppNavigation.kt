@@ -173,6 +173,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.navigate(CategoriesRoute)
                         },
                         onRelatedClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onAlternativesClick = { id -> navController.navigate(AlternativesRoute(id)) },
+                    )
+                }
+                composable<AlternativesRoute> {
+                    org.nekosukuriputo.nekuva.alternatives.ui.AlternativesScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<ReaderRoute> {

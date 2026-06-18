@@ -54,6 +54,7 @@ fun DetailsScreen(
     onBackClick: () -> Unit,
     onManageCategoriesClick: () -> Unit,
     onRelatedClick: (mangaId: Long) -> Unit = {},
+    onAlternativesClick: (mangaId: Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
@@ -195,6 +196,15 @@ fun DetailsScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     showEditOverride = true
+                                },
+                            )
+                            // Find the same manga in other sources (Doki action_alternatives → Alternatives).
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.alternatives)) },
+                                enabled = uiState is DetailsUiState.Success,
+                                onClick = {
+                                    showOverflowMenu = false
+                                    (uiState as? DetailsUiState.Success)?.manga?.let { onAlternativesClick(it.id) }
                                 },
                             )
                         }
