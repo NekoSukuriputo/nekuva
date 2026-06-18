@@ -919,9 +919,15 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     user buat bot sendiri via @BotFather). UI: enable + chat id + buka bot + test koneksi.
   - **Branding fix:** `open_telegram_bot_summary` "Kotatsu/Doki Backup Bot"→"Nekuva" (en/id/in). String baru
     `last_backup` (en/id/in); `backup_tg_echo` sudah ada (dipakai test).
-- **DEFERRED Fase 8 (increment berikut):** **restore section picker** (pilih section saat restore — kini restore
-  semua); extend backup ke section yang baru dimigrasi (stats/suggestions/scrobbling/saved-filters/settings);
-  periodic backup Desktop (tanpa WorkManager). Telegram nyata butuh bot token user.
+- **8B ✅ DONE — Restore section picker (Doki, compile + assembleDebug hijau):** restore kini baca backup →
+  `BackupRepository.peekSections(bytes)` deteksi section yang ada → **dialog checkbox** (History/Categories/
+  Favourites/Bookmarks, default semua) → `restoreBackup(input, selectedSections)` hanya restore yang dipilih.
+  `BackupViewModel.restorePrompt`/`confirmRestore`/`cancelRestore`.
+- **DEFERRED Fase 8 (increment berikut):** extend backup ke section yang baru dimigrasi (stats/suggestions/
+  scrobbling/saved-filters/settings); periodic backup Desktop (tanpa WorkManager). Telegram nyata butuh bot
+  token user (`TelegramBackupConfig.BOT_TOKEN`).
+- **FASE 8 SELESAI** (8A periodic backup + Telegram + 8B restore picker; compile + assembleDebug hijau,
+  belum run-verify GUI).
 - **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya

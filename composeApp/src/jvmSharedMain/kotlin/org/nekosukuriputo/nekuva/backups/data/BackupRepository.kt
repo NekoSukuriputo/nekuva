@@ -91,13 +91,30 @@ class BackupRepository(
         return file
     }
 
-    suspend fun restoreBackup(inputStream: InputStream): RestoreResult {
+    /** Which restorable sections a backup contains (for the restore section picker; excludes INDEX). */
+    fun peekSections(bytes: ByteArray): Set<BackupSection> {
+        val result = LinkedHashSet<BackupSection>()
+        ZipInputStream(java.io.ByteArrayInputStream(bytes)).use { input ->
+            var entry: ZipEntry? = input.nextEntry
+            while (entry != null) {
+                BackupSection.of(entry)?.takeIf { it != BackupSection.INDEX }?.let { result += it }
+                input.closeEntry()
+                entry = input.nextEntry
+            }
+        }
+        return result
+    }
+
+    suspend fun restoreBackup(
+        inputStream: InputStream,
+        sections: Set<BackupSection> = BackupSection.entries.toSet(),
+    ): RestoreResult {
         var restored = 0
         var failed = 0
         ZipInputStream(inputStream).use { input ->
             var entry: ZipEntry? = input.nextEntry
             while (entry != null) {
-                when (BackupSection.of(entry)) {
+                when (BackupSection.of(entry)?.takeIf { it in sections }) {
                     BackupSection.HISTORY -> input.readJsonArray<HistoryBackup>(serializer()).forEach {
                         if (restore { upsertManga(it.manga); getHistoryDao().upsert(it.toEntity()) }) restored++ else failed++
                     }

@@ -1,9 +1,15 @@
 package org.nekosukuriputo.nekuva.backups.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Backup
@@ -26,15 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import nekuva.composeapp.generated.resources.Res
-import nekuva.composeapp.generated.resources.backup_done
-import nekuva.composeapp.generated.resources.backup_information
-import nekuva.composeapp.generated.resources.backup_restore
-import nekuva.composeapp.generated.resources.create_backup
-import nekuva.composeapp.generated.resources.error
-import nekuva.composeapp.generated.resources.periodic_backups
-import nekuva.composeapp.generated.resources.restore_backup
-import nekuva.composeapp.generated.resources.restore_done
-import nekuva.composeapp.generated.resources.restore_summary
+import nekuva.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -48,8 +46,17 @@ fun BackupSettingsScreen(
     onPeriodicClick: () -> Unit = {},
 ) {
     val isBusy by viewModel.isBusy.collectAsState()
+    val restorePrompt by viewModel.restorePrompt.collectAsState()
     val backupIo = rememberBackupIo()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    restorePrompt?.let { prompt ->
+        RestoreSectionsDialog(
+            sections = prompt.sections,
+            onConfirm = { viewModel.confirmRestore(it) },
+            onDismiss = { viewModel.cancelRestore() },
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -106,3 +113,59 @@ fun BackupSettingsScreen(
 }
 
 private fun defaultBackupName(): String = "nekuva_backup_${System.currentTimeMillis()}.zip"
+
+/** Lets the user choose which sections to restore from the picked backup (Doki restore section picker). */
+@Composable
+private fun RestoreSectionsDialog(
+    sections: Set<org.nekosukuriputo.nekuva.backups.domain.BackupSection>,
+    onConfirm: (Set<org.nekosukuriputo.nekuva.backups.domain.BackupSection>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val selected = remember { androidx.compose.runtime.mutableStateListOf(*sections.toTypedArray()) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.restore_backup)) },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                for (section in sections) {
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (section in selected) selected.remove(section) else selected.add(section)
+                            }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        androidx.compose.material3.Checkbox(
+                            checked = section in selected,
+                            onCheckedChange = { if (it) selected.add(section) else selected.remove(section) },
+                        )
+                        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                        Text(sectionLabel(section))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onConfirm(selected.toSet()) },
+                enabled = selected.isNotEmpty(),
+            ) { Text(stringResource(Res.string.restore_backup)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun sectionLabel(section: org.nekosukuriputo.nekuva.backups.domain.BackupSection): String = stringResource(
+    when (section) {
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.HISTORY -> Res.string.history
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.CATEGORIES -> Res.string.favourites_categories
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.FAVOURITES -> Res.string.favourites
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.BOOKMARKS -> Res.string.bookmarks
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.INDEX -> Res.string.backup_restore
+    },
+)
