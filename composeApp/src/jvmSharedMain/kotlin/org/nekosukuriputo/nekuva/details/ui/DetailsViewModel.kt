@@ -14,6 +14,8 @@ import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 import org.nekosukuriputo.nekuva.core.model.isLocal
+import org.nekosukuriputo.nekuva.core.model.MangaOverride
+import org.nekosukuriputo.nekuva.core.model.withOverride
 import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
@@ -45,6 +47,10 @@ class DetailsViewModel(
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
     private val loadedManga = MutableStateFlow<Manga?>(null)
+
+    /** Current user override (custom title/cover) for this manga, for prefilling the edit dialog (CORE-7). */
+    private val _override = MutableStateFlow<org.nekosukuriputo.nekuva.core.model.MangaOverride?>(null)
+    val override: StateFlow<org.nekosukuriputo.nekuva.core.model.MangaOverride?> = _override.asStateFlow()
 
     /** Bookmarks of the currently opened manga (shown in the chapters bottom sheet). */
     val bookmarks: StateFlow<List<Bookmark>> = loadedManga.filterNotNull()
@@ -141,6 +147,12 @@ class DetailsViewModel(
                     }
                 }
 
+                // Apply the user override (custom title/cover) for display only — the DB row keeps the
+                // original source values (storeManga above already persisted them). Doki: Manga.withOverride.
+                val override = mangaDataRepository.getOverride(mangaId)
+                _override.value = override
+                manga = manga!!.withOverride(override)
+
                 _uiState.value = DetailsUiState.Success(manga!!)
                 loadedManga.value = manga
                 loadRelatedManga(manga!!)
@@ -159,6 +171,23 @@ class DetailsViewModel(
 
     fun retry() {
         loadDetails()
+    }
+
+    /**
+     * Save a custom title / cover override (Doki OverrideConfig). Blank fields clear that part of the
+     * override (reverting to the source value). Reloads details so the new title/cover show immediately.
+     */
+    fun saveOverride(title: String?, coverUrl: String?) {
+        viewModelScope.launch {
+            val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
+            val newOverride = MangaOverride(
+                coverUrl = coverUrl?.trim()?.ifEmpty { null },
+                title = title?.trim()?.ifEmpty { null },
+                contentRating = _override.value?.contentRating, // keep any existing rating override
+            )
+            runCatching { mangaDataRepository.setOverride(m, newOverride) }
+            loadDetails()
+        }
     }
 
     fun removeFromHistory() {

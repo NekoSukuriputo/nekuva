@@ -1051,7 +1051,8 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
 > **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-2 ✅, CORE-3 ✅, CORE-5 ✅, CORE-6 ✅,
 > CORE-8 ✅ (History), CORE-9 ✅. CORE-1 ✅ (History/Favourites/Local/Downloads). CORE-4 ✅ (History
-> sort+grouping+quick-filter, Favourites/Local sort). Sisa: CORE-7 (UI override) + area.
+> sort+grouping+quick-filter, Favourites/Local sort). CORE-7 🟡 (dialog Edit + Details apply ✅; list-wide apply
+> tersisa). Sisa: CORE-7 (list-wide override) + area (alternatives → image → picker → widget).
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
@@ -1096,12 +1097,21 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-6 — Mark as read / Mark as completed ✅ DONE (use case)** (commit `feat(core): MarkAsReadUseCase`).
   `history/domain/MarkAsReadUseCase` (port Doki: tulis history bab terakhir, percent=1, force; + varian
   `Collection<Manga>`), terdaftar di Koin. **Sisa wiring per-layar:** selection-mode History/Favourites + Details.
-- **CORE-7 — Edit override (rename judul + cover kustom)** 🔴 (skema SUDAH SIAP — tinggal UI)
+- **CORE-7 — Edit override (rename judul + cover kustom)** 🟡 (dialog Edit + Details apply ✅; list-wide apply tersisa)
   **CEK SKEMA (2026-06-18): TIDAK perlu kolom baru.** `MangaPrefsEntity` sudah punya `title_override`/
   `cover_override`/`content_rating_override`; ada model `MangaOverride` + `MangaDataRepository.getOverride()/
-  getOverrides()/setOverride(manga, override)`. **Sisa = UI murni:** (1) dialog **Edit** (rename judul + set
-  cover URL) di overflow Details + selection (`action_edit_override`); (2) **terapkan override saat tampil**
-  (Details/list pakai title/cover dari override bila ada — cek apakah sudah diterapkan; bila belum, map saat baca).
+  getOverrides()/setOverride(manga, override)`.
+  **✅ Dialog Edit (Details overflow):** `EditOverrideDialog` (preview cover + field cover-URL + field Name + hint
+  `manga_override_hint`); kosongkan field = revert ke nilai sumber (Reset). `DetailsViewModel.saveOverride(title,
+  coverUrl)` → `setOverride(manga, MangaOverride(...))` lalu reload. Menu item `Res.string.edit` (= Doki
+  `action_edit_override` → `@string/edit`). Cover via URL (lintas-platform); **file-picker + "pick manga page" +
+  reset-to-default button = defer** (perlu file-picker per-platform; dicatat di sini).
+  **✅ Apply saat tampil (Details):** `Manga.withOverride(override)` (ext baru di `core/model`, port Doki
+  `Manga.withOverride`) diterapkan setelah `getDetails`+`storeManga` (DB tetap nilai sumber, override display-only).
+  **🟡 SISA — apply ke list (Favourites/History/Local/Explore/Search):** Doki pakai `MangaListMapper.getOverrides()`
+  (ambil map sekali, terapkan per-item). Di Nekuva perlu inject map override ke tiap sumber list (repo Favourites/
+  History return type beda: `Manga` vs `MangaWithHistory`) + wiring Koin → langkah terfokus tersendiri, belum dibundel
+  ke commit ini agar tetap ter-validasi. Saat ini judul/cover override hanya tampil di Details.
 - **CORE-8 — Pagination / load-more daftar** 🟡
   History/Favourites/Local muat semua (Int.MAX_VALUE). Doki paginasi (PAGE_SIZE 16, requestMoreItems).
 - **CORE-9 — Create launcher shortcut (pin manga)** 🔴 Android (`action_shortcut`); Desktop N/A.
