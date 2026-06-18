@@ -1055,10 +1055,14 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
   `calculateTimeAgo` (Composable). Absolute = "d MMMM yyyy" ("24 Mei 2026"). **History** group header kini
   relatif (Hari ini/Kemarin/N hari lalu/→ tanggal), **chapter list** (Details) ikut. compile+assembleDebug hijau.
-- **CORE-1 — Selection mode (long-press multi-select)** 🔴
-  Doki: ActionMode + `mode_history`/`mode_favourites`/`mode_local`. Komponen Compose reusable: long-press → contextual
-  top bar (jumlah terpilih + aksi + select-all), dipakai History/Favourites/Local/Downloads. (Bookmarks sudah punya
-  versi sendiri — jadikan acuan/satukan.)
+- **CORE-1 — Selection mode (long-press multi-select)** 🟡 (komponen ✅ + History ✅; Favourites/Local/Downloads pending)
+  Komponen reusable `core/ui/selection/SelectionState` (`rememberSelectionState`: selected ids, toggle/selectAll/
+  clear/isActive) ✅. `MangaGridItem` dapat overlay `selected` (scrim + check) ✅. **History ✅ wired** (commit
+  `feat(core): selection mode`): long-press → masuk seleksi; top bar kontekstual (Close + jumlah + **Select-all /
+  Share / Mark-completed / Remove**) memakai CORE-5 `shareMangas` + CORE-6 `markAsRead` + multi-delete history;
+  item grid+list tampil ter-seleksi; menu single-item lama dihapus. **Sisa:** wiring Favourites (mode_favourites:
+  +categories), Local (mode_local: +delete/edit), Downloads. action favourite/save/edit di History menunggu
+  CORE-7/image (per-layar).
 - **CORE-2 — Overlay cover manga (parity grid item)** 🔴
   Ikon hati (favorit) + badge progres baca (%/✓ "sudah tamat") + badge "baru" di atas cover. Doki `ListModel`/cover
   overlay. Dipakai Explore, Favourites, History, RemoteList, hasil Search, Suggestions. (ledger "Parity item grid".)

@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Card
@@ -121,6 +122,7 @@ fun MangaGridItem(
     onLongClick: () -> Unit = {},
     progress: Float? = null,
     badges: MangaBadges = MangaBadges(),
+    selected: Boolean = false,
 ) {
     Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Column {
@@ -131,6 +133,17 @@ fun MangaGridItem(
                     LinearProgressIndicator(
                         progress = { it.coerceIn(0f, 1f) },
                         modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp),
+                    )
+                }
+                // Selection overlay (Doki ActionMode): primary scrim + check when selected.
+                if (selected) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp)
+                            .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(50)),
                     )
                 }
             }

@@ -49,6 +49,7 @@
     <string name="pages">Halaman</string>
     <string name="clear">Bersihkan</string>
     <string name="remove">Hapus</string>
+    <string name="select_all">Pilih semua</string>
     <string name="clear_history">Hapus riwayat</string>
     <string name="delete">Hapus</string>
     <string name="operation_not_supported">Tindakan ini tidak didukung</string>

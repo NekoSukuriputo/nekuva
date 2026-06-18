@@ -57,6 +57,7 @@
     <string name="pages">Pages</string>
     <string name="clear">Clear</string>
     <string name="remove">Remove</string>
+    <string name="select_all">Select all</string>
     <string name="_s_deleted_from_local_storage">\"%s\" deleted from local storage</string>
     <string name="save_page">Save page</string>
     <string name="page_saved">Page saved</string>

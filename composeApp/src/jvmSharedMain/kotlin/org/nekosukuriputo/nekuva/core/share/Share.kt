@@ -13,3 +13,12 @@ fun shareManga(manga: Manga) {
     val url = manga.publicUrl.ifEmpty { manga.url }
     shareText(if (url.isEmpty()) manga.title else "${manga.title}\n$url")
 }
+
+/** Share several manga at once (selection mode) — one "title + url" block each. */
+fun shareMangas(mangas: Collection<Manga>) {
+    if (mangas.size == 1) {
+        shareManga(mangas.first())
+        return
+    }
+    shareText(mangas.joinToString("\n\n") { m -> m.publicUrl.ifEmpty { m.url }.let { if (it.isEmpty()) m.title else "${m.title}\n$it" } })
+}

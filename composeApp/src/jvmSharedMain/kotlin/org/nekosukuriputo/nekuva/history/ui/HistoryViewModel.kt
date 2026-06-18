@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 
 class HistoryViewModel(
-    private val historyRepository: HistoryRepository
+    private val historyRepository: HistoryRepository,
+    private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
@@ -51,6 +52,20 @@ class HistoryViewModel(
     fun clearAllHistory() {
         viewModelScope.launch {
             historyRepository.clear()
+        }
+    }
+
+    /** Selection-mode: remove several manga from history (Doki mode_history action_remove). */
+    fun removeHistory(mangas: Collection<Manga>) {
+        viewModelScope.launch {
+            mangas.forEach { historyRepository.delete(it) }
+        }
+    }
+
+    /** Selection-mode: mark several manga as fully read (Doki action_mark_current). */
+    fun markAsRead(mangas: Collection<Manga>) {
+        viewModelScope.launch {
+            runCatching { markAsReadUseCase(mangas) }
         }
     }
 }

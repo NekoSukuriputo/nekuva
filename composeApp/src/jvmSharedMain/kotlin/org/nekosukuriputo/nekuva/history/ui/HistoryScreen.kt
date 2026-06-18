@@ -1,6 +1,7 @@
 package org.nekosukuriputo.nekuva.history.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,8 +9,12 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,19 +57,46 @@ fun HistoryScreen(
     val listMode = rememberMangaListMode(settings, AppSettings.KEY_LIST_MODE_HISTORY)
     val gridSize = rememberGridSize(settings)
     val progressMode = remember { settings.progressIndicatorMode }
-    // Long-press target in grid mode -> a small Resume/Remove menu (Doki context menu parity).
-    var menuItem by remember { mutableStateOf<MangaWithHistory?>(null) }
+    // Multi-select (Doki ActionMode / mode_history): long-press enters, tap toggles while active.
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
+    val successList = (uiState as? HistoryUiState.Success)?.list.orEmpty()
+    fun selectedMangas() = successList.filter { selection.isSelected(it.manga.id) }.map { it.manga }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.history)) },
-                actions = {
-                    IconButton(onClick = { viewModel.clearAllHistory() }) {
-                        Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.clear_history))
+            if (selection.isActive) {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { selection.clear() }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.cancel))
+                        }
+                    },
+                    title = { Text(selection.count.toString()) },
+                    actions = {
+                        IconButton(onClick = { selection.selectAll(successList.map { it.manga.id }) }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = stringResource(Res.string.select_all))
+                        }
+                        IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
+                        }
+                        IconButton(onClick = { viewModel.markAsRead(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.DoneAll, contentDescription = stringResource(Res.string.mark_as_completed))
+                        }
+                        IconButton(onClick = { viewModel.removeHistory(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.remove))
+                        }
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(stringResource(Res.string.history)) },
+                    actions = {
+                        IconButton(onClick = { viewModel.clearAllHistory() }) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.clear_history))
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         when (val state = uiState) {
@@ -93,9 +125,10 @@ fun HistoryScreen(
                                 gridItems(items, key = { it.manga.id }) { item ->
                                     MangaGridItem(
                                         manga = item.manga,
-                                        onClick = { onMangaClick(item.manga.id) },
-                                        onLongClick = { menuItem = item },
+                                        onClick = { if (selection.isActive) selection.toggle(item.manga.id) else onMangaClick(item.manga.id) },
+                                        onLongClick = { selection.toggle(item.manga.id) },
                                         progress = progressOf(item),
+                                        selected = selection.isSelected(item.manga.id),
                                     )
                                 }
                             }
@@ -111,9 +144,11 @@ fun HistoryScreen(
                                     HistoryItem(
                                         item = item,
                                         showProgress = progressMode != ProgressIndicatorMode.NONE,
-                                        onClick = { onMangaClick(item.manga.id) },
+                                        onClick = { if (selection.isActive) selection.toggle(item.manga.id) else onMangaClick(item.manga.id) },
                                         onResumeClick = { onResumeClick(item.manga.id, item.history.chapterId) },
-                                        onDeleteClick = { viewModel.removeHistory(item.manga) }
+                                        onDeleteClick = { viewModel.removeHistory(item.manga) },
+                                        onLongClick = { selection.toggle(item.manga.id) },
+                                        selected = selection.isSelected(item.manga.id),
                                     )
                                 }
                             }
@@ -124,25 +159,6 @@ fun HistoryScreen(
         }
     }
 
-    menuItem?.let { mi ->
-        AlertDialog(
-            onDismissRequest = { menuItem = null },
-            title = { Text(mi.manga.title, maxLines = 2) },
-            text = {},
-            confirmButton = {
-                TextButton(onClick = {
-                    onResumeClick(mi.manga.id, mi.history.chapterId)
-                    menuItem = null
-                }) { Text(stringResource(Res.string.resume)) }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    viewModel.removeHistory(mi.manga)
-                    menuItem = null
-                }) { Text(stringResource(Res.string.remove_from_history)) }
-            },
-        )
-    }
 }
 
 @Composable
@@ -155,6 +171,7 @@ private fun DateHeader(epochMillis: Long) {
     )
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun HistoryItem(
     item: MangaWithHistory,
@@ -162,13 +179,17 @@ fun HistoryItem(
     onResumeClick: () -> Unit,
     onDeleteClick: () -> Unit,
     showProgress: Boolean = true,
+    onLongClick: () -> Unit = {},
+    selected: Boolean = false,
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        ),
     ) {
         Row(
             modifier = Modifier
