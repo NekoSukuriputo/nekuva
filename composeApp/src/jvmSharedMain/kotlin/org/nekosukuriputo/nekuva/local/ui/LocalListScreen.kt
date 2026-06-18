@@ -59,7 +59,7 @@ fun LocalListScreen(
     val showSavedBadge = (settings.getMangaListBadges() and 2) != 0 // downloaded == "saved"
     val deco = rememberMangaListDecorations() // reading progress + favourite badge (Doki indicators)
     // Multi-select (Doki mode_local): long-press enters; contextual bar select-all/share/delete.
-    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
     val mangas = (uiState as? LocalListUiState.Success)?.mangaList.orEmpty()
     fun selected() = mangas.filter { selection.isSelected(it.id) }
     val sortOrder by viewModel.sortOrder.collectAsState()

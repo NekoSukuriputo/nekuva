@@ -1,6 +1,7 @@
 package org.nekosukuriputo.nekuva.download.ui.list
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -23,9 +24,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
@@ -83,6 +87,7 @@ import nekuva.composeapp.generated.resources.remove_completed
 import nekuva.composeapp.generated.resources.remove_completed_downloads_confirm
 import nekuva.composeapp.generated.resources.resume
 import nekuva.composeapp.generated.resources.retry
+import nekuva.composeapp.generated.resources.select_all
 import nekuva.composeapp.generated.resources.text_downloads_list_holder
 import nekuva.composeapp.generated.resources.unknown
 import org.jetbrains.compose.resources.pluralStringResource
@@ -109,44 +114,83 @@ fun DownloadsScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var confirmCancelAll by remember { mutableStateOf(false) }
     var confirmRemoveCompleted by remember { mutableStateOf(false) }
+    // Multi-select (Doki mode_downloads): long-press a card to enter; contextual bar pause/resume/cancel/remove.
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<String>()
+    val capability = remember(selection.selected, entries) { viewModel.selectionCapability(selection.selected) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.downloads)) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-                actions = {
-                    if (hasActive) {
-                        IconButton(onClick = { viewModel.pauseAll() }) {
-                            Icon(Icons.Default.Pause, contentDescription = stringResource(Res.string.pause))
+            if (selection.isActive) {
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { selection.clear() }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.cancel))
                         }
-                    }
-                    if (hasPaused) {
-                        IconButton(onClick = { viewModel.resumeAll() }) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(Res.string.resume))
+                    },
+                    title = { Text(selection.count.toString()) },
+                    actions = {
+                        IconButton(onClick = { selection.selectAll(viewModel.allIds()) }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = stringResource(Res.string.select_all))
                         }
-                    }
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
-                    }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        if (hasCancellable) {
+                        if (capability.canPause) {
+                            IconButton(onClick = { viewModel.pause(selection.selected); selection.clear() }) {
+                                Icon(Icons.Default.Pause, contentDescription = stringResource(Res.string.pause))
+                            }
+                        }
+                        if (capability.canResume) {
+                            IconButton(onClick = { viewModel.resume(selection.selected); selection.clear() }) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(Res.string.resume))
+                            }
+                        }
+                        if (capability.canCancel) {
+                            IconButton(onClick = { viewModel.cancel(selection.selected); selection.clear() }) {
+                                Icon(Icons.Filled.Cancel, contentDescription = stringResource(Res.string.cancel))
+                            }
+                        }
+                        if (capability.canRemove) {
+                            IconButton(onClick = { viewModel.remove(selection.selected); selection.clear() }) {
+                                Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.remove))
+                            }
+                        }
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = { Text(stringResource(Res.string.downloads)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        }
+                    },
+                    actions = {
+                        if (hasActive) {
+                            IconButton(onClick = { viewModel.pauseAll() }) {
+                                Icon(Icons.Default.Pause, contentDescription = stringResource(Res.string.pause))
+                            }
+                        }
+                        if (hasPaused) {
+                            IconButton(onClick = { viewModel.resumeAll() }) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(Res.string.resume))
+                            }
+                        }
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            if (hasCancellable) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.cancel_all)) },
+                                    onClick = { menuExpanded = false; confirmCancelAll = true },
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text(stringResource(Res.string.cancel_all)) },
-                                onClick = { menuExpanded = false; confirmCancelAll = true },
+                                text = { Text(stringResource(Res.string.remove_completed)) },
+                                onClick = { menuExpanded = false; confirmRemoveCompleted = true },
                             )
                         }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.remove_completed)) },
-                            onClick = { menuExpanded = false; confirmRemoveCompleted = true },
-                        )
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
     ) { padding ->
         if (entries.isEmpty()) {
@@ -176,6 +220,10 @@ fun DownloadsScreen(
                         is DownloadListEntry.DateHeader -> SectionHeader(calculateTimeAgo(entry.timestamp))
                         is DownloadListEntry.DownloadRow -> DownloadItem(
                             state = entry.state,
+                            selected = selection.isSelected(entry.state.id),
+                            selectionActive = selection.isActive,
+                            onLongClick = { selection.toggle(entry.state.id) },
+                            onToggleSelect = { selection.toggle(entry.state.id) },
                             onPause = { viewModel.pause(entry.state.id) },
                             onResume = { viewModel.resume(entry.state.id) },
                             onCancel = { viewModel.cancel(entry.state.id) },
@@ -232,6 +280,7 @@ private fun SectionHeader(text: String) {
 }
 
 /** Doki-style per-manga download card: header + progress, expandable (capped, scrollable) chapter list, footer actions. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun DownloadItem(
     state: DownloadState,
@@ -241,22 +290,48 @@ private fun DownloadItem(
     onRemove: () -> Unit,
     onRetry: () -> Unit,
     onRetryChapter: (Long) -> Unit,
+    selected: Boolean = false,
+    selectionActive: Boolean = false,
+    onLongClick: () -> Unit = {},
+    onToggleSelect: () -> Unit = {},
 ) {
     val isPaused = state.status == DownloadStatus.PAUSED
     // Active downloads start expanded (chapters visible); finished ones collapse like Doki.
     var expanded by remember(state.id) { mutableStateOf(!state.isFinished) }
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            // While selection is active, tapping the card toggles selection (Doki); long-press always toggles.
+            .combinedClickable(
+                onClick = { if (selectionActive) onToggleSelect() },
+                onLongClick = onLongClick,
+            ),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                AsyncImage(
-                    model = state.manga.coverUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(48.dp)
-                        .aspectRatio(13f / 18f)
-                        .clip(RoundedCornerShape(6.dp)),
-                )
+                Box {
+                    AsyncImage(
+                        model = state.manga.coverUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(48.dp)
+                            .aspectRatio(13f / 18f)
+                            .clip(RoundedCornerShape(6.dp)),
+                    )
+                    if (selected) {
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.align(Alignment.TopStart).size(18.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

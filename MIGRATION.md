@@ -1050,20 +1050,23 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 ## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
 > **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-2 ✅, CORE-3 ✅, CORE-5 ✅, CORE-6 ✅,
-> CORE-8 ✅ (History), CORE-9 ✅. CORE-1 🟡 (History/Favourites/Local ✅, Downloads pending). CORE-4 ✅ (History
-> sort+grouping+quick-filter, Favourites/Local sort). Sisa: CORE-1(Downloads), CORE-7 + area.
+> CORE-8 ✅ (History), CORE-9 ✅. CORE-1 ✅ (History/Favourites/Local/Downloads). CORE-4 ✅ (History
+> sort+grouping+quick-filter, Favourites/Local sort). Sisa: CORE-7 (UI override) + area.
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
   `calculateTimeAgo` (Composable). Absolute = "d MMMM yyyy" ("24 Mei 2026"). **History** group header kini
   relatif (Hari ini/Kemarin/N hari lalu/→ tanggal), **chapter list** (Details) ikut. compile+assembleDebug hijau.
-- **CORE-1 — Selection mode (long-press multi-select)** 🟡 (komponen ✅ + History/Favourites/Local ✅; Downloads pending)
-  Komponen reusable `core/ui/selection/SelectionState` (`rememberSelectionState`: toggle/selectAll/clear/isActive) ✅.
+- **CORE-1 — Selection mode (long-press multi-select)** ✅ DONE (komponen + History/Favourites/Local/Downloads)
+  Komponen reusable `core/ui/selection/SelectionState<K>` (generik: `rememberSelectionState<Long>()` untuk manga,
+  `<String>()` untuk Downloads; toggle/selectAll/clear/isActive) ✅.
   `MangaGridItem` overlay `selected` (scrim+check) + `MangaListRow` highlight + `MangaListContent(selectedIds=)` ✅.
   **History ✅** (Select-all/Share/Mark-completed/Remove), **Favourites ✅** (FavouritesListScreen: +remove-from-fav/
-  category), **Local ✅** (mode_local: Select-all/Share/Delete + konfirmasi). Pakai CORE-5 `shareMangas` + CORE-6
-  `markAsRead`. **Sisa:** Downloads multi-select; action favourite/save/edit (History) & categories (Favourites) &
-  edit (Local) menunggu CORE-7/image (per-layar).
+  category), **Local ✅** (mode_local: Select-all/Share/Delete + konfirmasi), **Downloads ✅** (mode_downloads:
+  long-press card → contextual bar Select-all/Pause/Resume/Cancel/Remove; aksi digate `DownloadSelectionCapability`
+  = kombinasi canPause/canResume/!isFinished/isFinished dari item terpilih, persis Doki `onPrepareActionMode`).
+  Pakai CORE-5 `shareMangas` + CORE-6 `markAsRead`. **Sisa (per-layar, bukan CORE-1):** action favourite/save/edit
+  (History) & categories (Favourites) menunggu per-layar.
 - **CORE-2 — Overlay cover manga (parity grid item)** ✅ DONE (komponen + wiring layar utama)
   `MangaListItems` (badge favorit/saved/bookmark + bar progres) + `MangaListDecorations` (`rememberMangaListDecorations`:
   observe favourite-ids + history-progress). **Sudah dipakai** di Local/Favourites/RemoteList/GlobalSearch via

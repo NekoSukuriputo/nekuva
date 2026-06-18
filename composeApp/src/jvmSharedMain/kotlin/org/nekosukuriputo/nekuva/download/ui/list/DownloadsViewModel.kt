@@ -17,6 +17,14 @@ sealed interface DownloadListEntry {
     data class DownloadRow(val state: DownloadState) : DownloadListEntry
 }
 
+/** Combined capability of the current selection (Doki onPrepareActionMode gates which actions are visible). */
+data class DownloadSelectionCapability(
+    val canPause: Boolean = false,
+    val canResume: Boolean = false,
+    val canCancel: Boolean = false,
+    val canRemove: Boolean = false,
+)
+
 class DownloadsViewModel(
     private val downloadManager: DownloadManager,
 ) : ViewModel() {
@@ -47,6 +55,26 @@ class DownloadsViewModel(
     fun resumeAll() = downloadManager.resumeAll()
     fun cancelAll() = downloadManager.cancelAll()
     fun removeCompleted() = downloadManager.removeCompleted()
+
+    // --- Multi-select (Doki mode_downloads): apply an action to several downloads at once. ---
+    fun pause(ids: Collection<String>) = ids.forEach { downloadManager.pause(it) }
+    fun resume(ids: Collection<String>) = ids.forEach { downloadManager.resume(it) }
+    fun cancel(ids: Collection<String>) = ids.forEach { downloadManager.cancel(it) }
+    fun remove(ids: Collection<String>) = ids.forEach { downloadManager.remove(it) }
+
+    fun allIds(): List<String> = downloadManager.downloads.value.map { it.id }
+
+    /** Combined capability of the selected items (Doki onPrepareActionMode): an action shows only if it applies to all. */
+    fun selectionCapability(ids: Set<String>): DownloadSelectionCapability {
+        val snapshot = downloadManager.downloads.value.filter { it.id in ids }
+        if (snapshot.isEmpty()) return DownloadSelectionCapability()
+        return DownloadSelectionCapability(
+            canPause = snapshot.all { it.canPause },
+            canResume = snapshot.all { it.canResume },
+            canCancel = snapshot.all { !it.isFinished },
+            canRemove = snapshot.all { it.isFinished },
+        )
+    }
 
     private fun List<DownloadState>.toEntries(): List<DownloadListEntry> {
         if (isEmpty()) return emptyList()

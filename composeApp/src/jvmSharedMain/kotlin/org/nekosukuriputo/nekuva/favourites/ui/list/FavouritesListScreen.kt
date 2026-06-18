@@ -47,7 +47,7 @@ fun FavouritesListScreen(
     // Favourites are all favourited (badge handled above), so only borrow the progress indicator.
     val deco = rememberMangaListDecorations(includeFavouriteBadge = false)
     // Multi-select (Doki mode_favourites): long-press enters; contextual bar select-all/share/mark/remove.
-    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
     val mangas = (uiState as? FavouritesUiState.Success)?.mangas.orEmpty()
     fun selected() = mangas.filter { selection.isSelected(it.id) }
 

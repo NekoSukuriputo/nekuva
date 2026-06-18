@@ -78,7 +78,7 @@ fun HistoryScreen(
         }
     }
     // Multi-select (Doki ActionMode / mode_history): long-press enters, tap toggles while active.
-    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
     val successList = (uiState as? HistoryUiState.Success)?.list.orEmpty()
     fun selectedMangas() = successList.filter { selection.isSelected(it.manga.id) }.map { it.manga }
     // Pagination (CORE-8): load the next page when scrolled near the end (VM no-ops if the last page was full).
