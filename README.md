@@ -91,22 +91,6 @@ Native installers (`.msi` / `.dmg` / `.deb`):
 # output: composeApp/build/outputs/apk/debug/composeApp-debug.apk
 ```
 
-## App icon
-
-The master logo is **`logo/logo.png`** (1024×1024). From it, the app icons are already generated and
-committed:
-
-- **Android** — launcher icons in `composeApp/src/androidMain/res/mipmap-*/ic_launcher.png`
-  (+ `ic_launcher_round.png`), referenced from the manifest (`android:icon` / `android:roundIcon`).
-- **Desktop** — the window icon `composeApp/src/desktopMain/resources/nekuva_icon.png` (used in
-  `Main.kt`), and the Linux installer icon (wired in `composeApp/build.gradle.kts` → `nativeDistributions`).
-
-To **change the logo**, replace `logo/logo.png` and regenerate the PNGs (any tool / Android Studio's
-*Image Asset* works). For **native installers on Windows & macOS**, also place
-`nekuva_icon.ico` (Windows) and `nekuva_icon.icns` (macOS) in `composeApp/src/desktopMain/resources/`
-and set `windows { iconFile.set(...) }` / `macOS { iconFile.set(...) }` in `nativeDistributions`
-(Linux already uses the PNG). On Android 12+ the splash screen automatically uses the launcher icon.
-
 ## Contributing
 
 Bug reports and pull requests are welcome.
