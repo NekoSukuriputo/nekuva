@@ -133,49 +133,57 @@ fun PeriodicBackupScreen(onBackClick: () -> Unit) {
                 )
             }
 
-            // Telegram integration (Doki) — only when a bot token is configured (TelegramBackupConfig).
-            if (TelegramBackupConfig.isAvailable) {
-                SettingsCategoryHeader(stringResource(Res.string.telegram_integration))
-                BoolPref(
-                    settings, AppSettings.KEY_BACKUP_TG_ENABLED,
-                    stringResource(Res.string.send_backups_telegram), null, false,
-                    enabled = enabled, onChange = { tgEnabled = it },
-                )
-                SettingsEditText(
-                    title = stringResource(Res.string.telegram_chat_id),
-                    value = chatId,
-                    onValueChange = { settings.setPref(AppSettings.KEY_BACKUP_TG_CHAT, it); chatId = it },
-                    enabled = enabled && tgEnabled,
-                )
-                SettingsItem(
-                    title = stringResource(Res.string.open_telegram_bot),
-                    summary = stringResource(Res.string.open_telegram_bot_summary),
-                    enabled = enabled && tgEnabled,
-                    onClick = {
-                        // Doki openBotInApp: prefer the Telegram app (tg://), fall back to the web link.
-                        val opened = runCatching {
-                            uriHandler.openUri("tg://resolve?domain=${TelegramBackupConfig.BOT_NAME}")
-                        }.isSuccess
-                        if (!opened) runCatching { uriHandler.openUri(uploader.botUrl) }
-                    },
-                )
-                val testLabel = stringResource(Res.string.test_connection)
-                val errorLabel = stringResource(Res.string.error)
-                SettingsItem(
-                    title = testLabel,
-                    enabled = enabled && tgEnabled,
-                    onClick = {
-                        scope.launch {
-                            try {
-                                uploader.sendTestMessage(getString(Res.string.backup_tg_echo))
-                                snackbar.showSnackbar("$testLabel ✓")
-                            } catch (e: Exception) {
-                                snackbar.showSnackbar("$errorLabel: ${e.message ?: ""}")
-                            }
+            // Telegram integration (Doki) — section ALWAYS shown for parity with Doki's periodic-backup screen
+            // (uses the Kotatsu backup bot). It is fully functional only when the bot token is injected at build
+            // (TelegramBackupConfig/TelegramSecrets via local.properties `tg_backup_bot_token`). Doki's open
+            // source does NOT ship that token (it's a build secret), so until it's provided the controls are
+            // shown disabled with a "coming soon" hint.
+            // TODO(credentials): supply the Kotatsu backup bot token (local.properties `tg_backup_bot_token=...`)
+            // to activate Telegram backup; without it this whole section stays "coming soon".
+            val tgAvailable = TelegramBackupConfig.isAvailable
+            val soon = stringResource(Res.string.coming_soon)
+            SettingsCategoryHeader(stringResource(Res.string.telegram_integration))
+            BoolPref(
+                settings, AppSettings.KEY_BACKUP_TG_ENABLED,
+                stringResource(Res.string.send_backups_telegram),
+                if (tgAvailable) null else soon, false,
+                enabled = enabled && tgAvailable, onChange = { tgEnabled = it },
+            )
+            SettingsEditText(
+                title = stringResource(Res.string.telegram_chat_id),
+                value = chatId,
+                onValueChange = { settings.setPref(AppSettings.KEY_BACKUP_TG_CHAT, it); chatId = it },
+                enabled = enabled && tgEnabled && tgAvailable,
+            )
+            SettingsItem(
+                title = stringResource(Res.string.open_telegram_bot),
+                summary = if (tgAvailable) stringResource(Res.string.open_telegram_bot_summary) else soon,
+                enabled = enabled && tgEnabled && tgAvailable,
+                onClick = {
+                    // Doki openBotInApp: prefer the Telegram app (tg://), fall back to the web link.
+                    val opened = runCatching {
+                        uriHandler.openUri("tg://resolve?domain=${TelegramBackupConfig.BOT_NAME}")
+                    }.isSuccess
+                    if (!opened) runCatching { uriHandler.openUri(uploader.botUrl) }
+                },
+            )
+            val testLabel = stringResource(Res.string.test_connection)
+            val errorLabel = stringResource(Res.string.error)
+            SettingsItem(
+                title = testLabel,
+                summary = if (tgAvailable) null else soon,
+                enabled = enabled && tgEnabled && tgAvailable,
+                onClick = {
+                    scope.launch {
+                        try {
+                            uploader.sendTestMessage(getString(Res.string.backup_tg_echo))
+                            snackbar.showSnackbar("$testLabel ✓")
+                        } catch (e: Exception) {
+                            snackbar.showSnackbar("$errorLabel: ${e.message ?: ""}")
                         }
-                    },
-                )
-            }
+                    }
+                },
+            )
         }
     }
 }

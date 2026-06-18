@@ -943,7 +943,11 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   - **Fitur Telegram (semua dari Doki):** `TelegramBackupUploader.uploadBackup` (sendDocument), `sendTestMessage`
     (getMe + sendMessage echo `backup_tg_echo`), **open bot** (tg://resolve fallback ke https://t.me — ala
     `openBotInApp`). Worker Android + scheduler Desktop meng-upload backup ke Telegram saat aktif + chat id diisi.
-    Section Telegram (enable/chat id/open bot/test) tampil saat token ada.
+  - **Section SELALU tampil (parity gambar Doki):** header "Integrasi Telegram" + toggle "Kirim cadangan di
+    Telegram" + "ID chat Telegram" + "Buka bot Telegram" + "Tes koneksi" kini selalu dirender. Saat token belum
+    di-inject (`isAvailable=false`) → kontrol **disabled + "Segera hadir"** (`coming_soon`) dgn `// TODO(credentials)`
+    di source; saat token ada → fungsional penuh. (Sebelumnya section disembunyikan bila token kosong → tak terlihat
+    di Desktop/Android.)
 - **DEFERRED Fase 8 (sisa, tetap ditunda dgn alasan):** backup **settings** (multiplatform-settings tak punya
   generic iterate/put nilai bertipe → tak bisa dump semua key) + **sources**/**saved_filters** enable/pin state
   (area sources belum punya dump backup); **suggestions** sengaja TIDAK di-backup (ephemeral, regen on-demand —
