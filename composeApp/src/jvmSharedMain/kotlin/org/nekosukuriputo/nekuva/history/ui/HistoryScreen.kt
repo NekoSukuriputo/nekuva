@@ -34,7 +34,8 @@ import org.nekosukuriputo.nekuva.core.ui.components.MangaGridItem
 import org.nekosukuriputo.nekuva.core.ui.components.mangaGridCells
 import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
 import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
-import org.nekosukuriputo.nekuva.core.util.ext.formatEpochToDateString
+import org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo
+import org.nekosukuriputo.nekuva.core.util.ext.relativeDateKey
 import org.nekosukuriputo.nekuva.history.domain.model.MangaWithHistory
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
@@ -73,7 +74,9 @@ fun HistoryScreen(
                 if (state.list.isEmpty()) {
                     EmptyState(message = stringResource(Res.string.text_history_holder_primary), modifier = Modifier.padding(paddingValues))
                 } else {
-                    val grouped = state.list.groupBy { formatEpochToDateString(it.history.updatedAt) }
+                    // Group by Doki-style relative bucket (today/yesterday/N-days/per-day) so headers read
+                    // "Hari ini"/"Kemarin"/"N hari lalu" then the absolute date ("24 Mei 2026").
+                    val grouped = state.list.groupBy { relativeDateKey(it.history.updatedAt) }
                     fun progressOf(item: MangaWithHistory): Float? =
                         if (progressMode != ProgressIndicatorMode.NONE && item.history.percent >= 0f) item.history.percent else null
 
@@ -85,8 +88,8 @@ fun HistoryScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize().padding(paddingValues),
                         ) {
-                            grouped.forEach { (dateStr, items) ->
-                                item(span = { GridItemSpan(maxLineSpan) }) { DateHeader(dateStr) }
+                            grouped.forEach { (_, items) ->
+                                item(span = { GridItemSpan(maxLineSpan) }) { DateHeader(items.first().history.updatedAt) }
                                 gridItems(items, key = { it.manga.id }) { item ->
                                     MangaGridItem(
                                         manga = item.manga,
@@ -102,8 +105,8 @@ fun HistoryScreen(
                             contentPadding = PaddingValues(bottom = 80.dp),
                             modifier = Modifier.fillMaxSize().padding(paddingValues)
                         ) {
-                            grouped.forEach { (dateStr, items) ->
-                                item { DateHeader(dateStr) }
+                            grouped.forEach { (_, items) ->
+                                item { DateHeader(items.first().history.updatedAt) }
                                 items(items, key = { it.manga.id }) { item ->
                                     HistoryItem(
                                         item = item,
@@ -143,9 +146,9 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun DateHeader(text: String) {
+private fun DateHeader(epochMillis: Long) {
     Text(
-        text = text,
+        text = calculateTimeAgo(epochMillis),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
