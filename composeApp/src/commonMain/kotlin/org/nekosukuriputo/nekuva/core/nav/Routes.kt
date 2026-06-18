@@ -46,6 +46,9 @@ data object StatsRoute
 data object SuggestionsRoute
 
 @Serializable
+data object PeriodicBackupRoute
+
+@Serializable
 data object BookmarksRoute
 
 @Serializable

@@ -900,7 +900,28 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     code. (Desktop KCEF intercept tetap ditunda; perlu uji dgn client id nyata.)
   - **Branding sweep:** `discord_rpc_description` "Doki/Kotatsu"→"Nekuva" di **semua locale** (18 file: 16 Latin
     + sr Cyrillic + ta Tamil). Tidak ada lagi literal "Doki" di katalog string nilai.
-- **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
+### FASE 8 — Backup — checklist + impact
+> Ref Doki: `pref_backups.xml` + `pref_backup_periodic.xml` + `backups/ui/periodical/*`. Layer settings periodic
+> backup di `AppSettings` SUDAH ada (enabled/freq/trim/count/dir/last + tg enabled/chat). Backup dasar
+> (create/restore zip favourites+history+categories+bookmarks) sudah ada dari Phase S2.
+- **8A ✅ DONE — Periodic backup (setting + impact, compile + assembleDebug hijau; belum run-verify):**
+  - **PeriodicBackupScreen** (port PeriodicalBackupSettingsFragment): toggle enable, **output dir** (picker
+    `pickMangaDirectory`), **frekuensi** (6 jam/harian/2 hari/mingguan/2x sebulan/bulanan → simpan day-value),
+    **hapus cadangan lama** (toggle) + **maks. jumlah** (slider 1–32), **info cadangan terakhir**, +
+    kategori **Telegram** (tampil hanya bila bot token diisi). Dibuka dari Backup ▸ "Pencadangan berkala".
+  - **Impact (worker):** `scheduleBackup()` expect/actual — **Android** `BackupWorker` (WorkManager periodik,
+    interval dari `backup_periodic_freq`, ≥15 mnt; constraint CONNECTED bila Telegram) menulis zip ke dir +
+    **trim** ke maks count + catat `backup_periodic_last` + upload Telegram bila aktif; **Desktop** no-op.
+    `BackupRepository.createBackupToDirectory(dir, maxCount)` (java.io, lintas-platform). Dijadwalkan di
+    `App()` start + reschedule saat keluar layar (`DisposableEffect`).
+  - **Telegram:** `TelegramBackupUploader` (okhttp Bot API sendDocument/sendMessage) + `TelegramBackupConfig`
+    (**BOT_TOKEN kosong** = placeholder, `TODO(credentials)`; bot token = rahasia → TIDAK pakai punya Doki,
+    user buat bot sendiri via @BotFather). UI: enable + chat id + buka bot + test koneksi.
+  - **Branding fix:** `open_telegram_bot_summary` "Kotatsu/Doki Backup Bot"→"Nekuva" (en/id/in). String baru
+    `last_backup` (en/id/in); `backup_tg_echo` sudah ada (dipakai test).
+- **DEFERRED Fase 8 (increment berikut):** **restore section picker** (pilih section saat restore — kini restore
+  semua); extend backup ke section yang baru dimigrasi (stats/suggestions/scrobbling/saved-filters/settings);
+  periodic backup Desktop (tanpa WorkManager). Telegram nyata butuh bot token user.
 - **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya

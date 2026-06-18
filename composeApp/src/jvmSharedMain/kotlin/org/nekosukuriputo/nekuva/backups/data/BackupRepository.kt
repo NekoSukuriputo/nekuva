@@ -71,6 +71,26 @@ class BackupRepository(
         }
     }
 
+    /**
+     * Write a timestamped backup zip into [dirPath] (periodic backup, Doki PeriodicalBackupWorker), then keep
+     * only the newest [maxCount] `nekuva_backup_*.zip` files. Returns the created file, or null on failure.
+     */
+    suspend fun createBackupToDirectory(dirPath: String, maxCount: Int): java.io.File? {
+        val dir = java.io.File(dirPath)
+        if (!dir.exists()) dir.mkdirs()
+        if (!dir.isDirectory) return null
+        val file = java.io.File(dir, "nekuva_backup_${System.currentTimeMillis()}.zip")
+        java.io.FileOutputStream(file).use { createBackup(it) }
+        // Trim old backups beyond maxCount (newest kept; filenames sort by their timestamp).
+        if (maxCount != Int.MAX_VALUE) {
+            dir.listFiles { f -> f.isFile && f.name.startsWith("nekuva_backup_") && f.name.endsWith(".zip") }
+                ?.sortedByDescending { it.name }
+                ?.drop(maxCount)
+                ?.forEach { runCatching { it.delete() } }
+        }
+        return file
+    }
+
     suspend fun restoreBackup(inputStream: InputStream): RestoreResult {
         var restored = 0
         var failed = 0

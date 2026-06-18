@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import nekuva.composeapp.generated.resources.backup_information
 import nekuva.composeapp.generated.resources.backup_restore
 import nekuva.composeapp.generated.resources.create_backup
 import nekuva.composeapp.generated.resources.error
+import nekuva.composeapp.generated.resources.periodic_backups
 import nekuva.composeapp.generated.resources.restore_backup
 import nekuva.composeapp.generated.resources.restore_done
 import nekuva.composeapp.generated.resources.restore_summary
@@ -43,6 +45,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 fun BackupSettingsScreen(
     viewModel: BackupViewModel = koinViewModel(),
     onBackClick: () -> Unit,
+    onPeriodicClick: () -> Unit = {},
 ) {
     val isBusy by viewModel.isBusy.collectAsState()
     val backupIo = rememberBackupIo()
@@ -87,6 +90,12 @@ fun BackupSettingsScreen(
                     icon = Icons.Outlined.Restore,
                     enabled = !isBusy,
                     onClick = { viewModel.restoreBackup(backupIo) },
+                )
+                SettingsItem(
+                    title = stringResource(Res.string.periodic_backups),
+                    icon = Icons.Outlined.Schedule,
+                    enabled = !isBusy,
+                    onClick = onPeriodicClick,
                 )
             }
             if (isBusy) {

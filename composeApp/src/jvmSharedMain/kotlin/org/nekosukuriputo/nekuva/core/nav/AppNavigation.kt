@@ -248,6 +248,12 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<BackupSettingsRoute> {
                     org.nekosukuriputo.nekuva.backups.ui.BackupSettingsScreen(
                         onBackClick = { navController.popBackStack() },
+                        onPeriodicClick = { navController.navigate(PeriodicBackupRoute) },
+                    )
+                }
+                composable<PeriodicBackupRoute> {
+                    org.nekosukuriputo.nekuva.backups.ui.PeriodicBackupScreen(
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<AppearanceSettingsRoute> {

@@ -480,6 +480,7 @@
     <string name="enhanced_colors_summary">Mengurangi banding, tetapi dapat mempengaruhi kinerja</string>
     <string name="frequency_once_per_week">Sekali dalam seminggu</string>
     <string name="periodic_backups">Pencadangan berkala</string>
+    <string name="last_backup">Cadangan terakhir</string>
     <string name="reader_zoom_buttons">Tampilkan tombol zoom</string>
     <string name="frequency_twice_per_month">Dua kali sebulan</string>
     <string name="by_relevance">Relevansi</string>
@@ -731,7 +732,7 @@
     <string name="test_connection">Tes koneksi</string>
     <string name="send_backups_telegram">Kirim cadangan di Telegram</string>
     <string name="telegram_chat_id_summary">Masukkan ID chat untuk pengiriman cadangan</string>
-    <string name="open_telegram_bot_summary">Tekan untuk membuka chat dengan Bot Cadangan Doki</string>
+    <string name="open_telegram_bot_summary">Tekan untuk membuka chat dengan Bot Cadangan Nekuva</string>
     <string name="delete_old_backups">Hapus cadangan lama</string>
     <string name="delete_old_backups_summary">Otomatis menghapus berkas cadangan lama untuk menghemat ruang penyimpanan</string>
     <string name="debug">Awakutu</string>

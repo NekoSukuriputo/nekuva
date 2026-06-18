@@ -134,6 +134,12 @@ fun App() {
         runCatching { org.nekosukuriputo.nekuva.suggestions.work.scheduleSuggestions() }
     }
 
+    // Periodic backup (Doki PeriodicalBackupWorker): (re)schedule per the backup setting on launch.
+    // Android = WorkManager; Desktop = no-op.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching { org.nekosukuriputo.nekuva.backups.work.scheduleBackup() }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()
