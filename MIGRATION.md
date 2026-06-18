@@ -1050,7 +1050,8 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 ## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
 > **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-2 ✅, CORE-3 ✅, CORE-5 ✅, CORE-6 ✅,
-> CORE-1 🟡 (History/Favourites/Local ✅, Downloads pending). Sisa: CORE-1(Downloads), CORE-4, CORE-7, CORE-8, CORE-9 + area.
+> CORE-8 ✅ (History), CORE-9 ✅. CORE-1 🟡 (History/Favourites/Local ✅, Downloads pending). CORE-4 🟡 (History
+> sort+grouping ✅; quick-filter + Favourites/Local pending). Sisa: CORE-1(Downloads), CORE-4(rest), CORE-7 + area.
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
@@ -1071,9 +1072,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-3 — Mode tampilan daftar (list/grid/detailed) + grid size** ✅ DONE (komponen + wiring)
   `rememberMangaListMode`/`rememberGridSize` + `MangaListContent` (GRID/LIST/DETAILED_LIST) dipakai
   Local/Favourites/RemoteList/GlobalSearch; History punya GRID/LIST sendiri. Live dari `KEY_LIST_MODE_*`/grid-size.
-- **CORE-4 — Sort order + quick-filter + grouping generik** 🟡
-  Untuk layar daftar (History/Favourites/Local). Doki `*ListQuickFilter` + menu sort + header grouping. Saat ini
-  banyak hardcoded (mis. History = LAST_READ saja, no grouping/quick-filter).
+- **CORE-4 — Sort order + quick-filter + grouping generik** 🟡 (History sort+grouping ✅; quick-filter + Favourites/Local pending)
+  **History ✅** (commit `feat(core): CORE-4 History sort+grouping`): ikon **Sort** di top bar → dialog
+  pilih **sort order** (ListSortOrder.HISTORY: last-read/long-ago/newest/oldest/progress/unread/by-name/
+  by-name-rev/new-chapters/updated, persist `KEY_HISTORY_ORDER`) + switch **"Group by date"** (persist
+  `KEY_HISTORY_GROUPING`); header tanggal hanya saat grouping ON & sort berbasis tanggal, else flat. VM
+  `combine(limit, sortOrder)` → query (DAO sudah dukung semua order + filter). **Sisa:** quick-filter chip
+  (HistoryListQuickFilter) + sort/grouping untuk Favourites & Local (pola sama, reuse dialog).
 - **CORE-5 — Share (manga + halaman) ✅ DONE (capability)** (commit `feat(core): Share`).
   `core/share/Share.kt` expect `shareText` + `shareManga(title+url)` — Android `Intent.ACTION_SEND` (share sheet),
   Desktop copy-to-clipboard. **Wired:** tombol Share di top bar Details. **Sisa wiring per-layar:** selection-mode

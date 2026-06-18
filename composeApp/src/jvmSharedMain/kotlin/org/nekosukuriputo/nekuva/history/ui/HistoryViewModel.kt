@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.collectLatest
 class HistoryViewModel(
     private val historyRepository: HistoryRepository,
     private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
+    private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
 ) : ViewModel() {
 
     // Pagination (Doki PAGE_SIZE / requestMoreItems): grow the DB window as the user scrolls.
@@ -30,14 +32,26 @@ class HistoryViewModel(
     private val _hasMore = MutableStateFlow(true)
     val hasMore: StateFlow<Boolean> = _hasMore.asStateFlow()
 
-    val uiState: StateFlow<HistoryUiState> = limit
-        .flatMapLatest { lim ->
-            historyRepository.observeAllWithHistory(ListSortOrder.LAST_READ, emptySet(), lim)
-                .onEach { _hasMore.value = it.size >= lim }
-                .map<List<MangaWithHistory>, HistoryUiState> { HistoryUiState.Success(it) }
-                .catch { e -> emit(HistoryUiState.Error(e)) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState.Loading)
+    // Sort order (Doki history sort; persisted to KEY_HISTORY_ORDER).
+    private val _sortOrder = MutableStateFlow(settings.historySortOrder)
+    val sortOrder: StateFlow<ListSortOrder> = _sortOrder.asStateFlow()
+
+    val uiState: StateFlow<HistoryUiState> =
+        combine(limit, _sortOrder) { lim, order -> lim to order }
+            .flatMapLatest { (lim, order) ->
+                historyRepository.observeAllWithHistory(order, emptySet(), lim)
+                    .onEach { _hasMore.value = it.size >= lim }
+                    .map<List<MangaWithHistory>, HistoryUiState> { HistoryUiState.Success(it) }
+                    .catch { e -> emit(HistoryUiState.Error(e)) }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState.Loading)
+
+    /** Change the sort order (Doki history sort), persist it, and restart pagination. */
+    fun setSortOrder(order: ListSortOrder) {
+        settings.historySortOrder = order
+        limit.value = PAGE_SIZE
+        _sortOrder.value = order
+    }
 
     /** Load the next page when scrolled near the end (no-op when the last page was already full). */
     fun loadMore() {

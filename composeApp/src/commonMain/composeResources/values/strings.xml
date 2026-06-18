@@ -45,6 +45,8 @@
     <string name="popular">Popular</string>
     <string name="updated">Updated</string>
     <string name="newest">Newest</string>
+    <string name="oldest">Oldest</string>
+    <string name="group_by_date">Group by date</string>
     <string name="by_rating">Rating</string>
     <string name="sort_order">Sorting order</string>
     <string name="filter">Filter</string>

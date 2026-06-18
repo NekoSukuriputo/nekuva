@@ -39,6 +39,8 @@
     <string name="popular">Populer</string>
     <string name="updated">Diperbarui</string>
     <string name="newest">Terbaru</string>
+    <string name="oldest">Terlama</string>
+    <string name="group_by_date">Kelompokkan per tanggal</string>
     <string name="by_rating">Nilai</string>
     <string name="sort_order">Urutkan</string>
     <string name="filter">Saring</string>

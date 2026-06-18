@@ -3,6 +3,8 @@ package org.nekosukuriputo.nekuva.history.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -57,6 +59,10 @@ fun HistoryScreen(
     val listMode = rememberMangaListMode(settings, AppSettings.KEY_LIST_MODE_HISTORY)
     val gridSize = rememberGridSize(settings)
     val progressMode = remember { settings.progressIndicatorMode }
+    // Sort + grouping (Doki opt_history): persisted sort order + "group by date" toggle.
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    var grouping by remember { mutableStateOf(settings.isHistoryGroupingEnabled) }
+    var showSortDialog by remember { mutableStateOf(false) }
     // Multi-select (Doki ActionMode / mode_history): long-press enters, tap toggles while active.
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
     val successList = (uiState as? HistoryUiState.Success)?.list.orEmpty()
@@ -102,6 +108,9 @@ fun HistoryScreen(
                 TopAppBar(
                     title = { Text(stringResource(Res.string.history)) },
                     actions = {
+                        IconButton(onClick = { showSortDialog = true }) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
+                        }
                         IconButton(onClick = { viewModel.clearAllHistory() }) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.clear_history))
                         }
@@ -117,9 +126,15 @@ fun HistoryScreen(
                 if (state.list.isEmpty()) {
                     EmptyState(message = stringResource(Res.string.text_history_holder_primary), modifier = Modifier.padding(paddingValues))
                 } else {
-                    // Group by Doki-style relative bucket (today/yesterday/N-days/per-day) so headers read
-                    // "Hari ini"/"Kemarin"/"N hari lalu" then the absolute date ("24 Mei 2026").
-                    val grouped = state.list.groupBy { relativeDateKey(it.history.updatedAt) }
+                    // Date grouping (Doki KEY_HISTORY_GROUPING) only for date-based sorts; headers read
+                    // "Hari ini"/"Kemarin"/"N hari lalu" then the absolute date ("24 Mei 2026"). Otherwise flat.
+                    val dateGrouped = grouping && sortOrder in setOf(
+                        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LAST_READ,
+                        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LONG_AGO_READ,
+                        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEWEST,
+                        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.OLDEST,
+                    )
+                    val grouped = if (dateGrouped) state.list.groupBy { relativeDateKey(it.history.updatedAt) } else mapOf("" to state.list)
                     fun progressOf(item: MangaWithHistory): Float? =
                         if (progressMode != ProgressIndicatorMode.NONE && item.history.percent >= 0f) item.history.percent else null
 
@@ -133,7 +148,7 @@ fun HistoryScreen(
                             modifier = Modifier.fillMaxSize().padding(paddingValues),
                         ) {
                             grouped.forEach { (_, items) ->
-                                item(span = { GridItemSpan(maxLineSpan) }) { DateHeader(items.first().history.updatedAt) }
+                                if (dateGrouped) item(span = { GridItemSpan(maxLineSpan) }) { DateHeader(items.first().history.updatedAt) }
                                 gridItems(items, key = { it.manga.id }) { item ->
                                     MangaGridItem(
                                         manga = item.manga,
@@ -152,7 +167,7 @@ fun HistoryScreen(
                             modifier = Modifier.fillMaxSize().padding(paddingValues)
                         ) {
                             grouped.forEach { (_, items) ->
-                                item { DateHeader(items.first().history.updatedAt) }
+                                if (dateGrouped) item { DateHeader(items.first().history.updatedAt) }
                                 items(items, key = { it.manga.id }) { item ->
                                     HistoryItem(
                                         item = item,
@@ -172,7 +187,74 @@ fun HistoryScreen(
         }
     }
 
+    if (showSortDialog) {
+        HistorySortDialog(
+            current = sortOrder,
+            grouping = grouping,
+            onSelect = { viewModel.setSortOrder(it) },
+            onGroupingChange = { settings.isHistoryGroupingEnabled = it; grouping = it },
+            onDismiss = { showSortDialog = false },
+        )
+    }
 }
+
+/** Sort + "group by date" picker (Doki history sort sheet). */
+@Composable
+private fun HistorySortDialog(
+    current: org.nekosukuriputo.nekuva.list.domain.ListSortOrder,
+    grouping: Boolean,
+    onSelect: (org.nekosukuriputo.nekuva.list.domain.ListSortOrder) -> Unit,
+    onGroupingChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.sort_order)) },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = 460.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
+                org.nekosukuriputo.nekuva.list.domain.ListSortOrder.HISTORY.forEach { order ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(order) }.padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = order == current, onClick = { onSelect(order) })
+                        Spacer(Modifier.width(8.dp))
+                        Text(sortLabel(order))
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { onGroupingChange(!grouping) }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.group_by_date), modifier = Modifier.weight(1f))
+                    Switch(checked = grouping, onCheckedChange = { onGroupingChange(it) })
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.done)) } },
+    )
+}
+
+@Composable
+private fun sortLabel(order: org.nekosukuriputo.nekuva.list.domain.ListSortOrder): String = stringResource(
+    when (order) {
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LAST_READ -> Res.string.last_read
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LONG_AGO_READ -> Res.string.long_ago_read
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEWEST -> Res.string.newest
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.OLDEST -> Res.string.oldest
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.PROGRESS -> Res.string.progress
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.UNREAD -> Res.string.unread
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.ALPHABETIC -> Res.string.by_name
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.ALPHABETIC_REVERSE -> Res.string.by_name_reverse
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEW_CHAPTERS -> Res.string.new_chapters
+        org.nekosukuriputo.nekuva.list.domain.ListSortOrder.UPDATED -> Res.string.updated
+        else -> Res.string.sort_order
+    },
+)
 
 @Composable
 private fun DateHeader(epochMillis: Long) {
