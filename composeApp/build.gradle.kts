@@ -220,6 +220,11 @@ compose.desktop {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi, org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb)
             packageName = "org.nekosukuriputo.nekuva"
             packageVersion = "1.0.0"
+            // App icon. Linux uses the generated PNG. Windows/macOS installers need platform formats:
+            // place `nekuva_icon.ico` / `nekuva_icon.icns` next to the PNG and set windows/macOS iconFile.
+            linux {
+                iconFile.set(project.file("src/desktopMain/resources/nekuva_icon.png"))
+            }
         }
     }
 }

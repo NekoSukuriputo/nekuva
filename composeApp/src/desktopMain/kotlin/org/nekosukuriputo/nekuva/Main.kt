@@ -1,5 +1,6 @@
 package org.nekosukuriputo.nekuva
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import java.util.Locale
@@ -33,9 +34,12 @@ fun main() {
         if (tag.isNotEmpty()) Locale.setDefault(Locale.forLanguageTag(tag))
     }
     application {
+        // App/window icon from the generated PNG on the classpath (desktopMain/resources/nekuva_icon.png).
+        val appIcon = painterResource("nekuva_icon.png")
         Window(
             onCloseRequest = ::exitApplication,
             title = "Nekuva",
+            icon = appIcon,
         ) {
             App()
         }
@@ -45,6 +49,7 @@ fun main() {
                 Window(
                     onCloseRequest = { org.nekosukuriputo.nekuva.reader.ui.DesktopReaderWindows.close(entry) },
                     title = "Nekuva — Reader",
+                    icon = appIcon,
                 ) {
                     org.nekosukuriputo.nekuva.reader.ui.ReaderWindowHost(
                         args = entry.args,

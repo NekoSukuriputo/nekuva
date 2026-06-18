@@ -965,9 +965,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     `api.github.com/repos/NekoSukuriputo/nekuva/releases/latest`, bandingkan tag via `VersionId`, return
     `AppVersion?`. `AboutSettingsViewModel.checkForUpdates` → snackbar **"Versi baru: X"** (aksi ↗ buka rilis)
     atau **"Anda menggunakan versi terbaru"**. String baru `youre_using_the_latest_version` (en/id/in).
-- **DEFERRED Fase 9 (increment berikut):** **ikon app + splash** (desktop win/linux/mac + android) dari
-  `logo/logo.png` — perlu generate aset (instruksi + wiring); **README** refactor (Desktop+Linux + logo di atas
-  judul). Changelog functional (release notes) + auto-update-check saat launch (Doki) bisa menyusul.
+- **9B ✅ DONE — Ikon aplikasi (Android + Desktop, compile + assembleDebug hijau):** dari `logo/logo.png`
+  (1024×1024) di-generate (JDK ImageIO, tanpa tool eksternal) → **Android** mipmap 5 densitas
+  `mipmap-*/ic_launcher.png`+`ic_launcher_round.png` + manifest `android:icon`/`android:roundIcon`;
+  **Desktop** `desktopMain/resources/nekuva_icon.png` → window icon di `Main.kt` (main + reader windows) +
+  Linux installer `nativeDistributions { linux { iconFile } }`. Splash Android 12+ otomatis pakai launcher icon.
+  **Instruksi (README):** ganti logo → regen PNG; Windows/macOS installer perlu `nekuva_icon.ico`/`.icns` di
+  `desktopMain/resources` + set `windows/macOS { iconFile }`.
+- **9C ✅ DONE — README refactor:** logo `<img>` di atas judul Nekuva, platform Desktop = **Windows/macOS/Linux**
+  (badge + teks), tambah perintah `packageDistributionForCurrentOS`, + section **App icon** (lokasi aset + cara
+  ganti + catatan .ico/.icns).
+- **FASE 9 SELESAI** (9A About+update-checker, 9B ikon app, 9C README; compile + assembleDebug hijau, belum
+  run-verify GUI).
+- **DEFERRED kecil Fase 9:** changelog functional (release notes) + auto update-check saat launch + custom splash
+  theme (Android 12+) + ikon installer Windows/macOS (.ico/.icns) — perlu aset/tool tambahan.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,

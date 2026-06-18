@@ -1,11 +1,13 @@
 <div align="center">
 
+<img src="logo/logo.png" alt="Nekuva logo" width="128" height="128" />
+
 # Nekuva
 
 **A cross-platform manga reader built with Kotlin Multiplatform & Compose Multiplatform.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20Desktop%20%7C%20iOS%20(planned)-success)
+![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20Desktop%20(Windows%20%7C%20macOS%20%7C%20Linux)%20%7C%20iOS%20(planned)-success)
 ![Status](https://img.shields.io/badge/status-active%20development-orange)
 
 </div>
@@ -15,8 +17,8 @@
 ## About
 
 **Nekuva** is a manga reader that lets you browse many online sources, read chapters online,
-and keep a local library — on **Android**, **Desktop (Windows & macOS)**, and (planned) **iOS**
-from a single shared codebase.
+and keep a local library — on **Android**, **Desktop (Windows, macOS & Linux)**, and (planned)
+**iOS** from a single shared codebase.
 
 Manga sources (the parsers/scrapers) live in a separate repository,
 **[nekuva-exts](https://github.com/NekoSukuriputo/nekuva-exts)**, which Nekuva consumes as a
@@ -68,9 +70,14 @@ composeApp/src/
 
 Requires **JDK 17** and the Android SDK (for the Android target).
 
-**Desktop (Windows/macOS/Linux):**
+**Desktop (Windows, macOS & Linux):**
 ```bash
 ./gradlew :composeApp:run
+```
+
+Native installers (`.msi` / `.dmg` / `.deb`):
+```bash
+./gradlew :composeApp:packageDistributionForCurrentOS
 ```
 
 **Android** (device with USB debugging connected):
@@ -83,6 +90,22 @@ Requires **JDK 17** and the Android SDK (for the Android target).
 ./gradlew :composeApp:assembleDebug
 # output: composeApp/build/outputs/apk/debug/composeApp-debug.apk
 ```
+
+## App icon
+
+The master logo is **`logo/logo.png`** (1024×1024). From it, the app icons are already generated and
+committed:
+
+- **Android** — launcher icons in `composeApp/src/androidMain/res/mipmap-*/ic_launcher.png`
+  (+ `ic_launcher_round.png`), referenced from the manifest (`android:icon` / `android:roundIcon`).
+- **Desktop** — the window icon `composeApp/src/desktopMain/resources/nekuva_icon.png` (used in
+  `Main.kt`), and the Linux installer icon (wired in `composeApp/build.gradle.kts` → `nativeDistributions`).
+
+To **change the logo**, replace `logo/logo.png` and regenerate the PNGs (any tool / Android Studio's
+*Image Asset* works). For **native installers on Windows & macOS**, also place
+`nekuva_icon.ico` (Windows) and `nekuva_icon.icns` (macOS) in `composeApp/src/desktopMain/resources/`
+and set `windows { iconFile.set(...) }` / `macOS { iconFile.set(...) }` in `nativeDistributions`
+(Linux already uses the PNG). On Android 12+ the splash screen automatically uses the launcher icon.
 
 ## Contributing
 
