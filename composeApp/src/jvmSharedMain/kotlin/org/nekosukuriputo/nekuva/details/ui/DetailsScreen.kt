@@ -71,11 +71,20 @@ fun DetailsScreen(
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showMangaStats by remember { mutableStateOf(false) }
     var showEditOverride by remember { mutableStateOf(false) }
+    var fullScreenCover by remember { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val downloadStartedMsg = stringResource(Res.string.download_started)
     val downloadAddedMsg = stringResource(Res.string.download_added)
     val detailsLabel = stringResource(Res.string.details)
+
+    fullScreenCover?.let { coverUrl ->
+        org.nekosukuriputo.nekuva.image.ui.FullScreenImageViewer(
+            imageUrl = coverUrl,
+            onDismiss = { fullScreenCover = null },
+            onShare = { org.nekosukuriputo.nekuva.core.share.shareText(it) },
+        )
+    }
 
     val editOverrideState = uiState
     if (showEditOverride && editOverrideState is DetailsUiState.Success) {
@@ -267,6 +276,7 @@ fun DetailsScreen(
                     relatedManga = relatedManga,
                     onRelatedClick = onRelatedClick,
                     readingTimeText = readingTime?.let { formatReadingTime(it) },
+                    onCoverClick = { fullScreenCover = it },
                     paddingValues = paddingValues
                 )
             }
@@ -284,6 +294,7 @@ fun MangaDetailsContent(
     relatedManga: List<Manga> = emptyList(),
     onRelatedClick: (mangaId: Long) -> Unit = {},
     readingTimeText: String? = null,
+    onCoverClick: (String?) -> Unit = {},
     paddingValues: PaddingValues
 ) {
     val scrollState = androidx.compose.foundation.rememberScrollState()
@@ -307,6 +318,8 @@ fun MangaDetailsContent(
                     .aspectRatio(13f / 18f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
+                    // Tap cover -> fullscreen zoomable viewer (Doki ImageActivity).
+                    .clickable { onCoverClick(manga.largeCoverUrl ?: manga.coverUrl) }
             ) {
                 AsyncImage(
                     model = manga.largeCoverUrl ?: manga.coverUrl,

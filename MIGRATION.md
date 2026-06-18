@@ -1124,7 +1124,12 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   "Search through disabled sources" (throughDisabledSources). Tap hasil → Details. **Defer (dicatat):** Migrate +
   AutoFix (pindahkan favourite/history ke sumber lain, `MigrateUseCase`/`AutoFixUseCase`/`AutoFixService`) — operasi
   tulis lintas-sumber, langkah tersendiri. `action_online` (buka varian online manga lokal) belum.
-- **AREA `image`** 🔴 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman tersimpan → fullscreen zoom + share + save.
+- **AREA `image`** 🟡 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman → fullscreen zoom + share + save.
+  **✅ Viewer:** `image/ui/FullScreenImageViewer` (Compose `Dialog` full-bleed, lintas-platform): pinch +
+  double-tap zoom (1–5×), drag pan, tap kosong/Close tutup, tombol Share (kirim URL via `shareText` — Android sheet /
+  Desktop clipboard). **Wired:** tap cover di Details → viewer. **Defer (dicatat):** Save gambar ke disk (perlu
+  file-write per-platform + MediaStore Android, port `ImageViewModel.saveImage`); buka viewer dari thumbnail "Pages"
+  tab & halaman reader (perluasan, cover dulu).
 - **AREA `picker` / import lokal** 🔴 — import `.cbz`/folder ke library (`opt_local action_import`). (directory/page-save picker sudah ada, IMPORT belum.)
 - **AREA `widget`** 🔴 — home-screen widget Android (Doki `widget/`: shelf/recent). Android `actual` saja; Desktop/iOS N/A.
 
