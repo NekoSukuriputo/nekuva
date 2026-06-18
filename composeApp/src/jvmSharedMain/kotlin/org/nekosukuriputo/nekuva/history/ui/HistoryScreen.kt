@@ -2,7 +2,9 @@ package org.nekosukuriputo.nekuva.history.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,6 +46,7 @@ import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
 import org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo
 import org.nekosukuriputo.nekuva.core.util.ext.relativeDateKey
 import org.nekosukuriputo.nekuva.history.domain.model.MangaWithHistory
+import org.nekosukuriputo.nekuva.list.domain.ListFilterOption
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
 
@@ -63,6 +66,17 @@ fun HistoryScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     var grouping by remember { mutableStateOf(settings.isHistoryGroupingEnabled) }
     var showSortDialog by remember { mutableStateOf(false) }
+    // Quick-filter chips (Doki HistoryListQuickFilter): gate by tracker/NSFW prefs as Doki does.
+    val appliedFilters by viewModel.filters.collectAsState()
+    val availableFilters = remember(settings.isTrackerEnabled, settings.isNsfwContentDisabled) {
+        buildList {
+            add(ListFilterOption.Downloaded)
+            if (settings.isTrackerEnabled) add(ListFilterOption.Macro.NEW_CHAPTERS)
+            add(ListFilterOption.Macro.COMPLETED)
+            add(ListFilterOption.Macro.FAVORITE)
+            if (!settings.isNsfwContentDisabled) add(ListFilterOption.Macro.NSFW)
+        }
+    }
     // Multi-select (Doki ActionMode / mode_history): long-press enters, tap toggles while active.
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
     val successList = (uiState as? HistoryUiState.Success)?.list.orEmpty()
@@ -123,8 +137,22 @@ fun HistoryScreen(
             is HistoryUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
             is HistoryUiState.Error -> ErrorState(error = state.error, onRetry = { }, modifier = Modifier.padding(paddingValues))
             is HistoryUiState.Success -> {
+              Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                // Quick-filter chips scroll above the list (Doki adds them as the first list item).
+                if (state.list.isNotEmpty() || appliedFilters.isNotEmpty()) {
+                    HistoryQuickFilterRow(
+                        available = availableFilters,
+                        applied = appliedFilters,
+                        onToggle = { viewModel.toggleFilter(it) },
+                    )
+                }
                 if (state.list.isEmpty()) {
-                    EmptyState(message = stringResource(Res.string.text_history_holder_primary), modifier = Modifier.padding(paddingValues))
+                    EmptyState(
+                        message = stringResource(
+                            if (appliedFilters.isEmpty()) Res.string.text_history_holder_primary else Res.string.nothing_found,
+                        ),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                    )
                 } else {
                     // Date grouping (Doki KEY_HISTORY_GROUPING) only for date-based sorts; headers read
                     // "Hari ini"/"Kemarin"/"N hari lalu" then the absolute date ("24 Mei 2026"). Otherwise flat.
@@ -145,7 +173,7 @@ fun HistoryScreen(
                             contentPadding = PaddingValues(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxSize().padding(paddingValues),
+                            modifier = Modifier.fillMaxSize(),
                         ) {
                             grouped.forEach { (_, items) ->
                                 if (dateGrouped) item(span = { GridItemSpan(maxLineSpan) }) { DateHeader(items.first().history.updatedAt) }
@@ -164,7 +192,7 @@ fun HistoryScreen(
                         LazyColumn(
                             state = listState,
                             contentPadding = PaddingValues(bottom = 80.dp),
-                            modifier = Modifier.fillMaxSize().padding(paddingValues)
+                            modifier = Modifier.fillMaxSize()
                         ) {
                             grouped.forEach { (_, items) ->
                                 if (dateGrouped) item { DateHeader(items.first().history.updatedAt) }
@@ -183,6 +211,7 @@ fun HistoryScreen(
                         }
                     }
                 }
+              }
             }
         }
     }
@@ -197,6 +226,40 @@ fun HistoryScreen(
             onDismiss = { showSortDialog = false },
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryQuickFilterRow(
+    available: List<ListFilterOption>,
+    applied: Set<ListFilterOption>,
+    onToggle: (ListFilterOption) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        available.forEach { option ->
+            FilterChip(
+                selected = option in applied,
+                onClick = { onToggle(option) },
+                label = { Text(filterLabel(option)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun filterLabel(option: ListFilterOption): String = when (option) {
+    ListFilterOption.Downloaded -> stringResource(Res.string.downloaded)
+    ListFilterOption.Macro.NEW_CHAPTERS -> stringResource(Res.string.new_chapters)
+    ListFilterOption.Macro.COMPLETED -> stringResource(Res.string.status_completed)
+    ListFilterOption.Macro.FAVORITE -> stringResource(Res.string.favourites)
+    ListFilterOption.Macro.NSFW -> stringResource(Res.string.nsfw)
+    else -> option.titleText?.toString() ?: ""
 }
 
 @Composable

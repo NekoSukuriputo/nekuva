@@ -36,10 +36,14 @@ class HistoryViewModel(
     private val _sortOrder = MutableStateFlow(settings.historySortOrder)
     val sortOrder: StateFlow<ListSortOrder> = _sortOrder.asStateFlow()
 
+    // Quick-filter chips (Doki HistoryListQuickFilter): applied ListFilterOptions narrowing the DB window.
+    private val _filters = MutableStateFlow<Set<ListFilterOption>>(emptySet())
+    val filters: StateFlow<Set<ListFilterOption>> = _filters.asStateFlow()
+
     val uiState: StateFlow<HistoryUiState> =
-        combine(limit, _sortOrder) { lim, order -> lim to order }
-            .flatMapLatest { (lim, order) ->
-                historyRepository.observeAllWithHistory(order, emptySet(), lim)
+        combine(limit, _sortOrder, _filters) { lim, order, filters -> Triple(lim, order, filters) }
+            .flatMapLatest { (lim, order, filters) ->
+                historyRepository.observeAllWithHistory(order, filters, lim)
                     .onEach { _hasMore.value = it.size >= lim }
                     .map<List<MangaWithHistory>, HistoryUiState> { HistoryUiState.Success(it) }
                     .catch { e -> emit(HistoryUiState.Error(e)) }
@@ -51,6 +55,12 @@ class HistoryViewModel(
         settings.historySortOrder = order
         limit.value = PAGE_SIZE
         _sortOrder.value = order
+    }
+
+    /** Toggle a quick-filter chip (Doki QuickFilterListener.onFilterOptionClick); restart pagination. */
+    fun toggleFilter(option: ListFilterOption) {
+        _filters.value = if (option in _filters.value) _filters.value - option else _filters.value + option
+        limit.value = PAGE_SIZE
     }
 
     /** Load the next page when scrolled near the end (no-op when the last page was already full). */
