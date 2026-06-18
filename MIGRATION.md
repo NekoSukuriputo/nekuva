@@ -1049,7 +1049,12 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 
 ## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
+> **Progress (2026-06-18, sedang berjalan, per-step commit):** CORE-0 ✅, CORE-5 ✅, CORE-6 ✅. Sisa: CORE-1/2(wiring)/3(wiring)/4/7/8/9 + area.
 
+- **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
+  `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
+  `calculateTimeAgo` (Composable). Absolute = "d MMMM yyyy" ("24 Mei 2026"). **History** group header kini
+  relatif (Hari ini/Kemarin/N hari lalu/→ tanggal), **chapter list** (Details) ikut. compile+assembleDebug hijau.
 - **CORE-1 — Selection mode (long-press multi-select)** 🔴
   Doki: ActionMode + `mode_history`/`mode_favourites`/`mode_local`. Komponen Compose reusable: long-press → contextual
   top bar (jumlah terpilih + aksi + select-all), dipakai History/Favourites/Local/Downloads. (Bookmarks sudah punya
@@ -1063,11 +1068,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-4 — Sort order + quick-filter + grouping generik** 🟡
   Untuk layar daftar (History/Favourites/Local). Doki `*ListQuickFilter` + menu sort + header grouping. Saat ini
   banyak hardcoded (mis. History = LAST_READ saja, no grouping/quick-filter).
-- **CORE-5 — Share (manga + halaman)** 🔴
-  `expect/actual`: Android `Intent.ACTION_SEND` (link/teks/gambar), Desktop salin-link / share file. Dipakai
-  Details/History/Favourites/Local/Reader/Bookmarks (`action_share` di semua `mode_*`/`opt_details`).
-- **CORE-6 — Mark as read / Mark as completed** 🔴
-  `MarkAsReadUseCase` (tandai bab/seluruh manga sudah dibaca). Dipakai History/Favourites selection + Details.
+- **CORE-5 — Share (manga + halaman) ✅ DONE (capability)** (commit `feat(core): Share`).
+  `core/share/Share.kt` expect `shareText` + `shareManga(title+url)` — Android `Intent.ACTION_SEND` (share sheet),
+  Desktop copy-to-clipboard. **Wired:** tombol Share di top bar Details. **Sisa wiring per-layar:** selection-mode
+  History/Favourites/Local + reader/bookmarks (ikut CORE-1 / per-layar).
+- **CORE-6 — Mark as read / Mark as completed ✅ DONE (use case)** (commit `feat(core): MarkAsReadUseCase`).
+  `history/domain/MarkAsReadUseCase` (port Doki: tulis history bab terakhir, percent=1, force; + varian
+  `Collection<Manga>`), terdaftar di Koin. **Sisa wiring per-layar:** selection-mode History/Favourites + Details.
 - **CORE-7 — Edit override (rename judul + cover kustom)** 🔴
   Doki `action_edit_override` (`MangaDataRepository` override nama/cover). Details + long-press item.
 - **CORE-8 — Pagination / load-more daftar** 🟡
