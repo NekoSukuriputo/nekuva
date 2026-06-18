@@ -162,6 +162,17 @@ fun DetailsScreen(
                                     showMangaStats = true
                                 },
                             )
+                            // Pin manga to launcher (Doki action_shortcut) — Android; Desktop no-op.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.create_shortcut)) },
+                                enabled = uiState is DetailsUiState.Success,
+                                onClick = {
+                                    showOverflowMenu = false
+                                    (uiState as? DetailsUiState.Success)?.manga?.let {
+                                        org.nekosukuriputo.nekuva.core.shortcuts.pinMangaShortcut(it.id, it.title)
+                                    }
+                                },
+                            )
                         }
                     }
                 }

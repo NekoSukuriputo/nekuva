@@ -42,3 +42,22 @@ actual fun updateDynamicShortcuts(shortcuts: List<MangaShortcut>) {
         ShortcutManagerCompat.setDynamicShortcuts(context, infos)
     }
 }
+
+actual fun pinMangaShortcut(id: Long, title: String) {
+    val context = ShortcutContext.context
+    runCatching {
+        if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) return
+        val label = title.ifBlank { "Manga" }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra(EXTRA_MANGA_ID, id)
+        }
+        val info = ShortcutInfoCompat.Builder(context, "manga_pin_$id")
+            .setShortLabel(label.take(24))
+            .setLongLabel(label)
+            .setIcon(IconCompat.createWithResource(context, context.applicationInfo.icon))
+            .setIntent(intent)
+            .build()
+        ShortcutManagerCompat.requestPinShortcut(context, info, null)
+    }
+}
