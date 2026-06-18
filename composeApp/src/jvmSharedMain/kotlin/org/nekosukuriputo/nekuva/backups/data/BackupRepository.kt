@@ -19,6 +19,8 @@ import org.nekosukuriputo.nekuva.backups.data.model.CategoryBackup
 import org.nekosukuriputo.nekuva.backups.data.model.FavouriteBackup
 import org.nekosukuriputo.nekuva.backups.data.model.HistoryBackup
 import org.nekosukuriputo.nekuva.backups.data.model.MangaBackup
+import org.nekosukuriputo.nekuva.backups.data.model.ScrobblingBackup
+import org.nekosukuriputo.nekuva.backups.data.model.StatisticBackup
 import org.nekosukuriputo.nekuva.backups.domain.BackupSection
 import org.nekosukuriputo.nekuva.core.db.MangaDatabase
 import org.nekosukuriputo.nekuva.core.db.withTransactionKmp
@@ -65,6 +67,18 @@ class BackupRepository(
             output.writeJsonArray(
                 BackupSection.BOOKMARKS,
                 database.getBookmarksDao().dump().map { BookmarkBackup(it.first, it.second) },
+                serializer(),
+            )
+            // Migrated Fase 7 sections (Doki backs these up as plain entity dumps — manga comes from the
+            // history/favourites sections restored first; written after them here so restore order matches).
+            output.writeJsonArray(
+                BackupSection.SCROBBLING,
+                database.getScrobblingDao().dumpEnabled().map { ScrobblingBackup(it) },
+                serializer(),
+            )
+            output.writeJsonArray(
+                BackupSection.STATS,
+                database.getStatsDao().dumpEnabled().map { StatisticBackup(it) },
                 serializer(),
             )
             output.finish()
@@ -126,6 +140,12 @@ class BackupRepository(
                     }
                     BackupSection.BOOKMARKS -> input.readJsonArray<BookmarkBackup>(serializer()).forEach { bk ->
                         if (restore { upsertManga(bk.manga); getBookmarksDao().upsert(bk.bookmarks.map { it.toEntity() }) }) restored++ else failed++
+                    }
+                    BackupSection.SCROBBLING -> input.readJsonArray<ScrobblingBackup>(serializer()).forEach {
+                        if (restore { getScrobblingDao().upsert(it.toEntity()) }) restored++ else failed++
+                    }
+                    BackupSection.STATS -> input.readJsonArray<StatisticBackup>(serializer()).forEach {
+                        if (restore { getStatsDao().upsert(it.toEntity()) }) restored++ else failed++
                     }
                     BackupSection.INDEX, null -> Unit
                 }

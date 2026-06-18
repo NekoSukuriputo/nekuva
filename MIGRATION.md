@@ -923,11 +923,21 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   `BackupRepository.peekSections(bytes)` deteksi section yang ada → **dialog checkbox** (History/Categories/
   Favourites/Bookmarks, default semua) → `restoreBackup(input, selectedSections)` hanya restore yang dipilih.
   `BackupViewModel.restorePrompt`/`confirmRestore`/`cancelRestore`.
-- **DEFERRED Fase 8 (increment berikut):** extend backup ke section yang baru dimigrasi (stats/suggestions/
-  scrobbling/saved-filters/settings); periodic backup Desktop (tanpa WorkManager). Telegram nyata butuh bot
-  token user (`TelegramBackupConfig.BOT_TOKEN`).
-- **FASE 8 SELESAI** (8A periodic backup + Telegram + 8B restore picker; compile + assembleDebug hijau,
-  belum run-verify GUI).
+- **8C ✅ DONE — extend backup section + Desktop periodic (compile + assembleDebug hijau):**
+  - **Section baru:** backup/restore kini termasuk **scrobbling** (`ScrobblingBackup`) + **statistics**
+    (`StatisticBackup`) — dump entitas polos ala Doki (entry `scrobbling`/`statistics`, nama field sama →
+    cross-compatible), ditulis SETELAH history/favourites supaya manga sudah ada saat restore; restore = upsert
+    (gagal per-item bila FK manga belum ada). Otomatis muncul di restore section picker (label Tracking/Statistik).
+  - **Desktop periodic backup:** `BackupScheduler.desktop` kini **check-on-launch** — bila enabled + dir diset +
+    sudah lewat 1 interval sejak `backup_periodic_last`, buat backup + trim + (opsional) upload Telegram.
+  - **Token Telegram:** tetap `TODO(credentials)` di `TelegramBackupConfig.BOT_TOKEN` (kosong = section Telegram
+    tersembunyi); user isi bot token sendiri.
+- **DEFERRED Fase 8 (sisa, tetap ditunda dgn alasan):** backup **settings** (multiplatform-settings tak punya
+  generic iterate/put nilai bertipe → tak bisa dump semua key) + **sources**/**saved_filters** enable/pin state
+  (area sources belum punya dump backup); **suggestions** sengaja TIDAK di-backup (ephemeral, regen on-demand —
+  sama seperti Doki). Telegram nyata butuh bot token user.
+- **FASE 8 SELESAI** (8A periodic + Telegram + 8B restore picker + 8C section/Desktop; compile + assembleDebug
+  hijau, belum run-verify GUI).
 - **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya

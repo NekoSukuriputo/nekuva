@@ -10,6 +10,8 @@ enum class BackupSection(val entryName: String) {
     CATEGORIES("categories"),
     FAVOURITES("favourites"),
     BOOKMARKS("bookmarks"),
+    SCROBBLING("scrobbling"),
+    STATS("statistics"),
     ;
 
     companion object {
