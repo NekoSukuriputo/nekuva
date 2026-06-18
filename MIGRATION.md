@@ -164,7 +164,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
 - [x] `download` (run-verified Android+Desktop: engine coroutine KMP (BUKAN WorkManager) dengan **output desain `index.json` Doki** — `MangaIndex`(org.json, `compileOnly(libs.json)`) + `ZipOutput` asli; `LocalMangaZipOutput`=SINGLE_CBZ (satu `.cbz` flat + index.json), `LocalMangaDirOutput`=MULTIPLE_CBZ (per-bab `.cbz` + index.json), `canWriteTo` (cocok manga.id, kalau tidak sufiks `_1`), id bab = id remote asli. Dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail, layar Downloads manager card-based ala Doki. **Fitur run-verified:** unduh→muncul di Local dgn **cover asli** (`addCover`), buka & **baca offline** manga unduhan, **resume** (bab sudah-unduh otomatis ✓ tak diulang), **retry** (tombol kartu = semua bab gagal + ikon ↻ per-bab), **pause** (ikon pause, bukan spinner), **cancel** (tak ada spinner nyangkut), pembersihan temp (`page*.tmp`/`*.cbz.tmp`), folder kustom persist, lanjut-saat-gagal. Hapus manga lokal (long-press di Local). Notifikasi foreground (Android), metered-network, save-page dll deferred — lihat ledger)
 - [x] `tracker` (T1 — run-verified Android+Desktop: tracker internal bab-baru + tab **Feed/Updates**; `TrackingRepository` + `CheckNewChaptersUseCase` + `FeedScreen`; kategori favorit default tracking ON + toggle lonceng di Kelola kategori)
-- [~] `scrobbling` (T2 — **fondasi + 1 layanan referensi (Shikimori) + UI login, compile + DI-verified; OAuth BELUM run-verify (butuh client ID dari user)**. DONE: `ScrobblerConfig` (placeholder client ID/secret + `REDIRECT_URI=nekuva://oauth`), model umum, `ScrobblerStorage` (token di ObservableSettings), `ScrobblerRepository`+`Scrobbler` base (adaptasi KMP), **ShikimoriRepository+ShikimoriScrobbler+ScrobblerManager** (referensi penuh OAuth+API), **OAuthScreen** (browser in-app menangkap redirect `code` → authorize) + **Settings→Services** menampilkan scrobbler ter-konfigurasi dgn login/logout. CARA AKTIFKAN: isi `SHIKIMORI_CLIENT_ID/SECRET` di `ScrobblerConfig` + daftarkan app dgn redirect `nekuva://oauth`. **SISA (increment berikut, pola sama):** AniList/MAL/Kitsu + Discord RPC, selector "ikat manga ke tracker" di Detail + tampil ScrobblingInfo, auto-scrobble saat baca, penyempurnaan tangkap-redirect custom-scheme (shouldOverrideUrl/CefRequestHandler))
+- [~] `scrobbling` (T2 — **fondasi + 1 layanan referensi (Shikimori) + UI login, compile + DI-verified; OAuth BELUM run-verify (butuh client ID dari user)**. DONE: `ScrobblerConfig` (placeholder client ID/secret + `REDIRECT_URI=nekuva://oauth`), model umum, `ScrobblerStorage` (token di ObservableSettings), `ScrobblerRepository`+`Scrobbler` base (adaptasi KMP), **ShikimoriRepository+ShikimoriScrobbler+ScrobblerManager** (referensi penuh OAuth+API), **OAuthScreen** (browser in-app menangkap redirect `code` → authorize) + **Settings→Services** menampilkan scrobbler ter-konfigurasi dgn login/logout. CARA AKTIFKAN: isi `SHIKIMORI_CLIENT_ID/SECRET` di `ScrobblerConfig` + daftarkan app dgn redirect `nekuva://oauth`. **UPDATE FASE 7: AniList/MAL/Kitsu + Discord RPC SUDAH DONE** (semua scrobbler + interceptor + Koin + Services UI + Kitsu password-dialog + Discord KizzyRPC/login webview + auto-scrobble + OAuth redirect intercept Android). **SISA:** selector "ikat manga ke tracker" di layar Detail + tampilkan ScrobblingInfo (action_scrobbling opt_details) — BELUM)
 - [~] `sync` (T3 — server sync Kotatsu; favorit/history lintas perangkat. **Compile-verified Android+Desktop; BELUM run-verify (butuh akun + server sync untuk uji aktual)**. ARSITEKTUR: framework Android SyncAdapter/AccountManager/ContentProvider Doki di-re-arsitektur untuk KMP — `SyncSettings` (kredensial/flag di ObservableSettings), DAO Room langsung (ganti ContentProvider), `SyncManager.syncNow()` manual + sync setelah login (ganti requestSync periodik). DONE: protokol 1:1 (`POST {host}/resource/{favourites,history}` payload `SyncDto`, merge balasan → DB, soft-delete GC 4 hari), `SyncAuthApi` (`POST /auth` {email,password}→token, akun dibuat bila belum ada), `SyncInterceptor` (Bearer + X-App/Db-Version) + `SyncAuthenticator` (refresh token saat 401), DTO 1:1 + mapping entity↔DTO, `SyncHelper` (push/merge via DAO; `HistoryDao.upsertForSync` verbatim agar tombstone tak ter-resurrect; `findAllForSync` baca semua baris termasuk soft-deleted), **SyncSettingsScreen** (login email/password/host ala Doki SyncAuthActivity + toggle favorit/history + "Sync sekarang" + waktu sync terakhir), wired ke Settings→Services→"Synchronization". CARA UJI: Settings→Services→Synchronization→isi server (default `https://sync.kotatsu.app`)+email+password→Login→Sync sekarang. **SISA/DEFERRED:** auto periodic background sync (dulu SyncAdapter periodik) → area background-jobs (WorkManager actual/Desktop scheduler); change-triggered auto-sync (observe InvalidationTracker); **CAVEAT** `X-Db-Version` mengirim versi Room lokal Nekuva (=1, "Fresh V1") sedang skema kanonik Kotatsu jauh lebih tinggi — bentuk JSON tetap cocok, server self-hosted aman, tapi server resmi mungkin berperilaku beda berdasar header ini)
 - [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & harus sama**, sesuai
       permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
@@ -176,11 +176,11 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
   - **MagusManga `JSONObject["author"] not found` (Android+Desktop):** parser `MagusToon` di nekuva-exts memanggil `getString("author")` pada entry tanpa field author → harus `getStringOrNull("author")`. Fix di repo nekuva-exts, lalu naikkan tag `exts` di `libs.versions.toml`.
   - **Shinigami "Error code:" hanya di Linux Desktop (Windows+Android aman):** pola khas celah cipher TLS — JVM Linux baku sering kurang cipher yang dipakai CDN, sedang Android (Conscrypt) & JVM Windows punya. **MITIGASI (repo ini):** tambah **Conscrypt** sbg JSSE provider teratas di Desktop (`Main.kt` + `conscrypt-openjdk-uber` di desktopMain). Kandidat-fix; perlu run-verify di Linux. Bila masih gagal, kirim stack trace Linux yang sebenarnya (baris `gcm DEPRECATED_ENDPOINT`/USB di log = noise Chromium).
 - [x] `browser` / `webview` / `evaluateJs` (run-verified Android+Desktop — PENUH B1+B2a+B2b+B3): **B1** evaluateJs Android via WebView (`WebViewExecutor`); **B3** evaluateJs Desktop via **KCEF** (embedded Chromium, unduh ~150MB sekali ke `~/.nekuva/kcef`); **B2a** browser in-app (`PlatformWebView` expect/actual: WebView/`AndroidView` + KCEF/`SwingPanel`; `BrowserScreen` toolbar ala Doki; "Buka di browser" dari error pencarian); **B2b** resolusi CloudFlare — cookie bridging (`createCookieJar` expect/actual: Android `AndroidCookieJar` berbagi CookieManager, Desktop `MemoryCookieJar` + `syncBrowserCookies` salin cookie CEF→OkHttp), `CloudFlareScreen` polling `cf_clearance`, error CF di RemoteList → tombol "Selesaikan captcha" → solve → **auto-retry**. Catatan: `evaluateJs` punya timeout 4s; saat KCEF masih mengunduh, eval pertama bisa gagal lalu sukses setelah siap)
-- [ ] `picker`
-- [ ] `widget`
-- [ ] `backups`
-- [ ] `stats`
-- [ ] `suggestions`
+- [ ] `picker` (file/folder picker UNTUK import manga lokal ke library belum ada; directory/page-save picker sudah ada)
+- [ ] `widget` (home-screen widget Android belum ada; hanya `AppWidgetConfig` pref)
+- [x] `backups` (DONE — Phase S2 + FASE 8: export/import zip per-section + restore section picker + periodic backup Android/Desktop + Telegram bot Kotatsu build-time token. Lihat FASE 8)
+- [x] `stats` (DONE — FASE 7: StatsCollector recording di reader + StatsRepository + StatsScreen via overflow History + per-manga stats dialog di Details)
+- [x] `suggestions` (DONE — FASE 7: SuggestionRepository + GenerateSuggestionsUseCase + SuggestionsScreen + worker Android. Lihat FASE 7)
 
 ---
 
@@ -1032,3 +1032,107 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 - [ ] Security (Biometric Lock / App Lock).
 - [ ] Tema / UI Lanjutan (Mis. Material You dynamic color).
 - [ ] Crashlytics / ACRA (Platform specific).
+
+---
+
+# ============================================================
+# FINAL MIGRATION — daftar untuk review (audit 2026-06-18)
+# ============================================================
+> Disusun setelah baca MIGRATION.md + verifikasi ke kode nyata + bandingkan menu/layar Doki
+> (`app/src/main/res/menu/*.xml` + `*/ui/*Fragment`). **Status besar:** semua 9 fase settings + reader-advanced
+> + scrobbling/Discord/stats/suggestions/backup/about/icon/splash SUDAH. Yang TERSISA dikelompokkan jadi
+> **(1) Core lintas-layar (prioritas dulu)** dan **(2) per-layar (tiru UI+behavior Doki, migrasi semua tanpa defer)**.
+> Konvensi: 🔴 belum ada · 🟡 ada sebagian/placeholder · ✅ sudah (dicantum agar konteks jelas).
+>
+> **Sudah dikoreksi di checklist atas:** `stats`/`suggestions`/`backups` = ✅ (dulu basi `[ ]`); scrobbling
+> AniList/MAL/Kitsu/Discord = ✅. **Masih `[ ]` beneran:** `image`, `alternatives`, `picker`(import), `widget`.
+
+## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
+Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
+
+- **CORE-1 — Selection mode (long-press multi-select)** 🔴
+  Doki: ActionMode + `mode_history`/`mode_favourites`/`mode_local`. Komponen Compose reusable: long-press → contextual
+  top bar (jumlah terpilih + aksi + select-all), dipakai History/Favourites/Local/Downloads. (Bookmarks sudah punya
+  versi sendiri — jadikan acuan/satukan.)
+- **CORE-2 — Overlay cover manga (parity grid item)** 🔴
+  Ikon hati (favorit) + badge progres baca (%/✓ "sudah tamat") + badge "baru" di atas cover. Doki `ListModel`/cover
+  overlay. Dipakai Explore, Favourites, History, RemoteList, hasil Search, Suggestions. (ledger "Parity item grid".)
+- **CORE-3 — Mode tampilan daftar (list/grid/detailed) + grid size + badges** 🟡
+  Key `KEY_LIST_MODE_*`/grid-size SUDAH tersimpan, tapi layar daftar masih render 1 layout. Terapkan ke
+  Explore/Favourites/History/Local/RemoteList (grid kolom adaptif, list, detailed-list).
+- **CORE-4 — Sort order + quick-filter + grouping generik** 🟡
+  Untuk layar daftar (History/Favourites/Local). Doki `*ListQuickFilter` + menu sort + header grouping. Saat ini
+  banyak hardcoded (mis. History = LAST_READ saja, no grouping/quick-filter).
+- **CORE-5 — Share (manga + halaman)** 🔴
+  `expect/actual`: Android `Intent.ACTION_SEND` (link/teks/gambar), Desktop salin-link / share file. Dipakai
+  Details/History/Favourites/Local/Reader/Bookmarks (`action_share` di semua `mode_*`/`opt_details`).
+- **CORE-6 — Mark as read / Mark as completed** 🔴
+  `MarkAsReadUseCase` (tandai bab/seluruh manga sudah dibaca). Dipakai History/Favourites selection + Details.
+- **CORE-7 — Edit override (rename judul + cover kustom)** 🔴
+  Doki `action_edit_override` (`MangaDataRepository` override nama/cover). Details + long-press item.
+- **CORE-8 — Pagination / load-more daftar** 🟡
+  History/Favourites/Local muat semua (Int.MAX_VALUE). Doki paginasi (PAGE_SIZE 16, requestMoreItems).
+- **CORE-9 — Create launcher shortcut (pin manga)** 🔴 Android (`action_shortcut`); Desktop N/A.
+
+### Area mandiri yang BELUM ada (masuk prioritas core)
+- **AREA `alternatives`** 🔴 — "Find similar / Alternatives / Online variant" (Details `action_related`/`action_alternatives`/`action_online`).
+  Doki `details/ui/related` + alternatives: cari manga sama di sumber lain + daftar alternatif. (related-row sudah ✅, ini layar/aksi terpisah.)
+- **AREA `image`** 🔴 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman tersimpan → fullscreen zoom + share + save.
+- **AREA `picker` / import lokal** 🔴 — import `.cbz`/folder ke library (`opt_local action_import`). (directory/page-save picker sudah ada, IMPORT belum.)
+- **AREA `widget`** 🔴 — home-screen widget Android (Doki `widget/`: shelf/recent). Android `actual` saja; Desktop/iOS N/A.
+
+## BAGIAN 2 — Per-layar (tiru UI + behavior Doki; migrasi SEMUA tanpa defer)
+
+### LAYAR: History (Doki `history/ui` + `opt_history` + `mode_history`)
+- 🟡 Overflow: **Clear history dgn opsi** (2 jam terakhir / hari ini / bukan favorit / semua) — kini cuma "clear all". Statistik ✅.
+- 🔴 Selection mode (long-press): Share, Remove, Save (halaman), Add to favourites, Fix, Edit, **Mark as completed**, Select-all.
+- 🔴 Sort order penuh (LAST_READ/LONG_AGO/NEWEST/OLDEST/PROGRESS/UNREAD/ALPHABETIC).
+- 🔴 Quick filters (chip) + 🔴 grouping toggle (header progress saat sort=PROGRESS).
+- 🔴 List mode (grid/list/detailed) + 🔴 pagination (16) + 🔴 indikator progres per item (CORE-2/3/8).
+- 🔴 Banner "Incognito mode" saat incognito aktif. 🔴 Empty state ikon + teks primer/sekunder.
+- 🔴 Pindahkan string hardcode ("Riwayat Baca"/"Tidak ada riwayat baca"/"Lanjut bab"/"Hapus Riwayat") ke Compose Resources.
+
+### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
+- 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
+- 🔴 Selection mode: Share, Remove, Save, **Categories** (pindah kategori), Fix, Edit, Mark as completed, Select-all.
+- 🔴 Sort order per kategori + 🔴 list mode + 🔴 overlay cover (CORE-2/3/4). 🔴 Empty state per kategori.
+
+### LAYAR: Local / Penyimpanan lokal (Doki `local/ui` + `opt_local` + `mode_local`)
+- 🔴 Overflow: **Import** (file/folder → AREA picker), Filter, Directories.
+- 🔴 Selection mode: Share, **Delete**, Edit, Select-all. (hapus per-item via long-press sudah ada — perluas ke multi-select.)
+- 🔴 List mode (CORE-3).
+
+### LAYAR: Feed / Updates (Doki `tracker/ui/feed` + `opt_feed`)
+- 🟡 Overflow: Update (refresh manual — verifikasi), **Show updated** (toggle), **Clear feed**.
+- 🔴 Badge counter jumlah update di tab Feed (CORE Main-shell). 🔴 Empty/loading state parity.
+
+### LAYAR: Explore (Doki `explore/ui` + `opt_explore`)
+- ✅ Manage sources / Catalog (FASE 2). Bookmarks/Downloads shortcut ✅.
+- 🔴 **Open random** (buka manga acak) shortcut. 🔴 Verifikasi grouping bahasa + long-press pin sama Doki.
+
+### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`)
+- 🔴 Overflow penuh: **Share**, Download ✅, **Delete** (lokal), **Edit** (override), **Tracking** (lihat bawah),
+  Statistics ✅, **Find similar / Alternatives / Online variant** (AREA alternatives), **Open in browser**, **Create shortcut**.
+- 🔴 **Scrobbling/Tracking di Details** (`action_scrobbling`): selector "ikat manga ke tracker" + tampil kartu `ScrobblingInfo`
+  (status/skor/progres per layanan). (scrobbler engine sudah ✅, UI di Details belum.)
+- 🔴 **Chapter list context** (`opt_chapters`): multi-select bab → download terpilih / mark-as-read / save; long-press bab.
+- ✅ Related manga row, reading-time, per-manga stats dialog.
+
+### LAYAR: Main shell (Doki `main/ui` + `opt_main`)
+- 🟡 Global search entry (kotak cari ✅ + suggestions ✅) — 🔴 tambah **toggle Incognito** di menu utama (`action_incognito`).
+- 🔴 Menu **"App update available"** muncul saat ada update (pakai `AppUpdateRepository` — auto-check saat launch).
+- 🔴 **FAB "Resume reading"** di atas bottom nav. 🔴 **Expandable navigation rail** (drawer buka-tutup, Desktop).
+- 🔴 **Dynamic tab visibility** (sembunyikan tab Feed/Suggestions per setting). 🔴 **Badge counter** tab Feed/Updates.
+
+### LAYAR: Reader (sisa kecil — refinement, prioritas rendah)
+- 🔴 Double-page **wide-page→solo** + sensitivity. 🔴 Double-foldable (perangkat foldable). 🔴 RegionDecoder/SSIV subsampling.
+  (Mayoritas reader sudah ✅ — lihat bagian `[~] reader`.)
+
+### LAYAR: Bookmarks / Downloads / Settings (sisa)
+- 🔴 Bookmarks: **Save pages** dari selection (butuh AREA image/save). Fungsi lain reader-sheet (sebagian).
+- 🔴 Downloads: **notifikasi foreground Android** (progress + pause/cancel) + multi-select.
+- 🟡 Settings: sub-screen "nav config" + sisa "Segera hadir"; backup-settings/sources (limit multiplatform-settings).
+
+> **Catatan eksekusi (untuk fase nanti):** kerjakan **Bagian 1 (CORE)** dulu → lalu **Bagian 2 per-layar**
+> (urut: History → Favourites → Local → Feed → Details → Main shell → sisa). Tiap layar: baca Doki dulu
+> (Fragment+menu+layout), tiru UI+behavior, jangan defer, update ledger ini.
