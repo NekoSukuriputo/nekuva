@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark splash background (Nekuva is dark-first), matching the app's surface tone. -->
+    <color name="splash_background">#0F0F12</color>
+
+    <!-- Cold-start splash (Doki): shows the launcher icon on a dark background, then hands off to the
+         normal app theme. Uses androidx core-splashscreen so it works on API 23+, not just Android 12+. -->
+    <style name="Theme.Nekuva.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+    </style>
+</resources>

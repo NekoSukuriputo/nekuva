@@ -1,8 +1,33 @@
 package org.nekosukuriputo.nekuva
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
+import kotlinx.coroutines.delay
 import java.util.Locale
 import javax.swing.UIManager
 import org.koin.core.context.GlobalContext
@@ -36,6 +61,25 @@ fun main() {
     application {
         // App/window icon from the generated PNG on the classpath (desktopMain/resources/nekuva_icon.png).
         val appIcon = painterResource("nekuva_icon.png")
+        // Splash window (Doki splash parity on Desktop): a brief branded window shown on launch, then the app.
+        var splashDone by remember { mutableStateOf(false) }
+        if (!splashDone) {
+            Window(
+                onCloseRequest = ::exitApplication,
+                title = "Nekuva",
+                icon = appIcon,
+                undecorated = true,
+                resizable = false,
+                state = rememberWindowState(size = DpSize(360.dp, 360.dp), position = WindowPosition(Alignment.Center)),
+            ) {
+                LaunchedEffect(Unit) {
+                    delay(1500)
+                    splashDone = true
+                }
+                SplashContent(appIcon)
+            }
+            return@application
+        }
         Window(
             onCloseRequest = ::exitApplication,
             title = "Nekuva",
@@ -57,6 +101,23 @@ fun main() {
                     )
                 }
             }
+        }
+    }
+}
+
+/** Desktop splash content: the app logo + name on a dark background (shown briefly on launch). */
+@Composable
+private fun SplashContent(icon: Painter) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F12)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Image(painter = icon, contentDescription = null, modifier = Modifier.size(128.dp))
+            Text("Nekuva", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

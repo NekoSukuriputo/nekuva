@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import java.lang.ref.WeakReference
 import org.nekosukuriputo.nekuva.core.i18n.LocaleActivityHolder
 import org.nekosukuriputo.nekuva.core.i18n.localeWrap
@@ -21,6 +22,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Cold-start splash (Doki): show the launcher icon on a dark background, then hand off to the app.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         LocaleActivityHolder.current = WeakReference(this)
         handleShortcutIntent(intent)

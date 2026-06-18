@@ -127,6 +127,8 @@ kotlin {
                 implementation(libs.androidx.work.runtime)
                 // Discord Rich Presence (Doki DiscordRpc): gateway WebSocket client — Android-only.
                 implementation(libs.kizzyrpc)
+                // Splash screen (Doki): backports the Android 12 splash to API 23+.
+                implementation(libs.androidx.core.splashscreen)
             }
         }
         val desktopMain by getting {

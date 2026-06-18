@@ -977,8 +977,16 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   ganti + catatan .ico/.icns).
 - **FASE 9 SELESAI** (9A About+update-checker, 9B ikon app, 9C README; compile + assembleDebug hijau, belum
   run-verify GUI).
-- **DEFERRED kecil Fase 9:** changelog functional (release notes) + auto update-check saat launch + custom splash
-  theme (Android 12+) + ikon installer Windows/macOS (.ico/.icns) — perlu aset/tool tambahan.
+- **9D ✅ DONE — Splash screen (Android + Desktop; compile + assembleDebug hijau):**
+  - **Android:** `androidx.core:core-splashscreen` (backport API 23+) → theme `Theme.Nekuva.Splash`
+    (`windowSplashScreenBackground` dark + `windowSplashScreenAnimatedIcon=@mipmap/ic_launcher` +
+    `postSplashScreenTheme`), di-set ke launcher activity, `installSplashScreen()` di `MainActivity.onCreate`.
+    (Android 12+ otomatis; <12 via backport.)
+  - **Desktop:** window splash undecorated 360×360 (logo + "Nekuva", bg gelap) tampil ~1.5 dtk saat launch lalu
+    pindah ke window utama (`Main.kt` `SplashContent` + `WindowState` center).
+- **DEFERRED kecil Fase 9 (sisa, low-value / butuh tool):** changelog functional (release notes — Doki pun
+  disabled), auto update-check saat launch (butuh badge/notif UI), ikon installer Windows/macOS (.ico/.icns —
+  butuh tool konversi; instruksi sudah di README).
 
 **Top bar per-tab (Doki parity):** search + overflow di History/Favourites/Explore/Feed/Local. Hanya
 **Settings** yang fungsional; item overflow lain (Hapus riwayat, Opsi daftar, Statistik, Kategori disukai,
