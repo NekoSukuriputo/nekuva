@@ -66,6 +66,8 @@ fun DetailsScreen(
 
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showMangaStats by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val downloadStartedMsg = stringResource(Res.string.download_started)
@@ -114,6 +116,10 @@ fun DetailsScreen(
         )
     }
 
+    if (showMangaStats && successForDialog != null) {
+        MangaStatsDialog(mangaId = successForDialog.manga.id, onDismiss = { showMangaStats = false })
+    }
+
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         snackbarHost = { SnackbarHost(scaffoldState.snackbarHostState) },
@@ -136,8 +142,20 @@ fun DetailsScreen(
                     ) {
                         Icon(Icons.Outlined.FileDownload, contentDescription = stringResource(Res.string.save_manga))
                     }
-                    IconButton(onClick = { /* Deferred: Overflow */ }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.more_options))
+                        }
+                        DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.statistics)) },
+                                enabled = uiState is DetailsUiState.Success,
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showMangaStats = true
+                                },
+                            )
+                        }
                     }
                 }
             )
@@ -403,6 +421,33 @@ fun DetailRow(label: String, value: String) {
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+/** Per-manga reading stats (Doki MangaStatsSheet, simplified): total read time + pages, on demand. */
+@Composable
+private fun MangaStatsDialog(mangaId: Long, onDismiss: () -> Unit) {
+    val statsRepository = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.stats.data.StatsRepository>()
+    var info by remember { mutableStateOf<org.nekosukuriputo.nekuva.stats.domain.MangaStatsInfo?>(null) }
+    LaunchedEffect(mangaId) {
+        info = runCatching { statsRepository.getMangaStats(mangaId) }.getOrNull()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.statistics)) },
+        text = {
+            val data = info
+            if (data == null || (data.totalDurationMs == 0L && data.totalPages == 0)) {
+                Text(stringResource(Res.string.nothing_found))
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val totalMin = (data.totalDurationMs / 60_000L).toInt()
+                    DetailRow(stringResource(Res.string.reading_time), formatReadingTime(ReadingTimeInfo(totalMin / 60, totalMin % 60, false)))
+                    DetailRow(stringResource(Res.string.pages), data.totalPages.toString())
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) } },
+    )
 }
 
 /** A related-manga cover + title in the Details horizontal row (Doki related). */

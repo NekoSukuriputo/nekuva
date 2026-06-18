@@ -70,7 +70,7 @@ val statsModule = module {
 // Suggestions (Doki suggestions): stored list (SuggestionRepository) + on-demand generation + screen VM.
 val suggestionsModule = module {
     single { org.nekosukuriputo.nekuva.suggestions.domain.SuggestionRepository(get(), get()) }
-    single { org.nekosukuriputo.nekuva.suggestions.domain.GenerateSuggestionsUseCase(get(), get(), get(), get(), get()) }
+    single { org.nekosukuriputo.nekuva.suggestions.domain.GenerateSuggestionsUseCase(get(), get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.suggestions.ui.SuggestionsViewModel(get(), get(), get()) }
 }
 

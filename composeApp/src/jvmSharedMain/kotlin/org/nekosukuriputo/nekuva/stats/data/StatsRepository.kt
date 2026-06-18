@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.map
 import org.nekosukuriputo.nekuva.core.db.MangaDatabase
 import org.nekosukuriputo.nekuva.core.db.entity.toManga
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.stats.domain.MangaStatsInfo
 import org.nekosukuriputo.nekuva.stats.domain.StatsPeriod
 import org.nekosukuriputo.nekuva.stats.domain.StatsRecord
 
@@ -50,6 +51,16 @@ class StatsRepository(
     }
 
     suspend fun getTotalPagesRead(mangaId: Long): Int = db.getStatsDao().getReadPagesCount(mangaId)
+
+    /** Per-manga totals for the manga stats sheet (Doki MangaStatsSheet): total read time (ms) + pages. */
+    suspend fun getMangaStats(mangaId: Long): MangaStatsInfo {
+        val sessions = db.getStatsDao().findAll(mangaId)
+        return MangaStatsInfo(
+            totalDurationMs = sessions.sumOf { it.duration },
+            totalPages = db.getStatsDao().getReadPagesCount(mangaId),
+            startedAt = sessions.minOfOrNull { it.startedAt },
+        )
+    }
 
     suspend fun clearStats() = db.getStatsDao().clear()
 

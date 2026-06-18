@@ -33,6 +33,14 @@ actual fun PlatformWebView(
                     databaseEnabled = true
                 }
                 webViewClient = object : WebViewClient() {
+                    // Capture custom-scheme redirects (e.g. OAuth `nekuva://oauth?code=...`) which the engine
+                    // can't navigate to — surface the URL so the OAuth screen reads the code, and swallow it.
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val target = request.url.toString()
+                        state.currentUrl = target
+                        return !(target.startsWith("http://") || target.startsWith("https://"))
+                    }
+
                     override fun onPageStarted(view: WebView, u: String?, favicon: Bitmap?) {
                         state.isLoading = true
                         u?.let { state.currentUrl = it }

@@ -844,7 +844,7 @@
 	<string name="discord_token_hint">在这里复制你的 Discord Token</string>
 	<string name="discord_rpc_summary">在 Discord 个人信息栏内显示你的阅读状态</string>
 	<string name="obtain">获取</string>
-	<string name="discord_rpc_description">正在 Doki - 一个漫画阅读软件上阅读漫画</string>
+	<string name="discord_rpc_description">正在 Nekuva - 一个漫画阅读软件上阅读漫画</string>
 	<string name="reading_s">正在阅读 %s</string>
 	<string name="rpc_skip_nsfw_summary">阅读成人内容时不在 Discord 上显示阅读状态</string>
 	<string name="invalid_token">非法Token：%s</string>

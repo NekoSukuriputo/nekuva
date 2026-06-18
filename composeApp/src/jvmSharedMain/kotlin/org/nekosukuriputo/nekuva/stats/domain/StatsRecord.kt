@@ -13,3 +13,10 @@ data class StatsRecord(
     val hours: Int = (duration / 3_600_000L).toInt()
     val minutes: Int = ((duration / 60_000L) % 60L).toInt()
 }
+
+/** Per-manga totals for the manga stats sheet (Doki MangaStatsSheet). */
+data class MangaStatsInfo(
+    val totalDurationMs: Long,
+    val totalPages: Int,
+    val startedAt: Long?,
+)

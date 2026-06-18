@@ -886,11 +886,20 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
     `suggestions` + item buka daftar → `SuggestionsRoute`).
 - **FASE 7 SELESAI** (scrobblers + Discord + related_manga + reading_time + stats + suggestions; semua
   compile + assembleDebug hijau, belum run-verify GUI).
-- **DEFERRED kecil Fase 7:** worker periodik Android utk suggestions (saat ini on-demand) + notifikasi suggestion;
-  per-manga stats sheet (Doki MangaStatsSheet) + chart pie/timeline (disederhanakan jadi list+bar); seed
-  suggestions dari favourites (saat ini riwayat saja). Kompat OAuth-redirect webview (`OAuthScreen`/Discord)
-  bila skema `nekuva://` ditelan engine tanpa URL-change → navigation-intercept. Branding:
-  `discord_rpc_description` masih "Doki/Kotatsu" di ~19 locale lain (sweep katalog terpisah).
+- **DEFERRED kecil Fase 7 ✅ DIKERJAKAN (compile + assembleDebug hijau; belum run-verify):**
+  - **Suggestions seed dari favourites:** `GenerateSuggestionsUseCase` kini seed dari **riwayat + favorit**
+    (`favouritesRepository.observeAll(NEWEST).first()`), de-dup per id.
+  - **Worker periodik Android suggestions + notifikasi:** `scheduleSuggestions()` expect/actual — Android
+    `SuggestionsWorker` (WorkManager periodik 6 jam, constraint wifi dari `suggestions_wifi`, battery-not-low),
+    regenerasi + **notifikasi** 1 manga acak bila `suggestions_notifications` on (skip NSFW, tap→buka manga);
+    Desktop no-op. Dijadwalkan di `App()` start + reschedule saat keluar layar Services (`DisposableEffect`).
+  - **Per-manga stats sheet (Doki MangaStatsSheet, disederhanakan):** overflow **⋮ → Statistik** di Details →
+    dialog **Waktu baca + Pages** (`StatsRepository.getMangaStats`). Chart timeline/pie tetap disederhanakan.
+  - **OAuth redirect intercept (Android):** `PlatformWebView.android` kini `shouldOverrideUrlLoading` menangkap
+    skema kustom (`nekuva://oauth?code=...`) → set `currentUrl` + telan (non-http), jadi `OAuthScreen` bisa baca
+    code. (Desktop KCEF intercept tetap ditunda; perlu uji dgn client id nyata.)
+  - **Branding sweep:** `discord_rpc_description` "Doki/Kotatsu"→"Nekuva" di **semua locale** (18 file: 16 Latin
+    + sr Cyrillic + ta Tamil). Tidak ada lagi literal "Doki" di katalog string nilai.
 - **Fase 8 Backup:** periodic backup (enable/dir/freq/trim/count) + Telegram (Android WorkManager actual).
 - **Fase 9 About:** changelog + app-update checker + manual pengguna isikan link kotatsu seperti di doki + sisa link + implementasi icon aplikasi(slpash screen dan icon app di dekstop dan android) sekarang ada image png 1024x1024 di logo\logo.png instruksikan apa yang perlu disiapkan untuk logo aplikasi dan taruh dimana untuk desktop(windows/linux/mac os) dan android, tambahan refactor README.md keterangan Desktop tambah linux dan tambahkan logo diatas judul Nekuva.
 

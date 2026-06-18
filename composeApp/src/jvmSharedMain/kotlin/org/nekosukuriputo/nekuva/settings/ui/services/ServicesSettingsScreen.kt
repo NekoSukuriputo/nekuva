@@ -53,6 +53,10 @@ fun ServicesSettingsScreen(
     val logoutLabel = stringResource(Res.string.logout)
     // Kitsu uses OAuth2 password grant (no webview), so its sign-in opens a credentials dialog.
     var showKitsuLogin by remember { mutableStateOf(false) }
+    // Reschedule the background suggestions worker (Android) when leaving, picking up enable/wifi changes.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { runCatching { org.nekosukuriputo.nekuva.suggestions.work.scheduleSuggestions() } }
+    }
     Scaffold(
         topBar = {
             TopAppBar(

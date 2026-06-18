@@ -844,7 +844,7 @@
 	<string name="discord_token">Token Discord</string>
 	<string name="discord_rpc_summary">Mostra il tuo stato di lettura su Discord</string>
 	<string name="obtain">Ottieni</string>
-	<string name="discord_rpc_description">Leggendo manga su Doki - un’app per leggere manga</string>
+	<string name="discord_rpc_description">Leggendo manga su Nekuva - un’app per leggere manga</string>
 	<string name="reading_s">Leggendo %s</string>
 	<string name="read_on_s">Leggendo su %s</string>
 	<string name="invalid_token">Token non valido: %s</string>

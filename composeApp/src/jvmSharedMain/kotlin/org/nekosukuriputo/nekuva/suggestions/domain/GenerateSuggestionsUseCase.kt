@@ -1,10 +1,13 @@
 package org.nekosukuriputo.nekuva.suggestions.domain
 
+import kotlinx.coroutines.flow.first
 import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.explore.data.MangaSourcesRepository
+import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 import org.nekosukuriputo.nekuva.history.data.HistoryRepository
+import org.nekosukuriputo.nekuva.list.domain.ListSortOrder
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaListFilter
 import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
@@ -17,6 +20,7 @@ import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
 class GenerateSuggestionsUseCase(
     private val settings: AppSettings,
     private val historyRepository: HistoryRepository,
+    private val favouritesRepository: FavouritesRepository,
     private val sourcesRepository: MangaSourcesRepository,
     private val repositoryFactory: MangaRepository.Factory,
     private val suggestionRepository: SuggestionRepository,
@@ -27,7 +31,12 @@ class GenerateSuggestionsUseCase(
             suggestionRepository.clear()
             return
         }
-        val seed = runCatchingCancellable { historyRepository.getList(0, SEED_SIZE) }.getOrDefault(emptyList())
+        // Seed from recent history + favourites (Doki seeds from both), de-duplicated by manga id.
+        val history = runCatchingCancellable { historyRepository.getList(0, SEED_SIZE) }.getOrDefault(emptyList())
+        val favourites = runCatchingCancellable {
+            favouritesRepository.observeAll(ListSortOrder.NEWEST, emptySet(), SEED_SIZE).first()
+        }.getOrDefault(emptyList())
+        val seed = (history + favourites).associateBy { it.id }.values.toList()
         if (seed.isEmpty()) return
         val topTags = seed.flatMap { it.tags.orEmpty().map { t -> t.title } }
             .groupingBy { it }.eachCount()

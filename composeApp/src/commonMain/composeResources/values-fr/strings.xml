@@ -845,7 +845,7 @@
 	<string name="discord_token_hint">Colle ton jeton Discord ici</string>
 	<string name="discord_rpc_summary">Affiche ton statut de lecture sur Discord</string>
 	<string name="obtain">Obtenir</string>
-	<string name="discord_rpc_description">Lecture de manga sur Kotatsu – une application de lecture de manga</string>
+	<string name="discord_rpc_description">Lecture de manga sur Nekuva – une application de lecture de manga</string>
 	<string name="reading_s">Lecture de %s</string>
 	<string name="read_on_s">Lire sur %s</string>
 	<string name="rpc_skip_nsfw_summary">Ne pas utiliser la présence enrichie pour du contenu adulte</string>

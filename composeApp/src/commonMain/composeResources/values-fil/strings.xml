@@ -836,7 +836,7 @@
 	<string name="rpc_skip_nsfw_summary">Huwag gamitin ang RPC para sa pangmatandang content</string>
 	<string name="read_on_s">Basahin sa %s</string>
 	<string name="reading_s">Binabasa ng %s</string>
-	<string name="discord_rpc_description">Bumamasa ng manga sa Doki - isang manga reader app</string>
+	<string name="discord_rpc_description">Bumamasa ng manga sa Nekuva - isang manga reader app</string>
 	<string name="obtain">Kumuha</string>
 	<string name="discord_rpc_summary">Ipakita ng status ng pagbabasa sa Discord</string>
 	<string name="discord_token_hint">I-paste ang Discord Token dito</string>

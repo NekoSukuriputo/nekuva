@@ -847,7 +847,7 @@
 	<string name="discord_token_hint">Устаўце сюды свой токен Discord</string>
 	<string name="discord_rpc_summary">Пакажыце свой статус чытання ў Discord</string>
 	<string name="obtain">Атрымаць</string>
-	<string name="discord_rpc_description">Чытанне мангі на Doki - праграма для чытання мангі</string>
+	<string name="discord_rpc_description">Чытанне мангі на Nekuva - праграма для чытання мангі</string>
 	<string name="reading_s">Чытанне %s</string>
 	<string name="read_on_s">Чытаць далей %s</string>
 	<string name="rpc_skip_nsfw_summary">Не выкарыстоўваць RPC для дарослага кантэнту</string>

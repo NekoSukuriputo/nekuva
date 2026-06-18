@@ -128,6 +128,12 @@ fun App() {
         runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() }
     }
 
+    // Background suggestions refresh (Doki SuggestionsWorker): (re)schedule per the suggestions setting on
+    // launch. Android = WorkManager periodic; Desktop = no-op (suggestions stay on-demand from the screen).
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching { org.nekosukuriputo.nekuva.suggestions.work.scheduleSuggestions() }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()
