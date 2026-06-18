@@ -61,6 +61,17 @@ fun HistoryScreen(
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
     val successList = (uiState as? HistoryUiState.Success)?.list.orEmpty()
     fun selectedMangas() = successList.filter { selection.isSelected(it.manga.id) }.map { it.manga }
+    // Pagination (CORE-8): load the next page when scrolled near the end (VM no-ops if the last page was full).
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    androidx.compose.runtime.LaunchedEffect(gridState) {
+        androidx.compose.runtime.snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index to gridState.layoutInfo.totalItemsCount }
+            .collect { (last, total) -> if (last != null && total > 0 && last >= total - 4) viewModel.loadMore() }
+    }
+    androidx.compose.runtime.LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index to listState.layoutInfo.totalItemsCount }
+            .collect { (last, total) -> if (last != null && total > 0 && last >= total - 4) viewModel.loadMore() }
+    }
 
     Scaffold(
         topBar = {
@@ -114,6 +125,7 @@ fun HistoryScreen(
 
                     if (listMode == ListMode.GRID) {
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = mangaGridCells(gridSize),
                             contentPadding = PaddingValues(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -135,6 +147,7 @@ fun HistoryScreen(
                         }
                     } else {
                         LazyColumn(
+                            state = listState,
                             contentPadding = PaddingValues(bottom = 80.dp),
                             modifier = Modifier.fillMaxSize().padding(paddingValues)
                         ) {

@@ -3,8 +3,13 @@ package org.nekosukuriputo.nekuva.history.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.history.data.HistoryRepository
 import org.nekosukuriputo.nekuva.history.domain.model.MangaWithHistory
@@ -14,33 +19,29 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val historyRepository: HistoryRepository,
     private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
-    val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
+    // Pagination (Doki PAGE_SIZE / requestMoreItems): grow the DB window as the user scrolls.
+    private val limit = MutableStateFlow(PAGE_SIZE)
+    private val _hasMore = MutableStateFlow(true)
+    val hasMore: StateFlow<Boolean> = _hasMore.asStateFlow()
 
-    init {
-        observeHistory()
-    }
-
-    private fun observeHistory() {
-        viewModelScope.launch {
-            _uiState.value = HistoryUiState.Loading
-            historyRepository.observeAllWithHistory(
-                order = ListSortOrder.LAST_READ,
-                filterOptions = emptySet(),
-                limit = Int.MAX_VALUE
-            )
-                .catch { e ->
-                    _uiState.value = HistoryUiState.Error(e)
-                }
-                .collectLatest { list ->
-                    _uiState.value = HistoryUiState.Success(list)
-                }
+    val uiState: StateFlow<HistoryUiState> = limit
+        .flatMapLatest { lim ->
+            historyRepository.observeAllWithHistory(ListSortOrder.LAST_READ, emptySet(), lim)
+                .onEach { _hasMore.value = it.size >= lim }
+                .map<List<MangaWithHistory>, HistoryUiState> { HistoryUiState.Success(it) }
+                .catch { e -> emit(HistoryUiState.Error(e)) }
         }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState.Loading)
+
+    /** Load the next page when scrolled near the end (no-op when the last page was already full). */
+    fun loadMore() {
+        if (_hasMore.value) limit.value += PAGE_SIZE
     }
 
     fun removeHistory(manga: Manga) {
@@ -67,6 +68,10 @@ class HistoryViewModel(
         viewModelScope.launch {
             runCatching { markAsReadUseCase(mangas) }
         }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 20
     }
 }
 
