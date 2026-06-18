@@ -133,8 +133,15 @@ fun DetailsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Deferred: Share */ }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share")
+                    IconButton(
+                        onClick = {
+                            (uiState as? DetailsUiState.Success)?.manga?.let {
+                                org.nekosukuriputo.nekuva.core.share.shareManga(it)
+                            }
+                        },
+                        enabled = uiState is DetailsUiState.Success,
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = stringResource(Res.string.share))
                     }
                     IconButton(
                         onClick = { showDownloadDialog = true },
