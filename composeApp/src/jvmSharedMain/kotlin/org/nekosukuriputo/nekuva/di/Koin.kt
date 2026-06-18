@@ -122,6 +122,8 @@ val favouritesModule = module {
 val historyModule = module {
     single { org.nekosukuriputo.nekuva.history.data.HistoryRepository(get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.history.domain.HistoryUpdateUseCase(get()) }
+    // Mark-as-read (Doki MarkAsReadUseCase): write history at last chapter/page, percent=1 (force).
+    factory { org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase(get(), get()) }
     factory { org.nekosukuriputo.nekuva.history.ui.HistoryViewModel(get()) }
 }
 
