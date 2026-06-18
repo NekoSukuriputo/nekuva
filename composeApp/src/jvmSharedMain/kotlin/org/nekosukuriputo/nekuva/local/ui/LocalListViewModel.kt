@@ -16,10 +16,21 @@ class LocalListViewModel(
     private val localMangaRepository: LocalMangaRepository,
     private val localStorageChanges: MutableSharedFlow<LocalManga?>,
     private val mangaDataRepository: org.nekosukuriputo.nekuva.core.parser.MangaDataRepository,
+    private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LocalListUiState>(LocalListUiState.Loading)
     val uiState: StateFlow<LocalListUiState> = _uiState.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow(settings.localListOrder)
+    val sortOrder: StateFlow<org.nekosukuriputo.nekuva.parsers.model.SortOrder> = _sortOrder.asStateFlow()
+
+    /** Change the local list sort (Doki KEY_LOCAL_LIST_ORDER), persist it, and reload. */
+    fun setSortOrder(order: org.nekosukuriputo.nekuva.parsers.model.SortOrder) {
+        settings.localListOrder = order
+        _sortOrder.value = order
+        loadManga()
+    }
 
     init {
         loadManga()
@@ -48,8 +59,7 @@ class LocalListViewModel(
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
             try {
-                // For simplicity in the vertical slice, we just load the whole list at once
-                val list = localMangaRepository.getList(0, null, null)
+                val list = localMangaRepository.getList(0, settings.localListOrder, null)
                 // Store local manga in the DB so Details/Reader can resolve them by id.
                 list.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
                 if (list.isEmpty()) {

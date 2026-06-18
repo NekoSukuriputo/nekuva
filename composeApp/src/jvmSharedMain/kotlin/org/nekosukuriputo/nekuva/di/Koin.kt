@@ -21,7 +21,7 @@ val localModule = module {
     }
     single { LocalMangaRepository(get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.local.domain.DeleteReadChaptersUseCase(get(), get(), get()) }
-    factory { LocalListViewModel(get(), get(), get()) }
+    factory { LocalListViewModel(get(), get(), get(), get()) }
 }
 
 val exploreModule = module {

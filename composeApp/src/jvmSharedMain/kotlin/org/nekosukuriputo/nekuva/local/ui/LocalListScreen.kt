@@ -1,7 +1,14 @@
 package org.nekosukuriputo.nekuva.local.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
@@ -9,7 +16,10 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +62,8 @@ fun LocalListScreen(
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState()
     val mangas = (uiState as? LocalListUiState.Success)?.mangaList.orEmpty()
     fun selected() = mangas.filter { selection.isSelected(it.id) }
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    var showSortDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -72,6 +84,16 @@ fun LocalListScreen(
                         }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.delete))
+                        }
+                    },
+                )
+            } else {
+                // Thin bar with the sort action (Doki opt_local sort); shell MainTopBar sits above.
+                TopAppBar(
+                    title = {},
+                    actions = {
+                        IconButton(onClick = { showSortDialog = true }) {
+                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
                         }
                     },
                 )
@@ -114,6 +136,38 @@ fun LocalListScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(Res.string.cancel)) }
             },
+        )
+    }
+
+    if (showSortDialog) {
+        // Local uses the parser SortOrder (NEWEST/ALPHABETICAL/RATING) — Doki KEY_LOCAL_LIST_ORDER.
+        val options = listOf(
+            org.nekosukuriputo.nekuva.parsers.model.SortOrder.NEWEST to Res.string.newest,
+            org.nekosukuriputo.nekuva.parsers.model.SortOrder.ALPHABETICAL to Res.string.by_name,
+            org.nekosukuriputo.nekuva.parsers.model.SortOrder.RATING to Res.string.by_rating,
+        )
+        AlertDialog(
+            onDismissRequest = { showSortDialog = false },
+            title = { Text(stringResource(Res.string.sort_order)) },
+            text = {
+                Column {
+                    options.forEach { (order, label) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.setSortOrder(order); showSortDialog = false
+                            }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = order == sortOrder, onClick = {
+                                viewModel.setSortOrder(order); showSortDialog = false
+                            })
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(label))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showSortDialog = false }) { Text(stringResource(Res.string.done)) } },
         )
     }
 }

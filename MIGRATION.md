@@ -1072,13 +1072,15 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-3 — Mode tampilan daftar (list/grid/detailed) + grid size** ✅ DONE (komponen + wiring)
   `rememberMangaListMode`/`rememberGridSize` + `MangaListContent` (GRID/LIST/DETAILED_LIST) dipakai
   Local/Favourites/RemoteList/GlobalSearch; History punya GRID/LIST sendiri. Live dari `KEY_LIST_MODE_*`/grid-size.
-- **CORE-4 — Sort order + quick-filter + grouping generik** 🟡 (History sort+grouping ✅; quick-filter + Favourites/Local pending)
-  **History ✅** (commit `feat(core): CORE-4 History sort+grouping`): ikon **Sort** di top bar → dialog
-  pilih **sort order** (ListSortOrder.HISTORY: last-read/long-ago/newest/oldest/progress/unread/by-name/
-  by-name-rev/new-chapters/updated, persist `KEY_HISTORY_ORDER`) + switch **"Group by date"** (persist
-  `KEY_HISTORY_GROUPING`); header tanggal hanya saat grouping ON & sort berbasis tanggal, else flat. VM
-  `combine(limit, sortOrder)` → query (DAO sudah dukung semua order + filter). **Sisa:** quick-filter chip
-  (HistoryListQuickFilter) + sort/grouping untuk Favourites & Local (pola sama, reuse dialog).
+- **CORE-4 — Sort order + quick-filter + grouping generik** 🟡 (sort History/Favourites/Local ✅ + History grouping ✅; quick-filter pending)
+  Komponen reusable **`core/ui/components/SortOrderDialog`** (ListSortOrder + `sortLabel`, opsi grouping toggle).
+  **History ✅**: Sort + "Group by date" (persist `KEY_HISTORY_ORDER`/`KEY_HISTORY_GROUPING`); header tanggal
+  hanya saat grouping ON & sort berbasis-tanggal. VM `combine(limit, sortOrder)`.
+  **Favourites ✅**: sort global (`KEY_FAVORITES_ORDER`, ListSortOrder.FAVORITES) via Sort icon di container;
+  `FavouritesListViewModel` reaktif (`keyChangeFlow`) → semua tab re-query.
+  **Local ✅**: sort (parser `SortOrder` NEWEST/ALPHABETICAL/RATING, `KEY_LOCAL_LIST_ORDER`) via top bar + dialog
+  inline (enum beda, tak pakai SortOrderDialog). **Sisa:** quick-filter chip (HistoryListQuickFilter) +
+  Favourites grouping (opsional).
 - **CORE-5 — Share (manga + halaman) ✅ DONE (capability)** (commit `feat(core): Share`).
   `core/share/Share.kt` expect `shareText` + `shareManga(title+url)` — Android `Intent.ACTION_SEND` (share sheet),
   Desktop copy-to-clipboard. **Wired:** tombol Share di top bar Details. **Sisa wiring per-layar:** selection-mode
