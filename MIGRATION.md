@@ -931,7 +931,19 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   - **Desktop periodic backup:** `BackupScheduler.desktop` kini **check-on-launch** — bila enabled + dir diset +
     sudah lewat 1 interval sejak `backup_periodic_last`, buat backup + trim + (opsional) upload Telegram.
   - **Token Telegram:** tetap `TODO(credentials)` di `TelegramBackupConfig.BOT_TOKEN` (kosong = section Telegram
-    tersembunyi); user isi bot token sendiri.
+    tersembunyi); user isi bot token sendiri. (Lihat 8D — kini di-inject saat build.)
+- **8D ✅ DONE — Integrasi Telegram penuh (bot Kotatsu, ala Doki; compile + assembleDebug hijau):**
+  - **Bot Kotatsu:** `TelegramBackupConfig.BOT_NAME = "kotatsu_backup_bot"` (sama dgn Doki — bot publik Kotatsu).
+  - **Token = secret build-time (persis Doki):** token Telegram TIDAK ada di source Doki maupun Nekuva (Doki
+    inject via `resValue` dari `local.properties`/`-D`, default kosong). Nekuva mirror: Gradle task
+    `generateTelegramSecrets` meng-generate `TelegramSecrets.BOT_TOKEN` ke jvmSharedMain dari
+    `tg_backup_bot_token` (local.properties / `-Dtg_backup_bot_token` / env `TG_BACKUP_BOT_TOKEN`), default "".
+    Terverifikasi: token diberikan → ter-bake; tak ada → kosong. **Untuk pakai bot Kotatsu, isi token bot
+    Kotatsu di `local.properties` (token = rahasia, hanya dimiliki maintainer Kotatsu) lalu rebuild.**
+  - **Fitur Telegram (semua dari Doki):** `TelegramBackupUploader.uploadBackup` (sendDocument), `sendTestMessage`
+    (getMe + sendMessage echo `backup_tg_echo`), **open bot** (tg://resolve fallback ke https://t.me — ala
+    `openBotInApp`). Worker Android + scheduler Desktop meng-upload backup ke Telegram saat aktif + chat id diisi.
+    Section Telegram (enable/chat id/open bot/test) tampil saat token ada.
 - **DEFERRED Fase 8 (sisa, tetap ditunda dgn alasan):** backup **settings** (multiplatform-settings tak punya
   generic iterate/put nilai bertipe → tak bisa dump semua key) + **sources**/**saved_filters** enable/pin state
   (area sources belum punya dump backup); **suggestions** sengaja TIDAK di-backup (ephemeral, regen on-demand —

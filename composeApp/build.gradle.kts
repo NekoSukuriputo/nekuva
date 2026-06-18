@@ -16,6 +16,43 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// Telegram backup bot token (Doki's `tg_backup_bot_token` resValue): a build-time SECRET, never committed.
+// Provide it (the Kotatsu backup bot's token, or your own bot's) via local.properties `tg_backup_bot_token=...`,
+// `-Dtg_backup_bot_token=...`, or the TG_BACKUP_BOT_TOKEN env var. Empty by default → Telegram backup is off.
+val tgBackupBotToken: String = run {
+    val props = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) FileInputStream(f).use { props.load(it) }
+    (System.getProperty("tg_backup_bot_token")
+        ?: props.getProperty("tg_backup_bot_token")
+        ?: System.getenv("TG_BACKUP_BOT_TOKEN")
+        ?: "").trim()
+}
+
+// Generate a Kotlin constant holding the token into jvmSharedMain (cross-platform equivalent of Doki's
+// Android resValue; keeps the secret out of source control).
+val generateTelegramSecrets by tasks.registering {
+    val outDir = layout.buildDirectory.dir("generated/telegramSecrets/kotlin")
+    val token = tgBackupBotToken
+    inputs.property("token", token)
+    outputs.dir(outDir)
+    doLast {
+        val pkgDir = outDir.get().dir("org/nekosukuriputo/nekuva/backups/domain").asFile
+        pkgDir.mkdirs()
+        val escaped = token.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        File(pkgDir, "TelegramSecrets.kt").writeText(
+            buildString {
+                appendLine("package org.nekosukuriputo.nekuva.backups.domain")
+                appendLine()
+                appendLine("/** Generated at build time from `tg_backup_bot_token` (local.properties / -D / env). */")
+                appendLine("internal object TelegramSecrets {")
+                appendLine("    const val BOT_TOKEN: String = \"$escaped\"")
+                appendLine("}")
+            },
+        )
+    }
+}
+
 kotlin {
     androidTarget {
         compilerOptions {
@@ -32,6 +69,7 @@ kotlin {
     sourceSets {
         val jvmSharedMain by creating {
             dependsOn(commonMain.get())
+            kotlin.srcDir(generateTelegramSecrets)
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp.tls)

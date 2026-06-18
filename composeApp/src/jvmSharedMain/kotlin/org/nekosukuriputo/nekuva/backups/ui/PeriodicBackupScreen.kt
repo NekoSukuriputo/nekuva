@@ -151,7 +151,13 @@ fun PeriodicBackupScreen(onBackClick: () -> Unit) {
                     title = stringResource(Res.string.open_telegram_bot),
                     summary = stringResource(Res.string.open_telegram_bot_summary),
                     enabled = enabled && tgEnabled,
-                    onClick = { runCatching { uriHandler.openUri(uploader.botUrl) } },
+                    onClick = {
+                        // Doki openBotInApp: prefer the Telegram app (tg://), fall back to the web link.
+                        val opened = runCatching {
+                            uriHandler.openUri("tg://resolve?domain=${TelegramBackupConfig.BOT_NAME}")
+                        }.isSuccess
+                        if (!opened) runCatching { uriHandler.openUri(uploader.botUrl) }
+                    },
                 )
                 val testLabel = stringResource(Res.string.test_connection)
                 val errorLabel = stringResource(Res.string.error)
