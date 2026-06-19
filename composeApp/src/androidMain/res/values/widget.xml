@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android-only widget chrome strings. The Compose Resources catalog can't be used in RemoteViews,
+     so the home-screen widget uses native Android string resources (Doki widget_recent). -->
+<resources>
+    <string name="widget_recent_title">Recently read</string>
+    <string name="widget_empty">Nothing read yet</string>
+    <string name="widget_recent_label">Nekuva — Recent</string>
+</resources>
