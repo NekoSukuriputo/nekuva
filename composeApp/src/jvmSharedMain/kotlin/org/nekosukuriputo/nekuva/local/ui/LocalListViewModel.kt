@@ -59,9 +59,11 @@ class LocalListViewModel(
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
             try {
-                val list = localMangaRepository.getList(0, settings.localListOrder, null)
+                val raw = localMangaRepository.getList(0, settings.localListOrder, null)
                 // Store local manga in the DB so Details/Reader can resolve them by id.
-                list.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
+                raw.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
+                // Apply user overrides (custom title/cover) for display (Doki MangaListMapper.getOverrides()).
+                val list = mangaDataRepository.applyOverrides(raw)
                 if (list.isEmpty()) {
                     _uiState.value = LocalListUiState.Empty
                 } else {

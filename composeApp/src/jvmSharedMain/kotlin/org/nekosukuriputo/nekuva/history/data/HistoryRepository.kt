@@ -11,6 +11,7 @@ import org.nekosukuriputo.nekuva.core.db.entity.toMangaList
 import org.nekosukuriputo.nekuva.core.db.entity.toMangaTags
 import org.nekosukuriputo.nekuva.core.db.entity.toMangaTagsList
 import org.nekosukuriputo.nekuva.core.model.MangaHistory
+import org.nekosukuriputo.nekuva.core.model.withOverride
 import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.model.toMangaSources
@@ -81,9 +82,12 @@ class HistoryRepository(
 		limit: Int
 	): Flow<List<MangaWithHistory>> {
 		return db.getHistoryDao().observeAll(order, filterOptions, limit).map { list ->
+			// Apply user overrides (custom title/cover) for display (Doki MangaListMapper.getOverrides()).
+			val overrides = mangaRepository.getOverrides()
 			list.map {
+				val manga = it.toManga()
 				MangaWithHistory(
-					it.toManga(),
+					if (overrides.isEmpty()) manga else manga.withOverride(overrides[manga.id]),
 					it.history.toMangaHistory(),
 				)
 			}

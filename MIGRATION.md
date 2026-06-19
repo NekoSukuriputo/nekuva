@@ -1099,7 +1099,7 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-6 — Mark as read / Mark as completed ✅ DONE (use case)** (commit `feat(core): MarkAsReadUseCase`).
   `history/domain/MarkAsReadUseCase` (port Doki: tulis history bab terakhir, percent=1, force; + varian
   `Collection<Manga>`), terdaftar di Koin. **Sisa wiring per-layar:** selection-mode History/Favourites + Details.
-- **CORE-7 — Edit override (rename judul + cover kustom)** 🟡 (dialog Edit + Details apply ✅; list-wide apply tersisa)
+- **CORE-7 — Edit override (rename judul + cover kustom)** ✅ DONE (dialog Edit + Details + list-wide apply)
   **CEK SKEMA (2026-06-18): TIDAK perlu kolom baru.** `MangaPrefsEntity` sudah punya `title_override`/
   `cover_override`/`content_rating_override`; ada model `MangaOverride` + `MangaDataRepository.getOverride()/
   getOverrides()/setOverride(manga, override)`.
@@ -1110,10 +1110,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   reset-to-default button = defer** (perlu file-picker per-platform; dicatat di sini).
   **✅ Apply saat tampil (Details):** `Manga.withOverride(override)` (ext baru di `core/model`, port Doki
   `Manga.withOverride`) diterapkan setelah `getDetails`+`storeManga` (DB tetap nilai sumber, override display-only).
-  **🟡 SISA — apply ke list (Favourites/History/Local/Explore/Search):** Doki pakai `MangaListMapper.getOverrides()`
-  (ambil map sekali, terapkan per-item). Di Nekuva perlu inject map override ke tiap sumber list (repo Favourites/
-  History return type beda: `Manga` vs `MangaWithHistory`) + wiring Koin → langkah terfokus tersendiri, belum dibundel
-  ke commit ini agar tetap ter-validasi. Saat ini judul/cover override hanya tampil di Details.
+  **✅ Apply ke list (Favourites/History/Local + Global Search):** `MangaDataRepository.applyOverrides(list)` (port
+  Doki `MangaListMapper.getOverrides()`: ambil map sekali via `getOverrides()`, map per-item `withOverride`, no-op bila
+  kosong). **Favourites:** inject `MangaDataRepository` ke `FavouritesRepository` → `observeAll(...)` apply (semua tab).
+  **History:** `observeAllWithHistory` apply ke `.manga` tiap `MangaWithHistory` (pakai `mangaRepository` yang sudah
+  ada). **Local:** `LocalListViewModel.loadManga` apply setelah store (DB simpan nilai sumber, display override).
+  Global Search ikut otomatis (lewat repo History/Favourites). Override judul/cover kini tampil konsisten di semua
+  daftar + Details.
 - **CORE-8 — Pagination / load-more daftar** 🟡
   History/Favourites/Local muat semua (Int.MAX_VALUE). Doki paginasi (PAGE_SIZE 16, requestMoreItems).
 - **CORE-9 — Create launcher shortcut (pin manga)** 🔴 Android (`action_shortcut`); Desktop N/A.

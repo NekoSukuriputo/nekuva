@@ -21,6 +21,7 @@ import org.nekosukuriputo.nekuva.core.model.LocalMangaSource
 import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.core.prefs.ReaderMode
 import org.nekosukuriputo.nekuva.core.model.MangaOverride
+import org.nekosukuriputo.nekuva.core.model.withOverride
 import org.nekosukuriputo.nekuva.parsers.model.ContentRating
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaSource
@@ -78,6 +79,17 @@ class MangaDataRepository (
 			map[entity.mangaId] = entity.getOverrideOrNull() ?: continue
 		}
 		return map
+	}
+
+	/**
+	 * Apply user overrides (custom title/cover) to a list for display (Doki MangaListMapper.getOverrides()):
+	 * fetch the override map once and map each item through [withOverride]. No-op when no overrides exist.
+	 */
+	suspend fun applyOverrides(list: List<Manga>): List<Manga> {
+		if (list.isEmpty()) return list
+		val overrides = getOverrides()
+		if (overrides.isEmpty()) return list
+		return list.map { it.withOverride(overrides[it.id]) }
 	}
 
 	suspend fun setOverride(manga: Manga, override: MangaOverride?) {

@@ -25,11 +25,13 @@ import kotlin.time.Clock
 @OptIn(kotlin.time.ExperimentalTime::class)
 class FavouritesRepository(
 	private val db: MangaDatabase,
+	private val mangaDataRepository: org.nekosukuriputo.nekuva.core.parser.MangaDataRepository,
 ) {
 
 	fun observeAll(order: ListSortOrder, filterOptions: Set<ListFilterOption>, limit: Int): Flow<List<Manga>> {
 		return db.getFavouritesDao().observeAll(order, filterOptions, limit)
-			.map { it.toMangaList() }
+			// Apply user overrides (custom title/cover) for display (Doki MangaListMapper.getOverrides()).
+			.map { mangaDataRepository.applyOverrides(it.toMangaList()) }
 	}
 
 	fun observeAll(
@@ -39,7 +41,7 @@ class FavouritesRepository(
 		limit: Int
 	): Flow<List<Manga>> {
 		return db.getFavouritesDao().observeAll(categoryId, order, filterOptions, limit)
-			.map { it.toMangaList() }
+			.map { mangaDataRepository.applyOverrides(it.toMangaList()) }
 	}
 
 	fun observeAll(categoryId: Long, filterOptions: Set<ListFilterOption>, limit: Int): Flow<List<Manga>> {
