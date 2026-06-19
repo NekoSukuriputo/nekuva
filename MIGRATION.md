@@ -1130,8 +1130,10 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   lama ke baru, lalu buka manga baru. **AutoFix ✅** (`AutoFixUseCase`): ikon di top bar → pilih kandidat terbaik
   (judul sama persis else pertama) → migrate. **action_online ✅** (`DetailsViewModel.openOnline`): manga lokal →
   resolve varian remote via `LocalMangaRepository.getRemoteManga` → buka Details remote (item overflow hanya muncul
-  bila `manga.isLocal`). **Defer (dicatat):** migrasi **tracks + scrobbling** (tracks re-resolve saat cek berikutnya);
-  **AutoFixService** periodik/batch (WorkManager) — sekarang AutoFix one-shot dari layar Alternatives.
+  bila `manga.isLocal`). **Migrate tracks + scrobbling ✅**: `MigrateUseCase` kini pindahkan juga baris `tracks`
+  (re-point ke manga baru, `RESULT_EXTERNAL_MODIFICATION`) + link scrobbling tiap scrobbler enabled
+  (unregister lama → linkManga → updateScrobblingInfo, status default by history). **AutoFixService periodik ✅**
+  (lihat entri widget/worker di bawah).
 - **AREA `image`** ✅ DONE — image viewer layar-penuh (`ImageActivity` Doki): tap cover → fullscreen zoom + share + save.
   **✅ Viewer:** `image/ui/FullScreenImageViewer` (Compose `Dialog` full-bleed, lintas-platform): pinch +
   double-tap zoom (1–5×), drag pan, tap kosong/Close tutup. **✅ Save + Share:** `image/domain/ImageSaveUseCase`
