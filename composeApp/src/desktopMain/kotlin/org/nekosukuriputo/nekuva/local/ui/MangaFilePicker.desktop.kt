@@ -22,12 +22,33 @@ private object DesktopMangaFilePicker : MangaFilePicker {
         return true
     }
 
+    override suspend fun pickDirectory(
+        onPicked: suspend (name: String, copyInto: suspend (destDir: File) -> Unit) -> Unit,
+    ): Boolean {
+        val dir = chooseDir() ?: return false
+        onPicked(dir.name) { dest ->
+            withContext(Dispatchers.IO) { dir.copyRecursively(dest, overwrite = true) }
+        }
+        return true
+    }
+
     private suspend fun chooseFile(): File? = withContext(Dispatchers.IO) {
         var result: File? = null
         SwingUtilities.invokeAndWait {
             val chooser = JFileChooser().apply {
                 fileFilter = FileNameExtensionFilter("Comic book archive (*.cbz, *.zip)", "cbz", "zip")
             }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                result = chooser.selectedFile
+            }
+        }
+        result
+    }
+
+    private suspend fun chooseDir(): File? = withContext(Dispatchers.IO) {
+        var result: File? = null
+        SwingUtilities.invokeAndWait {
+            val chooser = JFileChooser().apply { fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
                 result = chooser.selectedFile
             }

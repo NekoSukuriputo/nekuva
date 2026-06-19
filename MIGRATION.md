@@ -1139,13 +1139,14 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   share-sheet, Desktop tulis Pictures/Nekuva. Tombol Save (snackbar `page_saved`/`error_occurred`) + Share di viewer.
   **Wired:** tap cover di Details → viewer. **Defer (dicatat):** buka viewer dari thumbnail "Pages" tab & halaman
   reader (perluasan — cover dulu).
-- **AREA `picker` / import lokal** 🟡 — import `.cbz` ke library (`opt_local action_import`).
-  **✅ Import CBZ:** `local/domain/MangaImportUseCase` (port Doki `SingleMangaImporter`, KMP): copy file terpilih ke
-  `LocalStorageManager.getDefaultWriteableDir()`, parse `LocalMangaParser(dest).getManga()`, emit `localStorageChanges`
-  (Local list auto-refresh). File picker lintas-platform: `local/ui/MangaFilePicker` (expect) — Android `OpenDocument`
-  (resolve DISPLAY_NAME), Desktop `JFileChooser` (filter .cbz/.zip). **Wired:** ikon Import di top bar Local
-  (non-selection) → pick → import → snackbar `import_completed`/`error_occurred`. **Defer (dicatat):** import folder
-  (Doki importDirectory, perlu tree-uri/DocumentFile) — CBZ dulu.
+- **AREA `picker` / import lokal** ✅ DONE — import `.cbz` + folder gambar ke library (`opt_local action_import`).
+  **✅ Import CBZ + folder:** `local/domain/MangaImportUseCase` (port Doki `SingleMangaImporter`, KMP): `import`
+  (file) + `importDirectory` (folder via callback `copyContents`) → copy ke `getDefaultWriteableDir()`, parse
+  `LocalMangaParser(dest).getManga()`, emit `localStorageChanges` (Local list auto-refresh). Picker lintas-platform
+  `local/ui/MangaFilePicker` (expect): Android `OpenDocument` (file) + `OpenDocumentTree` (folder, copy tree via
+  **DocumentsContract** — tanpa dependency documentfile); Desktop `JFileChooser` (file filter .cbz/.zip + mode
+  DIRECTORIES_ONLY → `copyRecursively`). **Wired:** ikon Import di top bar Local → DropdownMenu (Doki ImportDialog):
+  "Comics archive" / "Folder with images" → snackbar `import_completed`/`error_occurred`.
 - **AREA `widget`** 🟡 — home-screen widget Android (Doki `widget/`: shelf/recent). Android-only (Desktop/iOS N/A).
   **✅ Recent widget:** `widget/recent/RecentWidgetProvider` (AppWidgetProvider) + `RecentWidgetService`
   (RemoteViewsService + Factory baca `HistoryRepository.getList(0,20)` via Koin `runBlocking`, render baris

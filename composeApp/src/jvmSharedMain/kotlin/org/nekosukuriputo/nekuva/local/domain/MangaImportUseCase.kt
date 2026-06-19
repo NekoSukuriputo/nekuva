@@ -25,12 +25,29 @@ class MangaImportUseCase(
         if (!hasZipExtension(name)) {
             throw IOException("Unsupported file: $name (only .cbz/.zip are supported)")
         }
-        val outputDir = storageManager.getDefaultWriteableDir()
-            ?: throw IOException("No writeable storage directory available")
-        val dest = File(outputDir, name)
+        val dest = File(outputDir(), name)
         dest.outputStream().use { output -> input.copyTo(output) }
+        finish(dest)
+    }
+
+    /**
+     * Import a folder of images (Doki importDirectory). The platform picker supplies [copyContents], which
+     * writes the picked tree into the destination dir (java.io on Desktop, DocumentFile/SAF on Android).
+     */
+    suspend fun importDirectory(name: String, copyContents: suspend (destDir: File) -> Unit): LocalManga =
+        withContext(Dispatchers.IO) {
+            val dest = File(outputDir(), name)
+            dest.mkdirs()
+            copyContents(dest)
+            finish(dest)
+        }
+
+    private suspend fun outputDir(): File = storageManager.getDefaultWriteableDir()
+        ?: throw IOException("No writeable storage directory available")
+
+    private suspend fun finish(dest: File): LocalManga {
         val manga = LocalMangaParser(dest).getManga(withDetails = false)
         localStorageChanges.emit(manga)
-        manga
+        return manga
     }
 }

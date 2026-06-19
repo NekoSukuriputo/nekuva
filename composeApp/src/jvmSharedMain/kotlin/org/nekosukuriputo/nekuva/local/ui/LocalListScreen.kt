@@ -1,6 +1,7 @@
 package org.nekosukuriputo.nekuva.local.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,8 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
@@ -73,6 +76,14 @@ fun LocalListScreen(
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
     val importDoneMsg = stringResource(Res.string.import_completed)
     val importErrMsg = stringResource(Res.string.error_occurred)
+    var showImportMenu by remember { mutableStateOf(false) }
+    fun runImport(block: suspend () -> Boolean) {
+        scope.launch {
+            runCatching { block() }
+                .onSuccess { picked -> if (picked) snackbarHostState.showSnackbar(importDoneMsg) }
+                .onFailure { snackbarHostState.showSnackbar(importErrMsg) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -101,18 +112,31 @@ fun LocalListScreen(
                 TopAppBar(
                     title = {},
                     actions = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                runCatching {
-                                    filePicker.pickCbz { name, input -> importer.import(name, input) }
-                                }.onSuccess { picked ->
-                                    if (picked) snackbarHostState.showSnackbar(importDoneMsg)
-                                }.onFailure {
-                                    snackbarHostState.showSnackbar(importErrMsg)
-                                }
+                        Box {
+                            IconButton(onClick = { showImportMenu = true }) {
+                                Icon(Icons.Filled.FileDownload, contentDescription = stringResource(Res.string._import))
                             }
-                        }) {
-                            Icon(Icons.Filled.FileDownload, contentDescription = stringResource(Res.string._import))
+                            DropdownMenu(expanded = showImportMenu, onDismissRequest = { showImportMenu = false }) {
+                                // Doki ImportDialog: import a .cbz archive, or a folder of images.
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.comics_archive)) },
+                                    onClick = {
+                                        showImportMenu = false
+                                        runImport { filePicker.pickCbz { name, input -> importer.import(name, input) } }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.folder_with_images)) },
+                                    onClick = {
+                                        showImportMenu = false
+                                        runImport {
+                                            filePicker.pickDirectory { name, copyInto ->
+                                                importer.importDirectory(name) { dest -> copyInto(dest) }
+                                            }
+                                        }
+                                    },
+                                )
+                            }
                         }
                         IconButton(onClick = { showSortDialog = true }) {
                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
