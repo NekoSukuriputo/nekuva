@@ -56,6 +56,8 @@ val searchModule = module {
 }
 
 val detailsModule = module {
+	// Save/share a cover or page image by URL (Doki ImageViewModel) via the platform PagePersister.
+	single { org.nekosukuriputo.nekuva.image.domain.ImageSaveUseCase(get(), get()) }
 	factory { parameters ->
 		org.nekosukuriputo.nekuva.details.ui.DetailsViewModel(
 			parameters.get(),

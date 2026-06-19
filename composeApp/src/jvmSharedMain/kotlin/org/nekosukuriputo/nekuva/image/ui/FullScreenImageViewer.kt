@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +32,7 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.cancel
+import nekuva.composeapp.generated.resources.save
 import nekuva.composeapp.generated.resources.share
 
 /**
@@ -43,6 +45,7 @@ fun FullScreenImageViewer(
     imageUrl: String?,
     onDismiss: () -> Unit,
     onShare: (String) -> Unit = {},
+    onSave: (String) -> Unit = {},
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -100,12 +103,21 @@ fun FullScreenImageViewer(
                 Icon(Icons.Filled.Close, contentDescription = stringResource(Res.string.cancel))
             }
             if (!imageUrl.isNullOrEmpty()) {
-                IconButton(
-                    onClick = { onShare(imageUrl) },
+                androidx.compose.foundation.layout.Row(
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
+                    IconButton(
+                        onClick = { onSave(imageUrl) },
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                    ) {
+                        Icon(Icons.Filled.Download, contentDescription = stringResource(Res.string.save))
+                    }
+                    IconButton(
+                        onClick = { onShare(imageUrl) },
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
+                    }
                 }
             }
         }

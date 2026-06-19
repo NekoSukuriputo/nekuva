@@ -80,14 +80,6 @@ fun DetailsScreen(
     val downloadAddedMsg = stringResource(Res.string.download_added)
     val detailsLabel = stringResource(Res.string.details)
 
-    fullScreenCover?.let { coverUrl ->
-        org.nekosukuriputo.nekuva.image.ui.FullScreenImageViewer(
-            imageUrl = coverUrl,
-            onDismiss = { fullScreenCover = null },
-            onShare = { org.nekosukuriputo.nekuva.core.share.shareText(it) },
-        )
-    }
-
     val editOverrideState = uiState
     if (showEditOverride && editOverrideState is DetailsUiState.Success) {
         EditOverrideDialog(
@@ -121,6 +113,24 @@ fun DetailsScreen(
             skipHiddenState = true
         )
     )
+
+    fullScreenCover?.let { coverUrl ->
+        val imageSaver = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.image.domain.ImageSaveUseCase>()
+        val savedMsg = stringResource(Res.string.page_saved)
+        val saveErrMsg = stringResource(Res.string.error_occurred)
+        org.nekosukuriputo.nekuva.image.ui.FullScreenImageViewer(
+            imageUrl = coverUrl,
+            onDismiss = { fullScreenCover = null },
+            // Share the actual image bytes (Doki ShareHelper.shareImage), not just the URL.
+            onShare = { url -> scope.launch { runCatching { imageSaver.share(url) } } },
+            onSave = { url ->
+                scope.launch {
+                    val loc = runCatching { imageSaver.save(url) }.getOrNull()
+                    scaffoldState.snackbarHostState.showSnackbar(if (loc != null) savedMsg else saveErrMsg)
+                }
+            },
+        )
+    }
 
     val successForDialog = uiState as? DetailsUiState.Success
     if (showDownloadDialog && successForDialog != null) {

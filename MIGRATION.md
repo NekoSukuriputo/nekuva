@@ -1132,12 +1132,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   resolve varian remote via `LocalMangaRepository.getRemoteManga` → buka Details remote (item overflow hanya muncul
   bila `manga.isLocal`). **Defer (dicatat):** migrasi **tracks + scrobbling** (tracks re-resolve saat cek berikutnya);
   **AutoFixService** periodik/batch (WorkManager) — sekarang AutoFix one-shot dari layar Alternatives.
-- **AREA `image`** 🟡 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman → fullscreen zoom + share + save.
+- **AREA `image`** ✅ DONE — image viewer layar-penuh (`ImageActivity` Doki): tap cover → fullscreen zoom + share + save.
   **✅ Viewer:** `image/ui/FullScreenImageViewer` (Compose `Dialog` full-bleed, lintas-platform): pinch +
-  double-tap zoom (1–5×), drag pan, tap kosong/Close tutup, tombol Share (kirim URL via `shareText` — Android sheet /
-  Desktop clipboard). **Wired:** tap cover di Details → viewer. **Defer (dicatat):** Save gambar ke disk (perlu
-  file-write per-platform + MediaStore Android, port `ImageViewModel.saveImage`); buka viewer dari thumbnail "Pages"
-  tab & halaman reader (perluasan, cover dulu).
+  double-tap zoom (1–5×), drag pan, tap kosong/Close tutup. **✅ Save + Share:** `image/domain/ImageSaveUseCase`
+  (download bytes via OkHttp app-client → `PagePersister.savePage`/`sharePage`): Android tulis MediaStore/SAF +
+  share-sheet, Desktop tulis Pictures/Nekuva. Tombol Save (snackbar `page_saved`/`error_occurred`) + Share di viewer.
+  **Wired:** tap cover di Details → viewer. **Defer (dicatat):** buka viewer dari thumbnail "Pages" tab & halaman
+  reader (perluasan — cover dulu).
 - **AREA `picker` / import lokal** 🟡 — import `.cbz` ke library (`opt_local action_import`).
   **✅ Import CBZ:** `local/domain/MangaImportUseCase` (port Doki `SingleMangaImporter`, KMP): copy file terpilih ke
   `LocalStorageManager.getDefaultWriteableDir()`, parse `LocalMangaParser(dest).getManga()`, emit `localStorageChanges`
