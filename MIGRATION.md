@@ -1130,7 +1130,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   Desktop clipboard). **Wired:** tap cover di Details → viewer. **Defer (dicatat):** Save gambar ke disk (perlu
   file-write per-platform + MediaStore Android, port `ImageViewModel.saveImage`); buka viewer dari thumbnail "Pages"
   tab & halaman reader (perluasan, cover dulu).
-- **AREA `picker` / import lokal** 🔴 — import `.cbz`/folder ke library (`opt_local action_import`). (directory/page-save picker sudah ada, IMPORT belum.)
+- **AREA `picker` / import lokal** 🟡 — import `.cbz` ke library (`opt_local action_import`).
+  **✅ Import CBZ:** `local/domain/MangaImportUseCase` (port Doki `SingleMangaImporter`, KMP): copy file terpilih ke
+  `LocalStorageManager.getDefaultWriteableDir()`, parse `LocalMangaParser(dest).getManga()`, emit `localStorageChanges`
+  (Local list auto-refresh). File picker lintas-platform: `local/ui/MangaFilePicker` (expect) — Android `OpenDocument`
+  (resolve DISPLAY_NAME), Desktop `JFileChooser` (filter .cbz/.zip). **Wired:** ikon Import di top bar Local
+  (non-selection) → pick → import → snackbar `import_completed`/`error_occurred`. **Defer (dicatat):** import folder
+  (Doki importDirectory, perlu tree-uri/DocumentFile) — CBZ dulu.
 - **AREA `widget`** 🔴 — home-screen widget Android (Doki `widget/`: shelf/recent). Android `actual` saja; Desktop/iOS N/A.
 
 ## BAGIAN 2 — Per-layar (tiru UI + behavior Doki; migrasi SEMUA tanpa defer)

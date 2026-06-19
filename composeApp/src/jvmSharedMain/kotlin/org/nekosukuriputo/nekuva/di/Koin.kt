@@ -21,6 +21,8 @@ val localModule = module {
     }
     single { LocalMangaRepository(get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.local.domain.DeleteReadChaptersUseCase(get(), get(), get()) }
+    // Local import (Doki action_import): copy a picked .cbz into the writeable dir + parse + notify.
+    single { org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase(get(), get()) }
     factory { LocalListViewModel(get(), get(), get(), get()) }
 }
 

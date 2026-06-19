@@ -11,8 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
+import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +66,13 @@ fun LocalListScreen(
     fun selected() = mangas.filter { selection.isSelected(it.id) }
     val sortOrder by viewModel.sortOrder.collectAsState()
     var showSortDialog by remember { mutableStateOf(false) }
+    // Local import (Doki action_import): pick a .cbz → copy into library → parse (list auto-refreshes via the bus).
+    val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
+    val filePicker = rememberMangaFilePicker()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val importDoneMsg = stringResource(Res.string.import_completed)
+    val importErrMsg = stringResource(Res.string.error_occurred)
 
     Scaffold(
         topBar = {
@@ -88,10 +97,23 @@ fun LocalListScreen(
                     },
                 )
             } else {
-                // Thin bar with the sort action (Doki opt_local sort); shell MainTopBar sits above.
+                // Thin bar with the import + sort actions (Doki opt_local); shell MainTopBar sits above.
                 TopAppBar(
                     title = {},
                     actions = {
+                        IconButton(onClick = {
+                            scope.launch {
+                                runCatching {
+                                    filePicker.pickCbz { name, input -> importer.import(name, input) }
+                                }.onSuccess { picked ->
+                                    if (picked) snackbarHostState.showSnackbar(importDoneMsg)
+                                }.onFailure {
+                                    snackbarHostState.showSnackbar(importErrMsg)
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Filled.FileDownload, contentDescription = stringResource(Res.string._import))
+                        }
                         IconButton(onClick = { showSortDialog = true }) {
                             Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
                         }
@@ -99,6 +121,7 @@ fun LocalListScreen(
                 )
             }
         },
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         when (val state = uiState) {
             is LocalListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
