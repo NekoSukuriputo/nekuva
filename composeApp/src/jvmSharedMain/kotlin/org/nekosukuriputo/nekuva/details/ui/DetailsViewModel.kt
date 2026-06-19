@@ -190,6 +190,19 @@ class DetailsViewModel(
         }
     }
 
+    /**
+     * Open the online (remote) variant of a saved/local manga (Doki action_online): resolve the remote
+     * manga from the local archive's source URL, store it, and hand the new id back for navigation.
+     */
+    fun openOnline(onResolved: (Long) -> Unit) {
+        viewModelScope.launch {
+            val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
+            val remote = runCatching { localMangaRepository.getRemoteManga(m) }.getOrNull() ?: return@launch
+            runCatching { mangaDataRepository.storeManga(remote, replaceExisting = false) }
+            onResolved(remote.id)
+        }
+    }
+
     fun removeFromHistory() {
         viewModelScope.launch {
             val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch

@@ -1122,13 +1122,16 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **CORE-9 — Create launcher shortcut (pin manga)** 🔴 Android (`action_shortcut`); Desktop N/A.
 
 ### Area mandiri yang BELUM ada (masuk prioritas core)
-- **AREA `alternatives`** 🟡 — "Find similar / Alternatives / Online variant" (Details `action_related`/`action_alternatives`/`action_online`).
-  related-row ✅. **Alternatives ✅**: `alternatives/ui/AlternativesViewModel` + `AlternativesScreen` (route
-  `AlternativesRoute(mangaId)`, overflow Details `action_alternatives`). Port `AlternativesUseCase`: cari judul
-  manga di tiap sumber enabled paralel (Semaphore 4), stream hasil flat (exclude id & sumber sendiri), tombol
-  "Search through disabled sources" (throughDisabledSources). Tap hasil → Details. **Defer (dicatat):** Migrate +
-  AutoFix (pindahkan favourite/history ke sumber lain, `MigrateUseCase`/`AutoFixUseCase`/`AutoFixService`) — operasi
-  tulis lintas-sumber, langkah tersendiri. `action_online` (buka varian online manga lokal) belum.
+- **AREA `alternatives`** ✅ DONE — "Find similar / Alternatives / Migrate / AutoFix / Online variant".
+  related-row ✅. **Alternatives ✅**: `AlternativesViewModel` + `AlternativesScreen` (route `AlternativesRoute`,
+  overflow Details): cari judul di tiap sumber enabled paralel (Semaphore 4), stream flat, "Search disabled sources".
+  **Migrate ✅** (`alternatives/domain/MigrateUseCase`, port Doki): long-press hasil → konfirmasi `migrate_confirmation`
+  → pindah keanggotaan kategori favourite + history (map posisi baca proporsional ke chapter sumber baru) dari manga
+  lama ke baru, lalu buka manga baru. **AutoFix ✅** (`AutoFixUseCase`): ikon di top bar → pilih kandidat terbaik
+  (judul sama persis else pertama) → migrate. **action_online ✅** (`DetailsViewModel.openOnline`): manga lokal →
+  resolve varian remote via `LocalMangaRepository.getRemoteManga` → buka Details remote (item overflow hanya muncul
+  bila `manga.isLocal`). **Defer (dicatat):** migrasi **tracks + scrobbling** (tracks re-resolve saat cek berikutnya);
+  **AutoFixService** periodik/batch (WorkManager) — sekarang AutoFix one-shot dari layar Alternatives.
 - **AREA `image`** 🟡 — image viewer layar-penuh (`ImageActivity` Doki): tap cover / halaman → fullscreen zoom + share + save.
   **✅ Viewer:** `image/ui/FullScreenImageViewer` (Compose `Dialog` full-bleed, lintas-platform): pinch +
   double-tap zoom (1–5×), drag pan, tap kosong/Close tutup, tombol Share (kirim URL via `shareText` — Android sheet /

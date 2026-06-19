@@ -174,6 +174,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onRelatedClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                         onAlternativesClick = { id -> navController.navigate(AlternativesRoute(id)) },
+                        onOpenManga = { id -> navController.navigate(MangaDetailsRoute(id)) },
                     )
                 }
                 composable<AlternativesRoute> {

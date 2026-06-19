@@ -39,6 +39,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
+import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import nekuva.composeapp.generated.resources.*
@@ -55,6 +56,7 @@ fun DetailsScreen(
     onManageCategoriesClick: () -> Unit,
     onRelatedClick: (mangaId: Long) -> Unit = {},
     onAlternativesClick: (mangaId: Long) -> Unit = {},
+    onOpenManga: (mangaId: Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
@@ -216,6 +218,17 @@ fun DetailsScreen(
                                     (uiState as? DetailsUiState.Success)?.manga?.let { onAlternativesClick(it.id) }
                                 },
                             )
+                            // Open the online variant of a saved/local manga (Doki action_online).
+                            val onlineManga = (uiState as? DetailsUiState.Success)?.manga
+                            if (onlineManga != null && onlineManga.isLocal) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.online_variant)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.openOnline { id -> onOpenManga(id) }
+                                    },
+                                )
+                            }
                         }
                     }
                 }

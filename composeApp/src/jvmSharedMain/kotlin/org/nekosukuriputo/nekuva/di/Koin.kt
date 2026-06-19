@@ -44,10 +44,13 @@ val searchModule = module {
             params.get(), get(), get(), get(), get(), get(), get(), get(),
         )
     }
-    // "Find similar in other sources" (Doki Alternatives): savedStateHandle + repo factory + data + sources + settings.
+    // Migrate (move favourites/history to another source) + AutoFix (pick best & migrate) — Doki alternatives.
+    single { org.nekosukuriputo.nekuva.alternatives.domain.MigrateUseCase(get(), get(), get(), get()) }
+    single { org.nekosukuriputo.nekuva.alternatives.domain.AutoFixUseCase(get()) }
+    // "Find similar in other sources" (Doki Alternatives): savedStateHandle + repo factory + data + sources + settings + migrate + autofix.
     factory { params ->
         org.nekosukuriputo.nekuva.alternatives.ui.AlternativesViewModel(
-            params.get(), get(), get(), get(), get(),
+            params.get(), get(), get(), get(), get(), get(), get(),
         )
     }
 }

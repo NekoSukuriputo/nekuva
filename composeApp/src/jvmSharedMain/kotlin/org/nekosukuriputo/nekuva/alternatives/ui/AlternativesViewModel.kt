@@ -49,6 +49,8 @@ class AlternativesViewModel(
     private val mangaDataRepository: MangaDataRepository,
     private val sourcesRepository: MangaSourcesRepository,
     private val settings: AppSettings,
+    private val migrateUseCase: org.nekosukuriputo.nekuva.alternatives.domain.MigrateUseCase,
+    private val autoFixUseCase: org.nekosukuriputo.nekuva.alternatives.domain.AutoFixUseCase,
 ) : ViewModel() {
 
     private val mangaId: Long = savedStateHandle.toRoute<AlternativesRoute>().mangaId
@@ -61,6 +63,10 @@ class AlternativesViewModel(
     private var searchJob: Job? = null
     private var includeDisabled = false
     private var refManga: Manga? = null
+
+    /** One-shot "migrating…" flag so the UI can block re-taps and show progress. */
+    private val _isMigrating = MutableStateFlow(false)
+    val isMigrating: StateFlow<Boolean> = _isMigrating.asStateFlow()
 
     init {
         start()
@@ -109,6 +115,30 @@ class AlternativesViewModel(
                 .filter { it.name != manga.source.name }
             searchSources(manga, disabled, skipNsfw)
             mutex.withLock { _uiState.value = _uiState.value.copy(isLoading = false, canSearchDisabled = false) }
+        }
+    }
+
+    /** Migrate the reference manga to [target] (Doki MigrateUseCase); [onDone] gets the new manga id. */
+    fun migrateTo(target: Manga, onDone: (Long) -> Unit) {
+        val old = refManga ?: return
+        if (_isMigrating.value) return
+        viewModelScope.launch {
+            _isMigrating.value = true
+            runCatching { migrateUseCase(old, target) }
+            _isMigrating.value = false
+            onDone(target.id)
+        }
+    }
+
+    /** Auto-fix: pick the best alternative and migrate to it (Doki AutoFixUseCase); [onDone] gets the new id. */
+    fun autoFix(onDone: (Long) -> Unit) {
+        val old = refManga ?: return
+        if (_isMigrating.value) return
+        viewModelScope.launch {
+            _isMigrating.value = true
+            val chosen = runCatching { autoFixUseCase(old, found.values.toList()) }.getOrNull()
+            _isMigrating.value = false
+            if (chosen != null) onDone(chosen.id)
         }
     }
 
