@@ -91,5 +91,22 @@
             android:name=".widget.recent.RecentWidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Favourites "shelf" home-screen widget (Doki widget/shelf). -->
+        <receiver
+            android:name=".widget.shelf.ShelfWidgetProvider"
+            android:exported="false"
+            android:label="@string/widget_shelf_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_shelf_info" />
+        </receiver>
+        <service
+            android:name=".widget.shelf.ShelfWidgetService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>
 </manifest>

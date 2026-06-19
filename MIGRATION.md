@@ -1049,12 +1049,12 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 
 ## BAGIAN 1 — CORE lintas-layar (PRIORITAS, dikerjakan dulu)
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
-> **Progress (2026-06-20, per-step commit):** CORE-0 ✅, CORE-2 ✅, CORE-3 ✅, CORE-5 ✅, CORE-6 ✅,
-> CORE-8 ✅ (History), CORE-9 ✅. CORE-1 ✅ (History/Favourites/Local/Downloads). CORE-4 ✅ (History
-> sort+grouping+quick-filter, Favourites/Local sort). CORE-7 🟡 (dialog Edit + Details apply ✅; list-wide apply
-> tersisa). **Area:** alternatives 🟡, image 🟡, picker/import 🟡, widget 🟡 — semua slice inti ✅ (lihat tiap entri
-> untuk item defer). **Sisa untuk full-parity:** CORE-7 list-wide override; alternatives Migrate/AutoFix; image Save;
-> picker import-folder; widget cover + Shelf. Semua kompilasi Desktop+Android + `assembleDebug` hijau.
+> **Progress (2026-06-20, per-step commit):** CORE-0..9 ✅ semua (CORE-1 History/Favourites/Local/Downloads;
+> CORE-4 sort+grouping+quick-filter; CORE-7 dialog Edit + Details + **list-wide override** ✅). **Area semua ✅:**
+> alternatives (Find similar + **Migrate** + **AutoFix** + **online variant**), image (viewer + **Save/Share ke disk**),
+> picker (**import CBZ + folder**), widget (recent + **shelf** + **cover** + **live-update**). **Semua defer batch
+> TUNTAS.** Kompilasi Desktop+Android + `assembleDebug` hijau. **Sisa = item kecil yang dicatat per-entri** (tracks/
+> scrobbling migrate, AutoFixService periodik, viewer dari Pages/reader, Shelf per-category config) + run-verify GUI.
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
@@ -1147,15 +1147,18 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   **DocumentsContract** — tanpa dependency documentfile); Desktop `JFileChooser` (file filter .cbz/.zip + mode
   DIRECTORIES_ONLY → `copyRecursively`). **Wired:** ikon Import di top bar Local → DropdownMenu (Doki ImportDialog):
   "Comics archive" / "Folder with images" → snackbar `import_completed`/`error_occurred`.
-- **AREA `widget`** 🟡 — home-screen widget Android (Doki `widget/`: shelf/recent). Android-only (Desktop/iOS N/A).
-  **✅ Recent widget:** `widget/recent/RecentWidgetProvider` (AppWidgetProvider) + `RecentWidgetService`
-  (RemoteViewsService + Factory baca `HistoryRepository.getList(0,20)` via Koin `runBlocking`, render baris
-  judul+sumber). Tap baris → `MainActivity` + `EXTRA_MANGA_ID` (reuse jalur deep-link CORE-9) → Details. Res:
-  `res/xml/widget_recent_info.xml`, `res/layout/widget_recent(_item).xml`, `res/values/widget.xml` (string Android
-  native — RemoteViews tak bisa pakai Compose Res). Manifest: receiver + service `BIND_REMOTEVIEWS`. `assembleDebug`
-  hijau (manifest merge + resource OK). **Defer (dicatat):** cover thumbnail (perlu Coil bitmap non-Compose di
-  RemoteViews), Shelf/favourites widget + config activity (`ShelfWidgetProvider`/config), live-update via WidgetUpdater
-  (sekarang updatePeriodMillis + onUpdate). **Run-verify:** belum (perlu pasang widget di home-screen manual).
+- **AREA `widget`** ✅ DONE — home-screen widget Android (Doki `widget/`: recent + shelf). Android-only (Desktop/iOS N/A).
+  **✅ Recent widget:** `widget/recent/RecentWidgetProvider` + `RecentWidgetService` (Factory baca
+  `HistoryRepository.getList(0,20)` via Koin `runBlocking`). **✅ Shelf widget:** `widget/shelf/ShelfWidgetProvider` +
+  `ShelfWidgetService` (Factory baca `FavouritesRepository.observeAll(NEWEST,…).first()`). Keduanya: baris
+  cover+judul+sumber, tap → `MainActivity`+`EXTRA_MANGA_ID` (deep-link CORE-9) → Details. **✅ Cover thumbnail:**
+  `widget/WidgetCoverLoader` (download via Koin OkHttp + `BitmapFactory` downscale + cache, di binder thread Factory —
+  RemoteViews tak bisa Coil). **✅ Live-update:** `widget/WidgetUpdater` (observe history + favourites count, panggil
+  `notifyAppWidgetViewDataChanged`) dijalankan dari `NekuvaApp.onCreate`. Res: `widget_recent_info`/`widget_shelf_info`,
+  `widget_recent`/`widget_shelf`/`widget_recent_item` layout, `res/values/widget.xml` (string native). Manifest: 2
+  receiver + 2 service `BIND_REMOTEVIEWS`. `assembleDebug` hijau. **Defer (dicatat):** Shelf per-category config
+  activity (Doki ShelfWidgetConfigActivity) — sekarang tampil semua favourite. **Run-verify:** belum (pasang widget
+  di home-screen manual).
 
 ## BAGIAN 2 — Per-layar (tiru UI + behavior Doki; migrasi SEMUA tanpa defer)
 
