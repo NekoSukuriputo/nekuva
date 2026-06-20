@@ -7,9 +7,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.history.data.HistoryRepository
@@ -42,9 +44,14 @@ class HistoryViewModel(
     private val _hasMore = MutableStateFlow(true)
     val hasMore: StateFlow<Boolean> = _hasMore.asStateFlow()
 
-    // Sort order (Doki history sort; persisted to KEY_HISTORY_ORDER).
-    private val _sortOrder = MutableStateFlow(settings.historySortOrder)
-    val sortOrder: StateFlow<ListSortOrder> = _sortOrder.asStateFlow()
+    // Sort order (Doki history sort). Observed from settings (KEY_HISTORY_ORDER) so the shared list-config
+    // sheet in the main toolbar drives it live.
+    val sortOrder: StateFlow<ListSortOrder> =
+        settings.keyChangeFlow(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_HISTORY_ORDER)
+            .onStart { emit(Unit) }
+            .map { settings.historySortOrder }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), settings.historySortOrder)
 
     // Quick-filter chips (Doki HistoryListQuickFilter): applied ListFilterOptions narrowing the DB window.
     private val _filters = MutableStateFlow<Set<ListFilterOption>>(emptySet())
@@ -76,7 +83,7 @@ class HistoryViewModel(
     }
 
     val uiState: StateFlow<HistoryUiState> =
-        combine(limit, _sortOrder, _filters) { lim, order, filters -> Triple(lim, order, filters) }
+        combine(limit, sortOrder, _filters) { lim, order, filters -> Triple(lim, order, filters) }
             .flatMapLatest { (lim, order, filters) ->
                 historyRepository.observeAllWithHistory(order, filters, lim)
                     .onEach { _hasMore.value = it.size >= lim }
@@ -84,13 +91,6 @@ class HistoryViewModel(
                     .catch { e -> emit(HistoryUiState.Error(e)) }
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState.Loading)
-
-    /** Change the sort order (Doki history sort), persist it, and restart pagination. */
-    fun setSortOrder(order: ListSortOrder) {
-        settings.historySortOrder = order
-        limit.value = PAGE_SIZE
-        _sortOrder.value = order
-    }
 
     /** Toggle a quick-filter chip (Doki QuickFilterListener.onFilterOptionClick); restart pagination. */
     fun toggleFilter(option: ListFilterOption) {

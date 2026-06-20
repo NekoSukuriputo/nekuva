@@ -68,7 +68,17 @@ fun MainScreen(
     // "List options" overflow → opens the list-config sheet for the active tab's key (Doki parity).
     val settings = koinInject<AppSettings>()
     var listConfigKey by remember { mutableStateOf<String?>(null) }
-    val overflowItems = rememberOverflowItems(navController, currentDestination, onListOptions = { listConfigKey = it })
+    var showClearHistory by remember { mutableStateOf(false) }
+    // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
+    val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
+        .collectAsState(initial = settings.isIncognitoModeEnabled)
+    val overflowItems = rememberOverflowItems(
+        navController, currentDestination,
+        onListOptions = { listConfigKey = it },
+        onClearHistory = { showClearHistory = true },
+        incognitoOn = incognitoOn,
+        onToggleIncognito = { settings.isIncognitoModeEnabled = !incognitoOn },
+    )
     // Configurable bottom-nav (Doki nav_main) + label visibility (nav_labels), observed live.
     val navItems by settings.observeNavItems().collectAsState(initial = settings.mainNavItems)
     val tabs = remember(navItems) { navItems.map(::navItemToTab) }
@@ -275,6 +285,30 @@ fun MainScreen(
     listConfigKey?.let { key ->
         ListConfigSheet(settings = settings, listModeKey = key, onDismiss = { listConfigKey = null })
     }
+
+    // Clear history (Doki opt_history): Last 2h / Today / Not in favorites / All — acts on the history DB.
+    if (showClearHistory) {
+        org.nekosukuriputo.nekuva.history.ui.HistoryClearDialog(
+            onDismiss = { showClearHistory = false },
+            onClear = { option ->
+                showClearHistory = false
+                fabScope.launch {
+                    when (option) {
+                        org.nekosukuriputo.nekuva.history.ui.HistoryClearOption.LAST_2_HOURS ->
+                            historyRepo.deleteAfter(System.currentTimeMillis() - 2L * 60 * 60 * 1000)
+                        org.nekosukuriputo.nekuva.history.ui.HistoryClearOption.TODAY ->
+                            historyRepo.deleteAfter(
+                                java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault())
+                                    .toInstant().toEpochMilli(),
+                            )
+                        org.nekosukuriputo.nekuva.history.ui.HistoryClearOption.NOT_FAVORITE ->
+                            historyRepo.deleteNotFavorite()
+                        org.nekosukuriputo.nekuva.history.ui.HistoryClearOption.ALL -> historyRepo.clear()
+                    }
+                }
+            },
+        )
+    }
 }
 
 /** Doki's main-screen "resume reading" FAB. */
@@ -297,6 +331,9 @@ private fun rememberOverflowItems(
     navController: NavHostController,
     currentDestination: NavDestination?,
     onListOptions: (String) -> Unit,
+    onClearHistory: () -> Unit,
+    incognitoOn: Boolean,
+    onToggleIncognito: () -> Unit,
 ): List<OverflowItem> {
     val route = currentDestination?.route ?: ""
     // Read all labels unconditionally (stringResource must not be called inside a changing branch).
@@ -320,7 +357,7 @@ private fun rememberOverflowItems(
     fun disabled(label: String) = OverflowItem(label, enabled = false, onClick = {})
     fun listOpt(key: String) = OverflowItem(listOptions, enabled = true, onClick = { onListOptions(key) })
     val tabItems = when {
-        has(HistoryTabRoute) -> listOf(disabled(clearHistory), listOpt(AppSettings.KEY_LIST_MODE_HISTORY), OverflowItem(statistics, enabled = true, onClick = { navController.navigate(StatsRoute) }))
+        has(HistoryTabRoute) -> listOf(OverflowItem(clearHistory, enabled = true, onClick = onClearHistory), listOpt(AppSettings.KEY_LIST_MODE_HISTORY), OverflowItem(statistics, enabled = true, onClick = { navController.navigate(StatsRoute) }))
         has(FavoritesTabRoute) -> listOf(listOpt(AppSettings.KEY_LIST_MODE_FAVORITES), disabled(favCategories))
         has(ExploreRoute) -> listOf(
             OverflowItem(manageSources, enabled = true, onClick = { navController.navigate(SourcesSettingsRoute) }),
@@ -332,6 +369,6 @@ private fun rememberOverflowItems(
     }
 
     return tabItems +
-        OverflowItem(incognito, enabled = false, onClick = {}) +
+        OverflowItem(incognito, enabled = true, checked = incognitoOn, onClick = onToggleIncognito) +
         OverflowItem(settingsLabel, enabled = true, onClick = { navController.navigate(SettingsRoute) })
 }

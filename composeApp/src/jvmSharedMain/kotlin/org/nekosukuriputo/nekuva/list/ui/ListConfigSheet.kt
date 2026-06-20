@@ -3,6 +3,7 @@ package org.nekosukuriputo.nekuva.list.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -82,6 +83,48 @@ fun ListConfigSheet(
                     onValueChange = { gridSize = it.toInt(); settings.gridSize = gridSize },
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
+            }
+
+            // History gets the "group by date" toggle + sort order (Doki ListConfigSection.History).
+            if (listModeKey == AppSettings.KEY_LIST_MODE_HISTORY) {
+                var grouping by remember { mutableStateOf(settings.isHistoryGroupingEnabled) }
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(Res.string.group_by_date), style = MaterialTheme.typography.bodyLarge)
+                    androidx.compose.material3.Switch(
+                        checked = grouping,
+                        onCheckedChange = { settings.isHistoryGroupingEnabled = it; grouping = it },
+                    )
+                }
+                Text(
+                    text = stringResource(Res.string.sort_order),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                var sort by remember { mutableStateOf(settings.historySortOrder) }
+                org.nekosukuriputo.nekuva.list.domain.ListSortOrder.HISTORY.forEach { order ->
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .selectable(
+                                selected = order == sort,
+                                onClick = { settings.historySortOrder = order; sort = order },
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.RadioButton(
+                            selected = order == sort,
+                            onClick = { settings.historySortOrder = order; sort = order },
+                        )
+                        Text(
+                            org.nekosukuriputo.nekuva.core.ui.components.sortLabel(order),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
             }
         }
     }

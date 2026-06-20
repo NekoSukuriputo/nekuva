@@ -17,12 +17,18 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material.icons.filled.SdCard
+import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelectAll
@@ -39,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -64,7 +71,6 @@ import nekuva.composeapp.generated.resources.*
 fun HistoryScreen(
     onMangaClick: (Long) -> Unit,
     onResumeClick: (Long, Long) -> Unit,
-    onStatsClick: () -> Unit = {},
     viewModel: HistoryViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -72,10 +78,11 @@ fun HistoryScreen(
     val listMode = rememberMangaListMode(settings, AppSettings.KEY_LIST_MODE_HISTORY)
     val gridSize = rememberGridSize(settings)
     val progressMode = remember { settings.progressIndicatorMode }
-    // Sort + grouping (Doki opt_history): persisted sort order + "group by date" toggle.
+    // Sort + grouping (Doki opt_history) observed live from settings — driven by the shared list-config
+    // sheet opened from the main toolbar's "List options".
     val sortOrder by viewModel.sortOrder.collectAsState()
-    var grouping by remember { mutableStateOf(settings.isHistoryGroupingEnabled) }
-    var showConfigSheet by remember { mutableStateOf(false) }
+    val grouping by settings.observeBoolean(AppSettings.KEY_HISTORY_GROUPING, true)
+        .collectAsState(initial = settings.isHistoryGroupingEnabled)
     var showFavDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     // Quick-filter chips (Doki HistoryListQuickFilter): Downloaded/New/Completed/Favorite/Not-favorite/NSFW
@@ -141,31 +148,9 @@ fun HistoryScreen(
                         }
                     },
                 )
-            } else {
-                TopAppBar(
-                    title = { Text(stringResource(Res.string.history)) },
-                    actions = {
-                        // Display config (Doki action_list_mode): list mode + grid size + grouping + sort.
-                        IconButton(onClick = { showConfigSheet = true }) {
-                            Icon(Icons.Filled.Tune, contentDescription = stringResource(Res.string.list_mode))
-                        }
-                        HistoryOverflowMenu(
-                            statsEnabled = settings.isStatsEnabled,
-                            onClear = { option ->
-                                when (option) {
-                                    HistoryClearOption.LAST_2_HOURS ->
-                                        viewModel.clearHistoryAfter(System.currentTimeMillis() - 2L * 60 * 60 * 1000)
-                                    HistoryClearOption.TODAY ->
-                                        viewModel.clearHistoryAfter(startOfTodayMillis())
-                                    HistoryClearOption.NOT_FAVORITE -> viewModel.removeNotFavorite()
-                                    HistoryClearOption.ALL -> viewModel.clearAllHistory()
-                                }
-                            },
-                            onStats = onStatsClick,
-                        )
-                    }
-                )
             }
+            // Non-selection: no per-screen bar — the shell search toolbar (with overflow: Clear history /
+            // List options / Statistics / Incognito / Settings) is the single toolbar (Doki parity).
         }
     ) { paddingValues ->
         when (val state = uiState) {
@@ -260,29 +245,6 @@ fun HistoryScreen(
         }
     }
 
-    if (showConfigSheet) {
-        val groupingAvailable = sortOrder in setOf(
-            org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LAST_READ,
-            org.nekosukuriputo.nekuva.list.domain.ListSortOrder.LONG_AGO_READ,
-            org.nekosukuriputo.nekuva.list.domain.ListSortOrder.NEWEST,
-            org.nekosukuriputo.nekuva.list.domain.ListSortOrder.OLDEST,
-        )
-        org.nekosukuriputo.nekuva.core.ui.components.ListConfigSheet(
-            listMode = listMode,
-            onListModeChange = { settings.historyListMode = it },
-            gridSize = gridSize,
-            onGridSizeChange = { settings.gridSize = it },
-            sortOrders = org.nekosukuriputo.nekuva.list.domain.ListSortOrder.HISTORY.toList(),
-            currentSort = sortOrder,
-            onSortChange = { viewModel.setSortOrder(it) },
-            groupingSupported = true,
-            groupingEnabled = grouping,
-            groupingAvailable = groupingAvailable,
-            onGroupingChange = { settings.isHistoryGroupingEnabled = it; grouping = it },
-            onDismiss = { showConfigSheet = false },
-        )
-    }
-
     if (showFavDialog) {
         val categories by viewModel.favouriteCategories.collectAsState()
         val toAdd = selectedMangas()
@@ -336,72 +298,44 @@ fun HistoryScreen(
 /** Doki opt_history clear-history options (Last 2h / Today / Not in favorites / All). */
 enum class HistoryClearOption { LAST_2_HOURS, TODAY, NOT_FAVORITE, ALL }
 
-/** Epoch millis at the start of the local day (Doki LocalDate.now().atStartOfDay). */
-private fun startOfTodayMillis(): Long =
-    java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-@OptIn(ExperimentalMaterial3Api::class)
+/** Clear-history options dialog (Doki opt_history clear). Shown from the main toolbar's "Clear history". */
 @Composable
-private fun HistoryOverflowMenu(
-    statsEnabled: Boolean,
+fun HistoryClearDialog(
+    onDismiss: () -> Unit,
     onClear: (HistoryClearOption) -> Unit,
-    onStats: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    var showClearDialog by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(Res.string.more))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.clear_history)) },
-                onClick = { expanded = false; showClearDialog = true },
-            )
-            if (statsEnabled) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.statistics)) },
-                    onClick = { expanded = false; onStats() },
-                )
-            }
-        }
-    }
-    if (showClearDialog) {
-        val options = listOf(
-            HistoryClearOption.LAST_2_HOURS to Res.string.last_2_hours,
-            HistoryClearOption.TODAY to Res.string.today,
-            HistoryClearOption.NOT_FAVORITE to Res.string.not_in_favorites,
-            HistoryClearOption.ALL to Res.string.clear_all_history,
-        )
-        var selected by remember { mutableStateOf(HistoryClearOption.LAST_2_HOURS) }
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text(stringResource(Res.string.clear_history)) },
-            text = {
-                Column {
-                    options.forEach { (option, label) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .clickable { selected = option }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = selected == option, onClick = { selected = option })
-                            Text(stringResource(label), modifier = Modifier.padding(start = 8.dp))
-                        }
+    val options = listOf(
+        HistoryClearOption.LAST_2_HOURS to Res.string.last_2_hours,
+        HistoryClearOption.TODAY to Res.string.today,
+        HistoryClearOption.NOT_FAVORITE to Res.string.not_in_favorites,
+        HistoryClearOption.ALL to Res.string.clear_all_history,
+    )
+    var selected by remember { mutableStateOf(HistoryClearOption.LAST_2_HOURS) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.clear_history)) },
+        text = {
+            Column {
+                options.forEach { (option, label) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { selected = option }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected == option, onClick = { selected = option })
+                        Text(stringResource(label), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showClearDialog = false; onClear(selected) }) {
-                    Text(stringResource(Res.string.clear))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text(stringResource(Res.string.cancel)) }
-            },
-        )
-    }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onClear(selected) }) { Text(stringResource(Res.string.clear)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
+        },
+    )
 }
 
 /** Banner shown while incognito mode is on (Doki InfoModel) — reading progress isn't recorded. */
@@ -456,8 +390,35 @@ private fun HistoryQuickFilterRow(
                 selected = option in applied,
                 onClick = { onToggle(option) },
                 label = { Text(filterLabel(option)) },
+                leadingIcon = { FilterLeadingIcon(option) },
             )
         }
+    }
+}
+
+/** Leading icon for a quick-filter chip (Doki parity): SD-card for downloaded, source favicon for a
+ *  source filter, tag/heart/etc. for the macros. */
+@Composable
+private fun FilterLeadingIcon(option: ListFilterOption) {
+    val iconMod = Modifier.size(18.dp)
+    when (option) {
+        ListFilterOption.Downloaded -> Icon(Icons.Filled.SdCard, null, iconMod)
+        ListFilterOption.Macro.NEW_CHAPTERS -> Icon(Icons.Filled.NewReleases, null, iconMod)
+        ListFilterOption.Macro.COMPLETED -> Icon(Icons.Filled.Check, null, iconMod)
+        ListFilterOption.Macro.FAVORITE -> Icon(Icons.Filled.Favorite, null, iconMod)
+        ListFilterOption.Macro.NSFW -> Icon(Icons.Filled.Warning, null, iconMod)
+        is ListFilterOption.Tag -> Icon(Icons.Filled.Tag, null, iconMod)
+        is ListFilterOption.Source -> org.nekosukuriputo.nekuva.core.ui.components.SourceFaviconImage(
+            sourceName = option.mangaSource.name,
+            displayName = option.titleText?.toString() ?: option.mangaSource.name,
+            modifier = iconMod,
+            letterSize = 10.sp,
+        )
+        is ListFilterOption.Inverted -> when (option.option) {
+            ListFilterOption.Macro.FAVORITE -> Icon(Icons.Filled.FavoriteBorder, null, iconMod)
+            else -> Icon(Icons.Filled.Warning, null, iconMod)
+        }
+        else -> Unit
     }
 }
 

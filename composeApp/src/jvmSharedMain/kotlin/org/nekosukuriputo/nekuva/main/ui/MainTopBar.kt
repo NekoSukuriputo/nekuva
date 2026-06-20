@@ -34,11 +34,12 @@ import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.search_manga
 import org.jetbrains.compose.resources.stringResource
 
-/** An overflow-menu entry; deferred items are shown disabled (Doki parity, functionality is polish). */
+/** An overflow-menu entry. [checked] != null renders a trailing checkbox (Doki checkable item, e.g. incognito). */
 data class OverflowItem(
     val label: String,
     val enabled: Boolean,
     val onClick: () -> Unit,
+    val checked: Boolean? = null,
 )
 
 /** Shared top bar for the main tabs: a search field + a three-dot overflow menu (Doki-style). */
@@ -96,8 +97,12 @@ fun MainTopBar(
                     DropdownMenuItem(
                         text = { Text(item.label) },
                         enabled = item.enabled,
+                        // Checkable item (Doki incognito): show a checkbox; keep the menu open on toggle.
+                        trailingIcon = item.checked?.let { checked ->
+                            { androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null) }
+                        },
                         onClick = {
-                            expanded = false
+                            if (item.checked == null) expanded = false
                             item.onClick()
                         },
                     )

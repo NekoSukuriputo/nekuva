@@ -1194,8 +1194,14 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - ✅ Sort order penuh + grouping (CORE-4), pagination (CORE-8), progress+badges (CORE-2/3), date header (CORE-0).
 - **Incognito banner ✅** (saat `isIncognitoModeEnabled`) + **empty-state primer+sekunder ✅** (`EmptyState` kini
   punya param `secondary`; filtered → nothing_found + reset hint). Judul/aksi via `Res.string`.
-- **LAYAR HISTORY: SELESAI** (Desktop+Android compile + `assembleDebug` hijau). Sisa: run-verify GUI Anda; ikon
-  empty-state khusus (Doki ic_empty_history) opsional.
+- **Toolbar tunggal (samakan UI Doki) ✅**: History tak lagi punya TopAppBar sendiri (judul+Tune+overflow ganda
+  dihapus). Toolbar = search bar shell; overflow shell kini fungsional: **Hapus riwayat** (dialog 4 opsi → act ke
+  `HistoryRepository`), **Opsi daftar** (`list.ui.ListConfigSheet` kini + group-by-date + sort untuk History),
+  **Statistik**, **Mode penyamaran** (checkbox toggle live, `OverflowItem.checked`), **Pengaturan**. Selection mode
+  tetap pakai contextual TopAppBar History. Sort/grouping History diobservasi reaktif dari settings (didorong sheet shell).
+- **Ikon chip filter ✅** (catatan user 2): Downloaded=SD card, New=NewReleases, Completed=Check, Favorite=heart,
+  Not-favorite=heart-outline, NSFW=warning, Tag=tag, **Source=favicon sumber** (`SourceFaviconImage` sebagai leadingIcon).
+- **LAYAR HISTORY: SELESAI** (Desktop+Android compile hijau). Sisa: run-verify GUI Anda; ikon empty-state khas Doki opsional.
 
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
 - 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
