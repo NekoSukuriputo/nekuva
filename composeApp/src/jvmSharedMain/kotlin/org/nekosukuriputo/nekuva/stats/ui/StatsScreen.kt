@@ -142,14 +142,17 @@ fun StatsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     // Donut chart (Doki PieChartView): segments sized by reading-time share, coloured per manga.
+                    // Padding lives on the wrapper Box so it never distorts the square (circular) canvas.
                     item {
-                        PieChart(
-                            segments = stats.map { (it.duration.toFloat() / total) to statsColor(it.manga) },
-                            modifier = Modifier
-                                .fillMaxWidth(0.72f)
-                                .aspectRatio(1f)
-                                .padding(vertical = 16.dp),
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            PieChart(
+                                segments = stats.map { (it.duration.toFloat() / total) to statsColor(it.manga) },
+                                modifier = Modifier.fillMaxWidth(0.72f).aspectRatio(1f),
+                            )
+                        }
                     }
                     // Legend (Doki item_stats): colour swatch + title + duration.
                     items(stats, key = { it.manga?.id ?: -1L }) { record ->
