@@ -1132,8 +1132,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   resolve varian remote via `LocalMangaRepository.getRemoteManga` → buka Details remote (item overflow hanya muncul
   bila `manga.isLocal`). **Migrate tracks + scrobbling ✅**: `MigrateUseCase` kini pindahkan juga baris `tracks`
   (re-point ke manga baru, `RESULT_EXTERNAL_MODIFICATION`) + link scrobbling tiap scrobbler enabled
-  (unregister lama → linkManga → updateScrobblingInfo, status default by history). **AutoFixService periodik ✅**
-  (lihat entri widget/worker di bawah).
+  (unregister lama → linkManga → updateScrobblingInfo, status default by history).
+  **AutoFixService periodik ✅**: search di-extract ke `AlternativesUseCase` (Flow, dipakai bersama VM + worker).
+  `AutoFixAllUseCase` (jvmShared): scan favourites+history → manga "broken" (sumber bukan `MangaParserSource` & bukan
+  lokal) → cari judul di sumber lain → migrate ke yang terbaik. Android `alternatives/work/AutoFixWorker`
+  (CoroutineWorker) + `scheduleAutoFix()` (expect/actual: Android WorkManager periodik 24 jam, gated pref
+  `auto_fix_broken`; Desktop no-op), dijadwalkan di `App.kt` + reschedule di Tracker settings. Toggle **"Auto-fix
+  broken manga"** (default OFF) di layar Tracker. **Defer kecil (dicatat):** notifikasi hasil auto-fix (sekarang silent).
 - **AREA `image`** ✅ DONE — image viewer layar-penuh (`ImageActivity` Doki): tap cover → fullscreen zoom + share + save.
   **✅ Viewer:** `image/ui/FullScreenImageViewer` (Compose `Dialog` full-bleed, lintas-platform): pinch +
   double-tap zoom (1–5×), drag pan, tap kosong/Close tutup. **✅ Save + Share:** `image/domain/ImageSaveUseCase`

@@ -134,6 +134,12 @@ fun App() {
         runCatching { org.nekosukuriputo.nekuva.suggestions.work.scheduleSuggestions() }
     }
 
+    // Background batch auto-fix (Doki AutoFixService): (re)schedule per the auto_fix_broken setting on launch.
+    // Android = WorkManager periodic; Desktop = no-op.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching { org.nekosukuriputo.nekuva.alternatives.work.scheduleAutoFix() }
+    }
+
     // Periodic backup (Doki PeriodicalBackupWorker): (re)schedule per the backup setting on launch.
     // Android = WorkManager; Desktop = no-op.
     androidx.compose.runtime.LaunchedEffect(Unit) {

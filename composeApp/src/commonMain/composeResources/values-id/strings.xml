@@ -615,6 +615,8 @@
     <string name="show_pages_thumbs_summary">Aktifkan tab \"Halaman\" pada layar detail</string>
     <string name="unsupported_backup_message">Pilih file cadangan Doki yang tepat</string>
     <string name="fix">Memperbaiki</string>
+    <string name="auto_fix_broken">Perbaiki otomatis manga rusak</string>
+    <string name="auto_fix_broken_summary">Migrasikan manga dari sumber yang dihapus ke sumber yang berfungsi secara berkala</string>
     <string name="missing_storage_permission">Tidak ada izin untuk mengakses manga di penyimpanan eksternal</string>
     <string name="disable_nsfw_notifications_summary">Jangan tampilkan notifikasi tentang pembaruan manga TAUSB</string>
     <string name="search_suggestions">Saran pencarian</string>

@@ -45,9 +45,12 @@ fun TrackerSettingsScreen(
     val settings = koinInject<AppSettings>()
     // tracker_enabled is the master switch; everything else depends on it (Doki dependency).
     var trackerEnabled by remember { mutableStateOf(settings.prefBoolean(AppSettings.KEY_TRACKER_ENABLED, true)) }
-    // Reschedule the background tracker (Android WorkManager) when leaving, picking up enabled/freq/wifi changes.
+    // Reschedule the background tracker + auto-fix (Android WorkManager) when leaving, picking up changes.
     androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() } }
+        onDispose {
+            runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() }
+            runCatching { org.nekosukuriputo.nekuva.alternatives.work.scheduleAutoFix() }
+        }
     }
     Scaffold(
         topBar = {
@@ -115,6 +118,13 @@ fun TrackerSettingsScreen(
                     onSelect = { settings.setPref(AppSettings.KEY_TRACKER_DOWNLOAD, it.name); strategy = it },
                 )
             }
+
+            // Batch auto-fix (Doki AutoFixService): periodically migrate manga from removed sources. Off by
+            // default (it silently migrates), independent of the tracker switch.
+            BoolPref(
+                settings, AppSettings.KEY_AUTOFIX_ENABLED, stringResource(Res.string.auto_fix_broken),
+                stringResource(Res.string.auto_fix_broken_summary), false,
+            )
 
             HorizontalDivider()
             SettingsCategoryHeader(stringResource(Res.string.debug))

@@ -740,6 +740,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		const val KEY_READER_VOLUME_BUTTONS = "reader_volume_buttons"
 		const val KEY_READER_ORIENTATION = "reader_orientation"
 		const val KEY_TRACKER_ENABLED = "tracker_enabled"
+		const val KEY_AUTOFIX_ENABLED = "auto_fix_broken"
 		const val KEY_TRACKER_WIFI_ONLY = "tracker_wifi"
 		const val KEY_TRACKER_FREQUENCY = "tracker_freq"
 		const val KEY_TRACK_SOURCES = "track_sources"

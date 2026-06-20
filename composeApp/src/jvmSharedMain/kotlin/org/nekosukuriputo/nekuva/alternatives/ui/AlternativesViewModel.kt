@@ -5,29 +5,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
-import org.nekosukuriputo.nekuva.core.model.isNsfw
+import org.nekosukuriputo.nekuva.alternatives.domain.AlternativesUseCase
+import org.nekosukuriputo.nekuva.alternatives.domain.AutoFixUseCase
+import org.nekosukuriputo.nekuva.alternatives.domain.MigrateUseCase
 import org.nekosukuriputo.nekuva.core.nav.AlternativesRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
-import org.nekosukuriputo.nekuva.core.parser.MangaRepository
-import org.nekosukuriputo.nekuva.core.prefs.AppSettings
-import org.nekosukuriputo.nekuva.explore.data.MangaSourcesRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
-import org.nekosukuriputo.nekuva.parsers.model.MangaListFilter
-import org.nekosukuriputo.nekuva.parsers.model.MangaSource
-import org.nekosukuriputo.nekuva.parsers.model.SortOrder
 import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
-
-private const val MAX_PARALLELISM = 4
 
 data class AlternativesUiState(
     val refManga: Manga? = null,
@@ -38,19 +28,15 @@ data class AlternativesUiState(
 )
 
 /**
- * "Find similar in other sources" (Doki AlternativesUseCase/AlternativesActivity): searches the reference
- * manga's title across every enabled parser source in parallel (Semaphore-limited), streaming matches into
- * one flat list as each source completes. The reference manga and its own source are excluded. The disabled
- * sources are searched on demand. Migrate/AutoFix (swap a favourite/history to another source) is deferred.
+ * "Find similar in other sources" (Doki AlternativesActivity): streams matches from [AlternativesUseCase]
+ * into one flat list, and offers Migrate / AutoFix to swap a favourite/history to another source.
  */
 class AlternativesViewModel(
     savedStateHandle: SavedStateHandle,
-    private val repositoryFactory: MangaRepository.Factory,
     private val mangaDataRepository: MangaDataRepository,
-    private val sourcesRepository: MangaSourcesRepository,
-    private val settings: AppSettings,
-    private val migrateUseCase: org.nekosukuriputo.nekuva.alternatives.domain.MigrateUseCase,
-    private val autoFixUseCase: org.nekosukuriputo.nekuva.alternatives.domain.AutoFixUseCase,
+    private val alternativesUseCase: AlternativesUseCase,
+    private val migrateUseCase: MigrateUseCase,
+    private val autoFixUseCase: AutoFixUseCase,
 ) : ViewModel() {
 
     private val mangaId: Long = savedStateHandle.toRoute<AlternativesRoute>().mangaId
@@ -91,10 +77,9 @@ class AlternativesViewModel(
                 _uiState.value = _uiState.value.copy(isLoading = false)
                 return@launch
             }
-            val skipNsfw = settings.isNsfwContentDisabled
-            val sources = runCatchingCancellable { sourcesRepository.getEnabledSources() }.getOrDefault(emptyList())
-                .filter { it.name != manga.source.name }
-            searchSources(manga, sources, skipNsfw)
+            runCatchingCancellable {
+                alternativesUseCase(manga, throughDisabledSources = false).collect { append(it) }
+            }
             mutex.withLock {
                 _uiState.value = _uiState.value.copy(isLoading = false, canSearchDisabled = !includeDisabled)
             }
@@ -109,11 +94,9 @@ class AlternativesViewModel(
         viewModelScope.launch {
             searchJob?.join()
             mutex.withLock { _uiState.value = _uiState.value.copy(isLoading = true, canSearchDisabled = false) }
-            val skipNsfw = settings.isNsfwContentDisabled
-            val disabled = runCatchingCancellable { sourcesRepository.getDisabledSources().toList() }
-                .getOrDefault(emptyList())
-                .filter { it.name != manga.source.name }
-            searchSources(manga, disabled, skipNsfw)
+            runCatchingCancellable {
+                alternativesUseCase(manga, throughDisabledSources = true).collect { append(it) }
+            }
             mutex.withLock { _uiState.value = _uiState.value.copy(isLoading = false, canSearchDisabled = false) }
         }
     }
@@ -142,33 +125,12 @@ class AlternativesViewModel(
         }
     }
 
-    private suspend fun searchSources(manga: Manga, sources: List<MangaSource>, skipNsfw: Boolean) = coroutineScope {
-        val semaphore = Semaphore(MAX_PARALLELISM)
-        sources.map { source ->
-            launch {
-                semaphore.withPermit { searchSource(manga, source, skipNsfw) }
-            }
-        }.joinAll()
-    }
-
-    private suspend fun searchSource(manga: Manga, source: MangaSource, skipNsfw: Boolean) {
-        val matches = runCatchingCancellable {
-            val repo = repositoryFactory.create(source)
-            if (!repo.filterCapabilities.isSearchSupported) return
-            val order = if (SortOrder.RELEVANCE in repo.sortOrders) SortOrder.RELEVANCE else repo.defaultSortOrder
-            repo.getList(0, order, MangaListFilter(query = manga.title))
-        }.getOrNull() ?: return
-        val filtered = (if (skipNsfw) matches.filterNot { it.isNsfw() } else matches)
-            .filter { it.id != manga.id }
-        if (filtered.isEmpty()) return
+    private suspend fun append(manga: Manga) {
         mutex.withLock {
-            filtered.forEach { m ->
-                if (m.id !in found) {
-                    runCatchingCancellable { mangaDataRepository.storeManga(m, replaceExisting = false) }
-                    found[m.id] = m
-                }
+            if (manga.id !in found) {
+                found[manga.id] = manga
+                _uiState.value = _uiState.value.copy(results = found.values.toList())
             }
-            _uiState.value = _uiState.value.copy(results = found.values.toList())
         }
     }
 }
