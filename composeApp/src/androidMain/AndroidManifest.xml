@@ -108,5 +108,14 @@
             android:name=".widget.shelf.ShelfWidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <!-- Per-widget category picker shown when the Shelf widget is placed (Doki ShelfWidgetConfigActivity). -->
+        <activity
+            android:name=".widget.shelf.ShelfWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

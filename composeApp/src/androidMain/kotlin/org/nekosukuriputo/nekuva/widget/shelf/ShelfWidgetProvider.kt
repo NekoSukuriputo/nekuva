@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.RemoteViews
 import org.nekosukuriputo.nekuva.MainActivity
 import org.nekosukuriputo.nekuva.R
@@ -19,7 +20,13 @@ class ShelfWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         for (id in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_shelf)
-            views.setRemoteAdapter(R.id.widget_list, Intent(context, ShelfWidgetService::class.java))
+            // Unique per-widget intent (EXTRA_APPWIDGET_ID + data) so each widget gets its own factory
+            // and can show its own configured category (Doki ShelfWidgetService).
+            val serviceIntent = Intent(context, ShelfWidgetService::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                data = Uri.parse("nekuva://shelf/$id")
+            }
+            views.setRemoteAdapter(R.id.widget_list, serviceIntent)
             views.setEmptyView(R.id.widget_list, R.id.widget_empty)
 
             val openApp = PendingIntent.getActivity(
@@ -39,5 +46,9 @@ class ShelfWidgetProvider : AppWidgetProvider() {
             appWidgetManager.updateAppWidget(id, views)
         }
         appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_list)
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        appWidgetIds.forEach { ShelfWidgetConfig.remove(context, it) }
     }
 }

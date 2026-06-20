@@ -1,5 +1,6 @@
 package org.nekosukuriputo.nekuva.widget.shelf
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -17,12 +18,17 @@ import org.nekosukuriputo.nekuva.widget.WidgetCoverLoader
 
 /** Backing service for the Shelf (favourites) widget's ListView (Doki ShelfWidgetService). */
 class ShelfWidgetService : RemoteViewsService() {
-    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
-        ShelfListFactory(applicationContext)
+    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
+        val appWidgetId = intent.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID,
+        )
+        return ShelfListFactory(applicationContext, appWidgetId)
+    }
 }
 
 private class ShelfListFactory(
     private val context: Context,
+    private val appWidgetId: Int,
 ) : RemoteViewsService.RemoteViewsFactory, KoinComponent {
 
     private val favouritesRepository: FavouritesRepository by inject()
@@ -31,9 +37,15 @@ private class ShelfListFactory(
     override fun onCreate() = Unit
 
     override fun onDataSetChanged() {
+        // Per-widget configured category (Doki ShelfWidgetConfig); ALL_FAVOURITES = every favourite.
+        val categoryId = ShelfWidgetConfig.getCategory(context, appWidgetId)
         items = runBlocking {
             runCatching {
-                favouritesRepository.observeAll(ListSortOrder.NEWEST, emptySet(), MAX_ITEMS).first()
+                if (categoryId == ShelfWidgetConfig.ALL_FAVOURITES) {
+                    favouritesRepository.observeAll(ListSortOrder.NEWEST, emptySet(), MAX_ITEMS).first()
+                } else {
+                    favouritesRepository.observeAll(categoryId, ListSortOrder.NEWEST, emptySet(), MAX_ITEMS).first()
+                }
             }.getOrDefault(emptyList())
         }
     }

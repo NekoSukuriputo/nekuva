@@ -8,5 +8,6 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_shelf"
     android:previewImage="@mipmap/ic_launcher"
+    android:configure="org.nekosukuriputo.nekuva.widget.shelf.ShelfWidgetConfigActivity"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

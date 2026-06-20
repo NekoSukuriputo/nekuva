@@ -1051,10 +1051,10 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
 Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migrasi per-layar (Bagian 2) konsisten.
 > **Progress (2026-06-20, per-step commit):** CORE-0..9 ✅ semua (CORE-1 History/Favourites/Local/Downloads;
 > CORE-4 sort+grouping+quick-filter; CORE-7 dialog Edit + Details + **list-wide override** ✅). **Area semua ✅:**
-> alternatives (Find similar + **Migrate** + **AutoFix** + **online variant**), image (viewer + **Save/Share ke disk**),
-> picker (**import CBZ + folder**), widget (recent + **shelf** + **cover** + **live-update**). **Semua defer batch
-> TUNTAS.** Kompilasi Desktop+Android + `assembleDebug` hijau. **Sisa = item kecil yang dicatat per-entri** (tracks/
-> scrobbling migrate, AutoFixService periodik, viewer dari Pages/reader, Shelf per-category config) + run-verify GUI.
+> alternatives (Find similar + **Migrate**+tracks/scrobbling + **AutoFix** one-shot & **periodik** + **online variant**),
+> image (viewer + Save/Share + **dari Pages tab**), picker (import CBZ + folder), widget (recent + shelf + cover +
+> live-update + **per-category config**). **SEMUA defer TUNTAS** (termasuk batch kecil). Kompilasi Desktop+Android +
+> `assembleDebug` hijau. **Sisa hanya:** run-verify GUI + notifikasi hasil auto-fix (kosmetik). → siap migrasi per-layar.
 
 - **CORE-0 — Tanggal relatif (Doki DateTimeAgo) ✅ DONE** (commit `feat(core): relative date util`).
   `core/util/ext/DateUtil`: `daysAgo` (LocalDate.until, kalender-akurat) + `relativeDateKey` (grouping) +
@@ -1164,9 +1164,11 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   RemoteViews tak bisa Coil). **✅ Live-update:** `widget/WidgetUpdater` (observe history + favourites count, panggil
   `notifyAppWidgetViewDataChanged`) dijalankan dari `NekuvaApp.onCreate`. Res: `widget_recent_info`/`widget_shelf_info`,
   `widget_recent`/`widget_shelf`/`widget_recent_item` layout, `res/values/widget.xml` (string native). Manifest: 2
-  receiver + 2 service `BIND_REMOTEVIEWS`. `assembleDebug` hijau. **Defer (dicatat):** Shelf per-category config
-  activity (Doki ShelfWidgetConfigActivity) — sekarang tampil semua favourite. **Run-verify:** belum (pasang widget
-  di home-screen manual).
+  receiver + 2 service `BIND_REMOTEVIEWS`. **✅ Shelf per-category config:** `ShelfWidgetConfigActivity` (Compose,
+  `APPWIDGET_CONFIGURE`) — pilih kategori favourite (All / per kategori) saat widget dipasang; tersimpan per
+  appWidgetId (`ShelfWidgetConfig` SharedPreferences), factory `ShelfWidgetService` baca kategori per-widget (intent
+  unik EXTRA_APPWIDGET_ID + data uri), `onDeleted` bersihkan config. `assembleDebug` hijau. **Run-verify:** belum
+  (pasang widget di home-screen manual).
 
 ## BAGIAN 2 — Per-layar (tiru UI + behavior Doki; migrasi SEMUA tanpa defer)
 
