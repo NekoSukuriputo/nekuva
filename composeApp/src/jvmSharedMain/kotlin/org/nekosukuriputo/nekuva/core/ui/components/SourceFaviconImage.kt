@@ -18,7 +18,11 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 
 /**
  * Source favicon (Doki FaviconView): loads `favicon://<name>` via Coil (file-cached, fetched once),
@@ -33,14 +37,19 @@ fun SourceFaviconImage(
     modifier: Modifier = Modifier,
     letterSize: TextUnit = 20.sp,
 ) {
-    SubcomposeAsyncImage(
-        model = "favicon://$sourceName",
-        contentDescription = displayName,
-        contentScale = ContentScale.Fit,
-        modifier = modifier.clip(RoundedCornerShape(12.dp)),
-        loading = { SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize) },
-        error = { SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize) },
-    )
+    // AsyncImage (not SubcomposeAsyncImage) for fast scrolling in the long source list; the placeholder
+    // letter sits behind and is hidden once the favicon loads (onState success).
+    var loaded by remember(sourceName) { mutableStateOf(false) }
+    Box(modifier = modifier.clip(RoundedCornerShape(12.dp))) {
+        if (!loaded) SourceIconPlaceholder(displayName, Modifier.fillMaxSize(), letterSize)
+        AsyncImage(
+            model = "favicon://$sourceName",
+            contentDescription = displayName,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(),
+            onState = { loaded = it is AsyncImagePainter.State.Success },
+        )
+    }
 }
 
 /** Doki-style fallback: rounded square with a bold first letter, colour derived from the source name. */

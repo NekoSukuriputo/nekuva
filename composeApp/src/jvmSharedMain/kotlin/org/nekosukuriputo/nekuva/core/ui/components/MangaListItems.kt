@@ -27,8 +27,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.prefs.ListMode
 import org.nekosukuriputo.nekuva.parsers.model.Manga
@@ -114,7 +112,11 @@ fun MangaListContent(
     }
 }
 
-/** Grid card (Doki `item_manga_grid`): cover + optional progress bar + badges, title below. */
+/**
+ * Grid card (Doki `item_manga_grid`): rounded cover with a fixed 13:18 ratio + optional progress/badges,
+ * then the title in a FIXED two lines below. The fixed-line title (Doki `android:lines="2"`) keeps every
+ * card the same height, so the grid stays even regardless of title length. No filled Card behind the title.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MangaGridItem(
@@ -125,37 +127,42 @@ fun MangaGridItem(
     badges: MangaBadges = MangaBadges(),
     selected: Boolean = false,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
-        Column {
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(COVER_RATIO)) {
-                CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize())
-                if (badges.any) BadgeRow(badges, Modifier.align(Alignment.TopEnd).padding(4.dp))
-                progress?.let {
-                    LinearProgressIndicator(
-                        progress = { it.coerceIn(0f, 1f) },
-                        modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp),
-                    )
-                }
-                // Selection overlay (Doki ActionMode): primary scrim + check when selected.
-                if (selected) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp)
-                            .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(50)),
-                    )
-                }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(4.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth().aspectRatio(COVER_RATIO).clip(RoundedCornerShape(6.dp))) {
+            CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize())
+            if (badges.any) BadgeRow(badges, Modifier.align(Alignment.TopEnd).padding(4.dp))
+            progress?.let {
+                LinearProgressIndicator(
+                    progress = { it.coerceIn(0f, 1f) },
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp),
+                )
             }
-            Text(
-                text = manga.title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            )
+            // Selection overlay (Doki ActionMode): primary scrim + check when selected.
+            if (selected) {
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)))
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(22.dp)
+                        .background(MaterialTheme.colorScheme.onPrimary, RoundedCornerShape(50)),
+                )
+            }
         }
+        Text(
+            text = manga.title,
+            style = MaterialTheme.typography.bodySmall,
+            minLines = 2,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
     }
 }
 
@@ -233,19 +240,13 @@ fun MangaListRow(
 
 @Composable
 private fun CoverImage(url: String?, title: String, modifier: Modifier) {
-    SubcomposeAsyncImage(
+    // AsyncImage (not SubcomposeAsyncImage): subcomposition per item makes long lists/grids scroll laggy.
+    // The surfaceVariant background acts as placeholder during load and on error.
+    AsyncImage(
         model = url,
         contentDescription = title,
         contentScale = ContentScale.Crop,
-        modifier = modifier,
-        loading = {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-            }
-        },
-        error = {
-            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant))
-        },
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
     )
 }
 

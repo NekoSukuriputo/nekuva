@@ -50,7 +50,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.model.MangaSourceInfo
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource

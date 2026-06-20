@@ -1172,14 +1172,20 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 
 ## BAGIAN 2 — Per-layar (tiru UI + behavior Doki; migrasi SEMUA tanpa defer)
 
-### LAYAR: History (Doki `history/ui` + `opt_history` + `mode_history`)
-- 🟡 Overflow: **Clear history dgn opsi** (2 jam terakhir / hari ini / bukan favorit / semua) — kini cuma "clear all". Statistik ✅.
-- 🔴 Selection mode (long-press): Share, Remove, Save (halaman), Add to favourites, Fix, Edit, **Mark as completed**, Select-all.
-- 🔴 Sort order penuh (LAST_READ/LONG_AGO/NEWEST/OLDEST/PROGRESS/UNREAD/ALPHABETIC).
-- 🔴 Quick filters (chip) + 🔴 grouping toggle (header progress saat sort=PROGRESS).
-- 🔴 List mode (grid/list/detailed) + 🔴 pagination (16) + 🔴 indikator progres per item (CORE-2/3/8).
-- 🔴 Banner "Incognito mode" saat incognito aktif. 🔴 Empty state ikon + teks primer/sekunder.
-- 🔴 Pindahkan string hardcode ("Riwayat Baca"/"Tidak ada riwayat baca"/"Lanjut bab"/"Hapus Riwayat") ke Compose Resources.
+### LAYAR: History (Doki `history/ui` + `opt_history` + `mode_history`) — MIGRASI PER-LAYAR (sedang berjalan)
+**Parity checklist (dari kode Doki: HistoryListViewModel/MenuProvider/QuickFilter + MangaListMenuProvider + ListConfig):**
+- **Perf & grid (catatan user 5 & 6) ✅ DONE** — list/grid manga terasa laggy: penyebab `SubcomposeAsyncImage`
+  (subkomposisi per item). Diganti `AsyncImage` di `CoverImage` (MangaListItems, dipakai History/Favourites/Local/
+  Remote/Search) + `SourceFaviconImage` (list sumber Explore) + buang import mati di ExploreScreen. Reader tetap
+  Subcompose (perlu untuk sizing zoom). **Grid rapi:** `MangaGridItem` judul kini FIXED 2 baris (`minLines=2,maxLines=2`,
+  ikut Doki `android:lines="2"`) → tinggi kartu seragam; buang Card berat → Column + cover rounded 13:18 + spacing 8dp.
+  **Catatan render umum:** untuk list panjang selalu pakai `AsyncImage` (bukan Subcompose) + `key` stabil.
+- 🟡 Overflow: Clear history dgn opsi (2 jam / hari ini / bukan favorit / semua) — PENDING (kini cuma clear all). Statistik ✅.
+- 🟡 List modes (LIST/DETAILED_LIST/GRID) — PENDING UI config sheet (list-mode + grid-size + grouping + sort).
+- 🟡 Quick filters: Downloaded/NewChapters/Completed/Favorite/NSFW ✅; **filter by source + tags + Not-favorite** PENDING.
+- 🟡 Selection: Select-all/Share/Mark-completed/Remove ✅; **Save(download)/Favourite/Fix/Edit override** PENDING.
+- ✅ Sort order penuh + grouping (CORE-4), pagination (CORE-8), progress+badges (CORE-2/3), date header (CORE-0).
+- 🔴 Banner "Incognito mode" + empty-state ikon/teks primer-sekunder + string hardcode tersisa.
 
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
 - 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
