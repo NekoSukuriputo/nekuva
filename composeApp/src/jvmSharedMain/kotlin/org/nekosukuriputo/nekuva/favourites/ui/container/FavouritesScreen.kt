@@ -1,24 +1,24 @@
 package org.nekosukuriputo.nekuva.favourites.ui.container
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -26,97 +26,99 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen
 import nekuva.composeapp.generated.resources.Res
-import nekuva.composeapp.generated.resources.favourites
 import nekuva.composeapp.generated.resources.all_favourites
-import nekuva.composeapp.generated.resources.default_category
-import nekuva.composeapp.generated.resources.sort_order
+import nekuva.composeapp.generated.resources.delete
+import nekuva.composeapp.generated.resources.edit_category
+import nekuva.composeapp.generated.resources.hide
+import nekuva.composeapp.generated.resources.manage
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** One tab descriptor: [id] = -1 for "All favourites", else a real category. */
+private data class FavTab(val id: Long, val title: String, val isAll: Boolean)
+
+/**
+ * Favourites container (Doki FavouritesContainerFragment): "All favourites" tab (when visible) + a tab per
+ * library-visible category, each long-pressable for Edit / Delete / Hide (Doki popup_fav_tab). No own
+ * toolbar — the main shell search bar + overflow ("List options" / "Manage categories") is the toolbar.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FavouritesScreen(
     onMangaClick: (Long) -> Unit,
-    onManageCategoriesClick: () -> Unit
+    onManageCategoriesClick: () -> Unit,
 ) {
     val viewModel = koinViewModel<FavouritesViewModel>()
     val categories by viewModel.categories.collectAsState()
     val isAllFavouritesVisible by viewModel.isAllFavouritesVisible.collectAsState()
 
-    val displayCategories = buildList {
-        if (isAllFavouritesVisible) {
-            add(FavouriteCategory(-1L, stringResource(Res.string.all_favourites), -1, 0L, true, true))
-        }
-        add(FavouriteCategory(0L, "Default", 0, 0L, true, true)) // Default category representation, we can refine this later
-        addAll(categories)
+    val allLabel = stringResource(Res.string.all_favourites)
+    val tabs = buildList {
+        if (isAllFavouritesVisible) add(FavTab(FavouritesViewModel.ALL_CATEGORY_ID, allLabel, isAll = true))
+        categories.forEach { add(FavTab(it.id, it.title, isAll = false)) }
+    }
+    if (tabs.isEmpty()) {
+        // No visible categories and "All" hidden — show the empty all-favourites list as a fallback.
+        FavouritesListScreen(categoryId = FavouritesViewModel.ALL_CATEGORY_ID, onMangaClick = onMangaClick)
+        return
     }
 
-    val pagerState = rememberPagerState(pageCount = { displayCategories.size })
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
+    var menuForTab by remember { mutableStateOf<FavTab?>(null) }
 
-    // Global favourites sort (Doki KEY_FAVORITES_ORDER) — applies to all category tabs; pages observe it live.
-    val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
-    var favSort by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(settings.allFavoritesSortOrder) }
-    var showSortDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.favourites)) },
-                actions = {
-                    IconButton(onClick = { showSortDialog = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
-                    }
-                    IconButton(onClick = onManageCategoriesClick) {
-                        Icon(Icons.Default.Settings, contentDescription = "Manage Categories")
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            if (displayCategories.size > 1) {
-                ScrollableTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    edgePadding = 8.dp
-                ) {
-                    displayCategories.forEachIndexed { index, category ->
-                        val title = when (category.id) {
-                            -1L -> stringResource(Res.string.all_favourites)
-                            0L -> stringResource(Res.string.default_category)
-                            else -> category.title
-                        }
-                        Tab(
-                            selected = pagerState.currentPage == index,
+    Column(modifier = Modifier.fillMaxSize()) {
+        ScrollableTabRow(selectedTabIndex = pagerState.currentPage.coerceIn(0, tabs.lastIndex), edgePadding = 8.dp) {
+            tabs.forEachIndexed { index, tab ->
+                Box {
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        // Click selects; long-press opens Edit/Delete/Hide (Doki FavouriteTabPopupMenuProvider).
+                        // Tab.onClick is a no-op — combinedClickable on the modifier handles both gestures.
+                        onClick = {},
+                        modifier = Modifier.combinedClickable(
                             onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(title) }
-                        )
-                    }
+                            onLongClick = { menuForTab = tab },
+                        ),
+                        text = { Text(tab.title) },
+                    )
+                    FavTabMenu(
+                        tab = if (menuForTab?.id == tab.id) tab else null,
+                        onDismiss = { menuForTab = null },
+                        onEdit = { onManageCategoriesClick() },
+                        onDelete = { viewModel.deleteCategory(tab.id) },
+                        onHide = { viewModel.hide(tab.id) },
+                        onManage = { onManageCategoriesClick() },
+                    )
                 }
             }
+        }
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                val categoryId = displayCategories[page].id
-                // When categoryId is -1L, it should show ALL favorites. 
-                // We'll pass -1L to FavouritesListScreen, but we need to ensure FavouritesListViewModel handles it correctly!
-                FavouritesListScreen(
-                    categoryId = categoryId,
-                    onMangaClick = onMangaClick
-                )
-            }
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            FavouritesListScreen(categoryId = tabs[page].id, onMangaClick = onMangaClick)
         }
     }
+}
 
-    if (showSortDialog) {
-        org.nekosukuriputo.nekuva.core.ui.components.SortOrderDialog(
-            current = favSort,
-            options = org.nekosukuriputo.nekuva.list.domain.ListSortOrder.FAVORITES,
-            onSelect = { settings.allFavoritesSortOrder = it; favSort = it },
-            onDismiss = { showSortDialog = false },
-        )
+@Composable
+private fun FavTabMenu(
+    tab: FavTab?,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onHide: () -> Unit,
+    onManage: () -> Unit,
+) {
+    DropdownMenu(expanded = tab != null, onDismissRequest = onDismiss) {
+        if (tab?.isAll == true) {
+            // "All favourites" tab (Doki popup_fav_tab_all): Hide / Manage.
+            DropdownMenuItem(text = { Text(stringResource(Res.string.hide)) }, onClick = { onDismiss(); onHide() })
+            DropdownMenuItem(text = { Text(stringResource(Res.string.manage)) }, onClick = { onDismiss(); onManage() })
+        } else if (tab != null) {
+            // A category tab (Doki popup_fav_tab): Edit / Delete / Hide.
+            DropdownMenuItem(text = { Text(stringResource(Res.string.edit_category)) }, onClick = { onDismiss(); onEdit() })
+            DropdownMenuItem(text = { Text(stringResource(Res.string.delete)) }, onClick = { onDismiss(); onDelete() })
+            DropdownMenuItem(text = { Text(stringResource(Res.string.hide)) }, onClick = { onDismiss(); onHide() })
+        }
     }
 }

@@ -358,7 +358,10 @@ private fun rememberOverflowItems(
     fun listOpt(key: String) = OverflowItem(listOptions, enabled = true, onClick = { onListOptions(key) })
     val tabItems = when {
         has(HistoryTabRoute) -> listOf(OverflowItem(clearHistory, enabled = true, onClick = onClearHistory), listOpt(AppSettings.KEY_LIST_MODE_HISTORY), OverflowItem(statistics, enabled = true, onClick = { navController.navigate(StatsRoute) }))
-        has(FavoritesTabRoute) -> listOf(listOpt(AppSettings.KEY_LIST_MODE_FAVORITES), disabled(favCategories))
+        has(FavoritesTabRoute) -> listOf(
+            listOpt(AppSettings.KEY_LIST_MODE_FAVORITES),
+            OverflowItem(favCategories, enabled = true, onClick = { navController.navigate(CategoriesRoute) }),
+        )
         has(ExploreRoute) -> listOf(
             OverflowItem(manageSources, enabled = true, onClick = { navController.navigate(SourcesSettingsRoute) }),
             OverflowItem(sourcesCatalog, enabled = true, onClick = { navController.navigate(SourcesCatalogRoute) }),

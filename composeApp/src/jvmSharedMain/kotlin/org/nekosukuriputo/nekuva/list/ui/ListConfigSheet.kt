@@ -126,6 +126,36 @@ fun ListConfigSheet(
                     }
                 }
             }
+
+            // Favourites gets the sort order (Doki ListConfigSection.Favorites). Applies to all category tabs.
+            if (listModeKey == AppSettings.KEY_LIST_MODE_FAVORITES) {
+                Text(
+                    text = stringResource(Res.string.sort_order),
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+                var favSort by remember { mutableStateOf(settings.allFavoritesSortOrder) }
+                org.nekosukuriputo.nekuva.list.domain.ListSortOrder.FAVORITES.forEach { order ->
+                    androidx.compose.foundation.layout.Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .selectable(
+                                selected = order == favSort,
+                                onClick = { settings.allFavoritesSortOrder = order; favSort = order },
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    ) {
+                        androidx.compose.material3.RadioButton(
+                            selected = order == favSort,
+                            onClick = { settings.allFavoritesSortOrder = order; favSort = order },
+                        )
+                        Text(
+                            org.nekosukuriputo.nekuva.core.ui.components.sortLabel(order),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }

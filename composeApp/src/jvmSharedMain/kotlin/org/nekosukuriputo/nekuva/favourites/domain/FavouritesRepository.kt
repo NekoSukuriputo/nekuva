@@ -134,6 +134,11 @@ class FavouritesRepository(
 		db.getFavouriteCategoriesDao().update(id, title, sortOrder.name, isTrackerEnabled, isVisibleOnShelf)
 	}
 
+	/** Toggle a category's "show in library" flag without touching its other fields (Doki tab Hide). */
+	suspend fun setCategoryVisibility(id: Long, isVisible: Boolean) {
+		db.getFavouriteCategoriesDao().updateVisibility(id, isVisible)
+	}
+
 	suspend fun removeCategories(ids: Collection<Long>) {
 		db.withTransactionKmp {
 			for (id in ids) {
