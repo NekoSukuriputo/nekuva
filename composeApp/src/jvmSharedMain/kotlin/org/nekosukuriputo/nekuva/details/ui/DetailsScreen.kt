@@ -3,6 +3,7 @@ package org.nekosukuriputo.nekuva.details.ui
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -257,7 +258,8 @@ fun DetailsScreen(
                     onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) },
                     onPageClick = { chapterId, page -> onPageClick(manga.id, chapterId, page) },
                     onDownloadClick = { showDownloadDialog = true },
-                    onForget = { viewModel.removeFromHistory() }
+                    onForget = { viewModel.removeFromHistory() },
+                    onViewPageImage = { url -> fullScreenCover = url },
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp))
@@ -659,6 +661,7 @@ fun ChaptersSheetContent(
     onPageClick: (chapterId: Long, page: Int) -> Unit,
     onDownloadClick: () -> Unit,
     onForget: () -> Unit,
+    onViewPageImage: (String) -> Unit = {},
 ) {
     val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val pagesEnabled = tabSettings.isPagesTabEnabled
@@ -815,6 +818,8 @@ fun ChaptersSheetContent(
                                     url = page.preview?.takeIf { it.isNotEmpty() } ?: page.url,
                                     number = index + 1,
                                     onClick = { onPageClick(ps.chapterId, index) },
+                                    // Long-press a page -> fullscreen image viewer (zoom + save + share).
+                                    onLongClick = { onViewPageImage(page.url) },
                                 )
                             }
                         }
@@ -857,15 +862,16 @@ fun ChaptersSheetContent(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit) {
+private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(13f / 18f)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         AsyncImage(
             model = url,

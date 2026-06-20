@@ -1144,8 +1144,9 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   double-tap zoom (1–5×), drag pan, tap kosong/Close tutup. **✅ Save + Share:** `image/domain/ImageSaveUseCase`
   (download bytes via OkHttp app-client → `PagePersister.savePage`/`sharePage`): Android tulis MediaStore/SAF +
   share-sheet, Desktop tulis Pictures/Nekuva. Tombol Save (snackbar `page_saved`/`error_occurred`) + Share di viewer.
-  **Wired:** tap cover di Details → viewer. **Defer (dicatat):** buka viewer dari thumbnail "Pages" tab & halaman
-  reader (perluasan — cover dulu).
+  **Wired:** tap cover di Details → viewer; **long-press thumbnail "Pages" tab → viewer** (zoom + Save + Share;
+  tap tetap buka reader di halaman itu, ikut Doki). **Reader:** sudah jadi fullscreen zoom-viewer dengan Save +
+  Share halaman bawaan (`ReaderViewModel.savePage()/sharePage()` + ikon/menu) — N/A, tak perlu viewer terpisah.
 - **AREA `picker` / import lokal** ✅ DONE — import `.cbz` + folder gambar ke library (`opt_local action_import`).
   **✅ Import CBZ + folder:** `local/domain/MangaImportUseCase` (port Doki `SingleMangaImporter`, KMP): `import`
   (file) + `importDirectory` (folder via callback `copyContents`) → copy ke `getDefaultWriteableDir()`, parse
