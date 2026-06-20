@@ -42,9 +42,11 @@ import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.core.model.isLocal
+import org.nekosukuriputo.nekuva.remotelist.ui.mangaStateTitle
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import org.nekosukuriputo.nekuva.parsers.model.MangaTag
+import androidx.compose.ui.unit.sp
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +84,7 @@ fun DetailsScreen(
     var showEditOverride by remember { mutableStateOf(false) }
     var fullScreenCover by remember { mutableStateOf<String?>(null) }
     var tagDialogFor by remember { mutableStateOf<MangaTag?>(null) }
+    var authorDialogFor by remember { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val downloadStartedMsg = stringResource(Res.string.download_started)
@@ -98,18 +101,55 @@ fun DetailsScreen(
             title = { Text(tag.title) },
             text = {
                 Column {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.search_on_s, sourceTitle)) },
-                        onClick = { tagDialogFor = null; onSearchInSource(sourceName, tag.title) },
+                    Text(
+                        text = stringResource(Res.string.search_on_s, sourceTitle),
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { tagDialogFor = null; onSearchInSource(sourceName, tag.title) }
+                            .padding(vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyLarge,
                     )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.search_everywhere)) },
-                        onClick = { tagDialogFor = null; onGlobalSearch(tag.title) },
+                    Text(
+                        text = stringResource(Res.string.search_everywhere),
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { tagDialogFor = null; onGlobalSearch(tag.title) }
+                            .padding(vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { tagDialogFor = null }) { Text(stringResource(Res.string.close)) } },
+        )
+    }
+
+    // Author click (Doki showAuthorDialog): search this author in the source, or everywhere.
+    authorDialogFor?.let { author ->
+        val sourceName = (uiState as? DetailsUiState.Success)?.manga?.source?.name ?: ""
+        val sourceTitle = org.nekosukuriputo.nekuva.parsers.model.MangaParserSource.entries
+            .find { it.name == sourceName }?.title ?: sourceName
+        AlertDialog(
+            onDismissRequest = { authorDialogFor = null },
+            title = { Text(author) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(Res.string.search_on_s, sourceTitle),
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { authorDialogFor = null; onSearchInSource(sourceName, author) }
+                            .padding(vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        text = stringResource(Res.string.search_everywhere),
+                        modifier = Modifier.fillMaxWidth()
+                            .clickable { authorDialogFor = null; onGlobalSearch(author) }
+                            .padding(vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { authorDialogFor = null }) { Text(stringResource(Res.string.close)) } },
         )
     }
 
@@ -357,6 +397,12 @@ fun DetailsScreen(
                     readingTimeText = readingTime?.let { formatReadingTime(it) },
                     onCoverClick = { fullScreenCover = it },
                     onTagClick = { tagDialogFor = it },
+                    onAuthorClick = { authorDialogFor = it },
+                    progressPercent = history?.percent?.takeIf { it >= 0f },
+                    currentChapterNumber = history?.let { h ->
+                        (uiState as? DetailsUiState.Success)?.manga?.chapters
+                            ?.indexOfFirst { it.id == h.chapterId }?.takeIf { it >= 0 }?.plus(1)
+                    },
                     paddingValues = paddingValues
                 )
             }
@@ -376,6 +422,9 @@ fun MangaDetailsContent(
     readingTimeText: String? = null,
     onCoverClick: (String?) -> Unit = {},
     onTagClick: (MangaTag) -> Unit = {},
+    onAuthorClick: (String) -> Unit = {},
+    progressPercent: Float? = null,
+    currentChapterNumber: Int? = null,
     paddingValues: PaddingValues
 ) {
     val scrollState = androidx.compose.foundation.rememberScrollState()
@@ -462,20 +511,65 @@ fun MangaDetailsContent(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DetailRow(stringResource(Res.string.source), manga.source.name)
-                DetailRow(stringResource(Res.string.author), manga.authors.joinToString().takeIf { it.isNotEmpty() } ?: "-")
-                // Fallback for locale, if not present we just use "-" or name
-                val localeStr = try { manga.source.javaClass.getMethod("getLang").invoke(manga.source) as String } catch(e: Exception) { "-" }
-                DetailRow(stringResource(Res.string.translation), if (localeStr != "-") localeStr else "-")
-                
-                if (manga.rating >= 0f) {
-                    DetailRow(stringResource(Res.string.rating), "${manga.rating} / 10")
+                val parserSource = org.nekosukuriputo.nekuva.parsers.model.MangaParserSource.entries
+                    .find { it.name == manga.source.name }
+                // Source: favicon + title (Doki source row).
+                DetailRowContent(stringResource(Res.string.source)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (parserSource != null) {
+                            org.nekosukuriputo.nekuva.core.ui.components.SourceFaviconImage(
+                                sourceName = manga.source.name,
+                                displayName = parserSource.title,
+                                modifier = Modifier.size(20.dp),
+                                letterSize = 11.sp,
+                            )
+                        }
+                        Text(parserSource?.title ?: manga.source.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
-                DetailRow(stringResource(Res.string.state), manga.state?.name ?: "-")
-                DetailRow(stringResource(Res.string.chapters), manga.chapters?.size?.toString() ?: "0")
-                // Estimated reading time (Doki ReadingTimeUseCase) — only when enabled & long enough.
-                if (readingTimeText != null) {
-                    DetailRow(stringResource(Res.string.reading_time), readingTimeText)
+                // Author: blue + clickable -> author search dialog (Doki showAuthorDialog).
+                val author = manga.authors.joinToString().takeIf { it.isNotEmpty() }
+                if (author != null) {
+                    DetailRowContent(stringResource(Res.string.author)) {
+                        Text(
+                            text = author,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.clickable { onAuthorClick(author) },
+                        )
+                    }
+                }
+                // Translation: flag + language name (Doki locale row).
+                val locale = parserSource?.locale
+                if (!locale.isNullOrBlank()) {
+                    DetailRow(stringResource(Res.string.translation), translationLabel(locale))
+                }
+                if (manga.rating > 0f) {
+                    DetailRow(stringResource(Res.string.rating), "${(manga.rating * 10f).toInt() / 10f} / 10")
+                }
+                manga.state?.let { DetailRow(stringResource(Res.string.state), mangaStateTitle(it)) }
+                // Chapters: "Bab X dari Y (reading time)" (Doki) — X = current read position from history.
+                val total = manga.chapters?.size ?: 0
+                val chaptersValue = buildString {
+                    if (currentChapterNumber != null && total > 0) {
+                        append(stringResource(Res.string.chapter_d_of_d, currentChapterNumber, total))
+                    } else {
+                        append(total.toString())
+                    }
+                    if (readingTimeText != null) append(" ($readingTimeText)")
+                }
+                DetailRow(stringResource(Res.string.chapters), chaptersValue)
+                // Progress: bar + percent (Doki progress row).
+                if (progressPercent != null && progressPercent >= 0f) {
+                    DetailRowContent(stringResource(Res.string.progress)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            LinearProgressIndicator(
+                                progress = { progressPercent.coerceIn(0f, 1f) },
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text("${(progressPercent * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
                 }
             }
         }
@@ -547,6 +641,36 @@ fun MangaDetailsContent(
 
         Spacer(Modifier.height(16.dp))
     }
+}
+
+/** Detail row with an arbitrary value slot (icons, clickable text, progress bar). */
+@Composable
+fun DetailRowContent(label: String, content: @Composable () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(0.35f),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(modifier = Modifier.weight(0.65f)) { content() }
+    }
+}
+
+/** Source locale → flag emoji + native language name (Doki translation indicator). */
+private fun translationLabel(locale: String): String {
+    val lang = locale.substringBefore('-').substringBefore('_').lowercase()
+    val flag = when (lang) {
+        "id", "in" -> "🇮🇩"; "en" -> "🇬🇧"; "ja" -> "🇯🇵"; "ko" -> "🇰🇷"; "zh" -> "🇨🇳"
+        "ru" -> "🇷🇺"; "fr" -> "🇫🇷"; "es" -> "🇪🇸"; "de" -> "🇩🇪"; "pt" -> "🇵🇹"
+        "ar" -> "🇸🇦"; "vi" -> "🇻🇳"; "th" -> "🇹🇭"; "tr" -> "🇹🇷"; "it" -> "🇮🇹"; "pl" -> "🇵🇱"
+        else -> "🏳"
+    }
+    val name = runCatching {
+        java.util.Locale.forLanguageTag(lang).getDisplayLanguage(java.util.Locale.forLanguageTag(lang))
+            .replaceFirstChar { it.uppercase() }
+    }.getOrNull()?.takeIf { it.isNotBlank() } ?: lang.uppercase()
+    return "$flag $name"
 }
 
 @Composable

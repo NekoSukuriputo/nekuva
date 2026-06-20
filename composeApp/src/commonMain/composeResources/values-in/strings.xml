@@ -66,7 +66,7 @@
     <string name="text_file_sizes">B|kB|MB|GB|TB</string>
     <string name="standard">Standar</string>
     <string name="grid_size">Ukuran kisi</string>
-    <string name="search_on_s">Cari di %s</string>
+    <string name="search_on_s">Cari di %1$s</string>
     <string name="delete_manga">Hapus manga</string>
     <string name="text_delete_local_manga">Hapus \"%s\" dari perangkat secara permanen?</string>
     <string name="reader_settings">Pengaturan pembaca</string>

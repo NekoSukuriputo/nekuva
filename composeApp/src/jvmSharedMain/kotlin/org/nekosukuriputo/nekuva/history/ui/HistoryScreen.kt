@@ -83,6 +83,9 @@ fun HistoryScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     val grouping by settings.observeBoolean(AppSettings.KEY_HISTORY_GROUPING, true)
         .collectAsState(initial = settings.isHistoryGroupingEnabled)
+    // Incognito banner reacts live to the toolbar toggle (observe, not a one-shot read).
+    val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
+        .collectAsState(initial = settings.isIncognitoModeEnabled)
     var showFavDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     // Quick-filter chips (Doki HistoryListQuickFilter): Downloaded/New/Completed/Favorite/Not-favorite/NSFW
@@ -159,7 +162,7 @@ fun HistoryScreen(
             is HistoryUiState.Success -> {
               Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 // Incognito banner (Doki InfoModel): reading progress isn't recorded while incognito is on.
-                if (settings.isIncognitoModeEnabled) {
+                if (incognitoOn) {
                     org.nekosukuriputo.nekuva.core.ui.components.IncognitoBanner()
                 }
                 // Quick-filter chips scroll above the list (Doki adds them as the first list item).
