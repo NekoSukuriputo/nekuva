@@ -1,33 +1,19 @@
 package org.nekosukuriputo.nekuva.local.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
-import kotlinx.coroutines.launch
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +24,7 @@ import androidx.compose.ui.Modifier
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.core.ui.components.EditOverrideDialog
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -46,10 +33,14 @@ import org.nekosukuriputo.nekuva.core.ui.components.MangaListContent
 import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
 import org.nekosukuriputo.nekuva.core.ui.components.rememberMangaListMode
 import org.nekosukuriputo.nekuva.list.ui.rememberMangaListDecorations
-import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.*
 
+/**
+ * Local library list (Doki LocalListFragment). No own toolbar in the normal state — the main shell search
+ * bar + overflow (Import / List options / Directories) is the toolbar. Long-press enters selection mode
+ * (Doki mode_local): Select-all / Share / Edit override (single) / Delete.
+ */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun LocalListScreen(
@@ -58,32 +49,16 @@ fun LocalListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     val settings = koinInject<AppSettings>()
     val listMode = rememberMangaListMode(settings)          // Local follows the global list mode
     val gridSize = rememberGridSize(settings)
     val showSavedBadge = (settings.getMangaListBadges() and 2) != 0 // downloaded == "saved"
     val deco = rememberMangaListDecorations() // reading progress + favourite badge (Doki indicators)
-    // Multi-select (Doki mode_local): long-press enters; contextual bar select-all/share/delete.
+    // Multi-select (Doki mode_local): long-press enters; contextual bar select-all/share/edit/delete.
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
     val mangas = (uiState as? LocalListUiState.Success)?.mangaList.orEmpty()
     fun selected() = mangas.filter { selection.isSelected(it.id) }
-    val sortOrder by viewModel.sortOrder.collectAsState()
-    var showSortDialog by remember { mutableStateOf(false) }
-    // Local import (Doki action_import): pick a .cbz → copy into library → parse (list auto-refreshes via the bus).
-    val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
-    val filePicker = rememberMangaFilePicker()
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
-    val importDoneMsg = stringResource(Res.string.import_completed)
-    val importErrMsg = stringResource(Res.string.error_occurred)
-    var showImportMenu by remember { mutableStateOf(false) }
-    fun runImport(block: suspend () -> Boolean) {
-        scope.launch {
-            runCatching { block() }
-                .onSuccess { picked -> if (picked) snackbarHostState.showSnackbar(importDoneMsg) }
-                .onFailure { snackbarHostState.showSnackbar(importErrMsg) }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -102,50 +77,20 @@ fun LocalListScreen(
                         IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selected()); selection.clear() }) {
                             Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
                         }
+                        // Edit override (Doki action_edit_override) — single selection only.
+                        if (selection.count == 1) {
+                            IconButton(onClick = { showEditDialog = true }) {
+                                Icon(Icons.Filled.Edit, contentDescription = stringResource(Res.string.edit))
+                            }
+                        }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.delete))
                         }
                     },
                 )
-            } else {
-                // Thin bar with the import + sort actions (Doki opt_local); shell MainTopBar sits above.
-                TopAppBar(
-                    title = {},
-                    actions = {
-                        Box {
-                            IconButton(onClick = { showImportMenu = true }) {
-                                Icon(Icons.Filled.FileDownload, contentDescription = stringResource(Res.string._import))
-                            }
-                            DropdownMenu(expanded = showImportMenu, onDismissRequest = { showImportMenu = false }) {
-                                // Doki ImportDialog: import a .cbz archive, or a folder of images.
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(Res.string.comics_archive)) },
-                                    onClick = {
-                                        showImportMenu = false
-                                        runImport { filePicker.pickCbz { name, input -> importer.import(name, input) } }
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(Res.string.folder_with_images)) },
-                                    onClick = {
-                                        showImportMenu = false
-                                        runImport {
-                                            filePicker.pickDirectory { name, copyInto ->
-                                                importer.importDirectory(name) { dest -> copyInto(dest) }
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                        IconButton(onClick = { showSortDialog = true }) {
-                            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(Res.string.sort_order))
-                        }
-                    },
-                )
             }
+            // Non-selection: the shell search toolbar is the single toolbar (Doki parity).
         },
-        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         when (val state = uiState) {
             is LocalListUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
@@ -186,35 +131,21 @@ fun LocalListScreen(
         )
     }
 
-    if (showSortDialog) {
-        // Local uses the parser SortOrder (NEWEST/ALPHABETICAL/RATING) — Doki KEY_LOCAL_LIST_ORDER.
-        val options = listOf(
-            org.nekosukuriputo.nekuva.parsers.model.SortOrder.NEWEST to Res.string.newest,
-            org.nekosukuriputo.nekuva.parsers.model.SortOrder.ALPHABETICAL to Res.string.by_name,
-            org.nekosukuriputo.nekuva.parsers.model.SortOrder.RATING to Res.string.by_rating,
-        )
-        AlertDialog(
-            onDismissRequest = { showSortDialog = false },
-            title = { Text(stringResource(Res.string.sort_order)) },
-            text = {
-                Column {
-                    options.forEach { (order, label) ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                viewModel.setSortOrder(order); showSortDialog = false
-                            }.padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = order == sortOrder, onClick = {
-                                viewModel.setSortOrder(order); showSortDialog = false
-                            })
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(label))
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showSortDialog = false }) { Text(stringResource(Res.string.done)) } },
-        )
+    if (showEditDialog) {
+        val target = selected().firstOrNull()
+        if (target != null) {
+            EditOverrideDialog(
+                currentTitle = target.title,
+                currentCoverUrl = target.coverUrl,
+                onDismiss = { showEditDialog = false },
+                onSave = { title, coverUrl ->
+                    viewModel.setOverride(target, title, coverUrl)
+                    showEditDialog = false
+                    selection.clear()
+                },
+            )
+        } else {
+            showEditDialog = false
+        }
     }
 }

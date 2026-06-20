@@ -69,6 +69,7 @@ fun MainScreen(
     val settings = koinInject<AppSettings>()
     var listConfigKey by remember { mutableStateOf<String?>(null) }
     var showClearHistory by remember { mutableStateOf(false) }
+    var showImportChoice by remember { mutableStateOf(false) }
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -76,9 +77,13 @@ fun MainScreen(
         navController, currentDestination,
         onListOptions = { listConfigKey = it },
         onClearHistory = { showClearHistory = true },
+        onImport = { showImportChoice = true },
         incognitoOn = incognitoOn,
         onToggleIncognito = { settings.isIncognitoModeEnabled = !incognitoOn },
     )
+    // Local import (Doki opt_local action_import → ImportDialog): pick a .cbz or a folder, copy + parse.
+    val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
+    val filePicker = org.nekosukuriputo.nekuva.local.ui.rememberMangaFilePicker()
     // Configurable bottom-nav (Doki nav_main) + label visibility (nav_labels), observed live.
     val navItems by settings.observeNavItems().collectAsState(initial = settings.mainNavItems)
     val tabs = remember(navItems) { navItems.map(::navItemToTab) }
@@ -309,6 +314,40 @@ fun MainScreen(
             },
         )
     }
+
+    // Import choice (Doki ImportDialog): a .cbz archive or a folder of images → MangaImportUseCase.
+    if (showImportChoice) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showImportChoice = false },
+            title = { Text(stringResource(Res.string._import)) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    androidx.compose.material3.TextButton(onClick = {
+                        showImportChoice = false
+                        fabScope.launch {
+                            runCatching { filePicker.pickCbz { name, input -> importer.import(name, input) } }
+                        }
+                    }) { Text(stringResource(Res.string.comics_archive)) }
+                    androidx.compose.material3.TextButton(onClick = {
+                        showImportChoice = false
+                        fabScope.launch {
+                            runCatching {
+                                filePicker.pickDirectory { name, copyInto ->
+                                    importer.importDirectory(name) { dest -> copyInto(dest) }
+                                }
+                            }
+                        }
+                    }) { Text(stringResource(Res.string.folder_with_images)) }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showImportChoice = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
 }
 
 /** Doki's main-screen "resume reading" FAB. */
@@ -332,12 +371,15 @@ private fun rememberOverflowItems(
     currentDestination: NavDestination?,
     onListOptions: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onImport: () -> Unit,
     incognitoOn: Boolean,
     onToggleIncognito: () -> Unit,
 ): List<OverflowItem> {
     val route = currentDestination?.route ?: ""
     // Read all labels unconditionally (stringResource must not be called inside a changing branch).
     val clearHistory = stringResource(Res.string.clear_history)
+    val importLabel = stringResource(Res.string._import)
+    val directoriesLabel = stringResource(Res.string.directories)
     val listOptions = stringResource(Res.string.list_options)
     val statistics = stringResource(Res.string.statistics)
     val favCategories = stringResource(Res.string.favourites_categories)
@@ -367,7 +409,13 @@ private fun rememberOverflowItems(
             OverflowItem(sourcesCatalog, enabled = true, onClick = { navController.navigate(SourcesCatalogRoute) }),
         )
         has(FeedTabRoute) -> listOf(disabled(update), disabled(showUpdated), disabled(clearFeed))
-        has(HomeRoute) -> listOf(disabled(filter), listOpt(AppSettings.KEY_LIST_MODE), disabled(directories))
+        // Local (Doki opt_local): Import + List options + Directories. Filter hidden until the local
+        // filter sheet exists (Doki hides it when !isFilterSupported).
+        has(HomeRoute) -> listOf(
+            OverflowItem(importLabel, enabled = true, onClick = onImport),
+            listOpt(AppSettings.KEY_LIST_MODE),
+            OverflowItem(directoriesLabel, enabled = true, onClick = { navController.navigate(StorageNetworkSettingsRoute) }),
+        )
         else -> emptyList()
     }
 

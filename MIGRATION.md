@@ -1230,10 +1230,16 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **Edit-category inline ✅**: long-press tab → Edit → `RenameCategoryDialog` (OutlinedTextField) → `renameCategory`
   (DAO `updateTitle` + repo `renameCategory`). Tak lagi lompat ke layar Manage.
 
-### LAYAR: Local / Penyimpanan lokal (Doki `local/ui` + `opt_local` + `mode_local`)
-- 🔴 Overflow: **Import** (file/folder → AREA picker), Filter, Directories.
-- 🔴 Selection mode: Share, **Delete**, Edit, Select-all. (hapus per-item via long-press sudah ada — perluas ke multi-select.)
-- 🔴 List mode (CORE-3).
+### LAYAR: Local / Penyimpanan lokal (Doki `local/ui` + `opt_local` + `mode_local`) — SELESAI
+- **Toolbar tunggal ✅**: LocalListScreen tak lagi punya TopAppBar sendiri (Import + Sort dipindah/dihapus) →
+  shell search bar. Overflow shell Local (Doki opt_local): **Import** (dialog Comics archive / Folder → picker +
+  `MangaImportUseCase`, di-host MainScreen) + **List options** (list mode + grid) + **Directories**
+  (→ StorageNetworkSettings). Sort lokal khusus-Nekuva dihapus (Doki Local tak punya sort).
+- **Selection mode ✅** (`mode_local`): Select-all / Share / **Edit override (single)** / Delete (+ konfirmasi).
+  Reuse `EditOverrideDialog`; VM `setOverride`.
+- ✅ List mode (CORE-3) + overlay cover/progress + saved badge.
+- **Defer kecil (Doki-conditional):** **Filter** lokal (Doki sembunyikan saat `!isFilterSupported`) — sheet filter
+  by-tags belum ada (bagian AREA `filter`); item disembunyikan, bukan disabled.
 
 ### LAYAR: Feed / Updates (Doki `tracker/ui/feed` + `opt_feed`)
 - 🟡 Overflow: Update (refresh manual — verifikasi), **Show updated** (toggle), **Clear feed**.

@@ -55,6 +55,24 @@ class LocalListViewModel(
         }
     }
 
+    /** Selection-mode (single): save a custom title/cover override (Doki mode_local action_edit_override). */
+    fun setOverride(manga: org.nekosukuriputo.nekuva.parsers.model.Manga, title: String?, coverUrl: String?) {
+        viewModelScope.launch {
+            val existing = runCatching { mangaDataRepository.getOverride(manga.id) }.getOrNull()
+            runCatching {
+                mangaDataRepository.setOverride(
+                    manga,
+                    org.nekosukuriputo.nekuva.core.model.MangaOverride(
+                        coverUrl = coverUrl?.trim()?.ifEmpty { null },
+                        title = title?.trim()?.ifEmpty { null },
+                        contentRating = existing?.contentRating,
+                    ),
+                )
+            }
+            loadManga()
+        }
+    }
+
     fun loadManga() {
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
