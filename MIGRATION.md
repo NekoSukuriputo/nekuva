@@ -1203,6 +1203,17 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   Not-favorite=heart-outline, NSFW=warning, Tag=tag, **Source=favicon sumber** (`SourceFaviconImage` sebagai leadingIcon).
 - **LAYAR HISTORY: SELESAI** (Desktop+Android compile hijau). Sisa: run-verify GUI Anda; ikon empty-state khas Doki opsional.
 
+### LAYAR: Statistics (Doki `stats/ui` StatsActivity + PieChartView) — SELESAI tampilan
+- VM sudah lengkap (period + kategori + readingStats + clearStats). **UI disamakan dgn Doki:**
+  - Judul **"Statistik membaca"** (`reading_stats`), overflow **Clear** (dialog `clear_stats_confirm`).
+  - **Period = chip dropdown** (`AssistChip` ikon `History` + panah → DropdownMenu Day/Week/Month/3M/All), bukan
+    deretan chip (sebelumnya). + **chip kategori favourite** (multi-select).
+  - **Donut/pie chart** (`Canvas` `drawArc` Stroke ring) proporsi waktu-baca, warna per-manga deterministik
+    (`statsColor`, port `KotatsuColors.ofManga`).
+  - **Legend** = swatch warna + judul + durasi ("Kurang dari semenit") — ikut Doki `item_stats` (bukan cover+bar lagi).
+  - Empty state `empty_stats_text`.
+  - **Defer kecil:** tap segmen/legend → MangaStatsSheet per-manga (Doki) — belum (Details sudah punya stats dialog).
+
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
 - 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
 - 🔴 Selection mode: Share, Remove, Save, **Categories** (pindah kategori), Fix, Edit, Mark as completed, Select-all.

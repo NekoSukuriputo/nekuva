@@ -1,30 +1,36 @@
 package org.nekosukuriputo.nekuva.stats.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,17 +45,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.stats.domain.StatsPeriod
 import org.nekosukuriputo.nekuva.stats.domain.StatsRecord
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
 
-/** Reading statistics (Doki StatsActivity): period filter + per-manga reading time with proportion bars. */
+/**
+ * Reading statistics (Doki StatsActivity): a period-dropdown chip + favourite-category filter chips, a
+ * donut chart of reading-time proportions per manga, and a colour-keyed legend list below.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
@@ -64,13 +77,13 @@ fun StatsScreen(
     var showClearDialog by remember { mutableStateOf(false) }
 
     val total = stats.sumOf { it.duration }.coerceAtLeast(1L)
-    val otherLabel = stringResource(Res.string.other)
+    val otherLabel = stringResource(Res.string.other_manga)
 
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text(stringResource(Res.string.statistics)) },
-            text = { Text(stringResource(Res.string.clear)) },
+            title = { Text(stringResource(Res.string.clear_stats)) },
+            text = { Text(stringResource(Res.string.clear_stats_confirm)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.clearStats(); showClearDialog = false }) {
                     Text(stringResource(Res.string.clear))
@@ -83,7 +96,7 @@ fun StatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.statistics)) },
+                title = { Text(stringResource(Res.string.reading_stats)) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -91,54 +104,56 @@ fun StatsScreen(
                 },
                 actions = {
                     IconButton(onClick = { showClearDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.clear))
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.clear_stats))
                     }
                 },
             )
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            // Period filter (Doki period spinner).
-            androidx.compose.foundation.lazy.LazyRow(
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            // Period dropdown chip + category filter chips (Doki chip_period + category chips).
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                items(StatsPeriod.entries) { p ->
+                item { PeriodChip(period = period, onSelect = { viewModel.setPeriod(it) }) }
+                items(categories, key = { it.id }) { cat ->
                     FilterChip(
-                        selected = p == period,
-                        onClick = { viewModel.setPeriod(p) },
-                        label = { Text(periodLabel(p)) },
+                        selected = cat.id in selectedCategories,
+                        onClick = { viewModel.setCategoryChecked(cat.id, cat.id !in selectedCategories) },
+                        label = { Text(cat.title) },
                     )
-                }
-            }
-            // Category filter (Doki category multi-select); only when categories exist.
-            if (categories.isNotEmpty()) {
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(categories, key = { it.id }) { cat ->
-                        FilterChip(
-                            selected = cat.id in selectedCategories,
-                            onClick = { viewModel.setCategoryChecked(cat.id, cat.id !in selectedCategories) },
-                            label = { Text(cat.title) },
-                        )
-                    }
                 }
             }
 
             when {
                 isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 stats.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(Res.string.nothing_found), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        stringResource(Res.string.empty_stats_text),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(32.dp),
+                    )
                 }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                    contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    // Donut chart (Doki PieChartView): segments sized by reading-time share, coloured per manga.
+                    item {
+                        PieChart(
+                            segments = stats.map { (it.duration.toFloat() / total) to statsColor(it.manga) },
+                            modifier = Modifier
+                                .fillMaxWidth(0.72f)
+                                .aspectRatio(1f)
+                                .padding(vertical = 16.dp),
+                        )
+                    }
+                    // Legend (Doki item_stats): colour swatch + title + duration.
                     items(stats, key = { it.manga?.id ?: -1L }) { record ->
-                        StatsRow(record = record, fraction = record.duration.toFloat() / total, otherLabel = otherLabel)
+                        StatsLegendRow(record = record, otherLabel = otherLabel)
                     }
                 }
             }
@@ -146,31 +161,76 @@ fun StatsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StatsRow(record: StatsRecord, fraction: Float, otherLabel: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(
-            modifier = Modifier.size(width = 40.dp, height = 56.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            val cover = record.manga?.coverUrl
-            if (cover != null) {
-                AsyncImage(model = cover, contentDescription = null, modifier = Modifier.fillMaxSize())
+private fun PeriodChip(period: StatsPeriod, onSelect: (StatsPeriod) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        AssistChip(
+            onClick = { expanded = true },
+            label = { Text(periodLabel(period)) },
+            leadingIcon = { Icon(Icons.Filled.History, contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
+            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            StatsPeriod.entries.forEach { p ->
+                DropdownMenuItem(
+                    text = { Text(periodLabel(p)) },
+                    onClick = { onSelect(p); expanded = false },
+                )
             }
         }
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    }
+}
+
+@Composable
+private fun PieChart(segments: List<Pair<Float, Color>>, modifier: Modifier) {
+    val empty = MaterialTheme.colorScheme.surfaceVariant
+    Canvas(modifier) {
+        val thickness = size.minDimension * 0.22f
+        val inset = thickness / 2f
+        val arcSize = Size(size.width - thickness, size.height - thickness)
+        val topLeft = Offset(inset, inset)
+        if (segments.isEmpty()) {
+            drawArc(empty, 0f, 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(thickness))
+            return@Canvas
+        }
+        var start = -90f
+        segments.forEach { (fraction, color) ->
+            val sweep = fraction.coerceIn(0f, 1f) * 360f
+            drawArc(color, start, sweep, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(thickness))
+            start += sweep
+        }
+    }
+}
+
+@Composable
+private fun StatsLegendRow(record: StatsRecord, otherLabel: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            modifier = Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(statsColor(record.manga)),
+        )
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = record.manga?.title ?: otherLabel,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            LinearProgressIndicator(progress = { fraction.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+            Text(
+                text = formatDuration(record.hours, record.minutes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Spacer(Modifier.width(4.dp))
-        Text(text = formatDuration(record.hours, record.minutes), style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+/** Deterministic per-manga colour for chart segments + legend (Doki KotatsuColors.ofManga). */
+private fun statsColor(manga: Manga?): Color {
+    if (manga == null) return Color(0xFF9E9E9E)
+    val hash = (manga.id xor (manga.id ushr 32)).toInt() and 0x7FFFFFFF
+    return Color.hsv((hash % 360).toFloat(), 0.55f, 0.85f)
 }
 
 @Composable
