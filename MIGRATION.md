@@ -1212,7 +1212,8 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
     (`statsColor`, port `KotatsuColors.ofManga`).
   - **Legend** = swatch warna + judul + durasi ("Kurang dari semenit") — ikut Doki `item_stats` (bukan cover+bar lagi).
   - Empty state `empty_stats_text`.
-  - **Defer kecil:** tap segmen/legend → MangaStatsSheet per-manga (Doki) — belum (Details sudah punya stats dialog).
+  - **Tap legend → per-manga stats ✅** (Doki MangaStatsSheet): baris legend klik → `MangaStatsDialog`
+    (`StatsRepository.getMangaStats` → reading_time + pages).
 
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`) — SELESAI
 - **Toolbar tunggal ✅**: container tak lagi punya TopAppBar sendiri → shell search bar. Overflow shell Favorites:
@@ -1226,7 +1227,8 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   multi-select → addToCategory)**/Mark-completed/**Fix(AutoFix)**/**Edit override(single)**/Remove. Komponen baru
   `core/ui/components/CategoryPickerDialog` (checkbox multi-kategori, reusable).
 - ✅ Sort + list mode (CORE-3/4 via shell), overlay cover/progress (CORE-2), empty state.
-- **Defer kecil:** Edit-category dari long-press buka layar Manage (bukan dialog rename inline) — fungsional, refinement.
+- **Edit-category inline ✅**: long-press tab → Edit → `RenameCategoryDialog` (OutlinedTextField) → `renameCategory`
+  (DAO `updateTitle` + repo `renameCategory`). Tak lagi lompat ke layar Manage.
 
 ### LAYAR: Local / Penyimpanan lokal (Doki `local/ui` + `opt_local` + `mode_local`)
 - 🔴 Overflow: **Import** (file/folder → AREA picker), Filter, Directories.

@@ -29,10 +29,13 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.all_favourites
+import nekuva.composeapp.generated.resources.cancel
 import nekuva.composeapp.generated.resources.delete
 import nekuva.composeapp.generated.resources.edit_category
 import nekuva.composeapp.generated.resources.hide
 import nekuva.composeapp.generated.resources.manage
+import nekuva.composeapp.generated.resources.name
+import nekuva.composeapp.generated.resources.save
 
 /** One tab descriptor: [id] = -1 for "All favourites", else a real category. */
 private data class FavTab(val id: Long, val title: String, val isAll: Boolean)
@@ -66,6 +69,7 @@ fun FavouritesScreen(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     var menuForTab by remember { mutableStateOf<FavTab?>(null) }
+    var renameTab by remember { mutableStateOf<FavTab?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         ScrollableTabRow(selectedTabIndex = pagerState.currentPage.coerceIn(0, tabs.lastIndex), edgePadding = 8.dp) {
@@ -85,7 +89,7 @@ fun FavouritesScreen(
                     FavTabMenu(
                         tab = if (menuForTab?.id == tab.id) tab else null,
                         onDismiss = { menuForTab = null },
-                        onEdit = { onManageCategoriesClick() },
+                        onEdit = { renameTab = tab },
                         onDelete = { viewModel.deleteCategory(tab.id) },
                         onHide = { viewModel.hide(tab.id) },
                         onManage = { onManageCategoriesClick() },
@@ -98,6 +102,40 @@ fun FavouritesScreen(
             FavouritesListScreen(categoryId = tabs[page].id, onMangaClick = onMangaClick)
         }
     }
+
+    renameTab?.let { tab ->
+        RenameCategoryDialog(
+            currentTitle = tab.title,
+            onDismiss = { renameTab = null },
+            onConfirm = { newTitle -> viewModel.renameCategory(tab.id, newTitle); renameTab = null },
+        )
+    }
+}
+
+@Composable
+private fun RenameCategoryDialog(currentTitle: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var text by remember { mutableStateOf(currentTitle) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.edit_category)) },
+        text = {
+            androidx.compose.material3.OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                label = { Text(stringResource(Res.string.name)) },
+            )
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { onConfirm(text) },
+                enabled = text.isNotBlank(),
+            ) { Text(stringResource(Res.string.save)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
+        },
+    )
 }
 
 @Composable

@@ -2,6 +2,7 @@ package org.nekosukuriputo.nekuva.stats.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,11 @@ fun StatsScreen(
 
     val total = stats.sumOf { it.duration }.coerceAtLeast(1L)
     val otherLabel = stringResource(Res.string.other_manga)
+    // Tap a legend row -> per-manga reading stats (Doki MangaStatsSheet).
+    var statsForManga by remember { mutableStateOf<org.nekosukuriputo.nekuva.parsers.model.Manga?>(null) }
+    statsForManga?.let { manga ->
+        MangaStatsDialog(manga = manga, onDismiss = { statsForManga = null })
+    }
 
     if (showClearDialog) {
         AlertDialog(
@@ -154,9 +160,13 @@ fun StatsScreen(
                             )
                         }
                     }
-                    // Legend (Doki item_stats): colour swatch + title + duration.
+                    // Legend (Doki item_stats): colour swatch + title + duration. Tap → per-manga stats.
                     items(stats, key = { it.manga?.id ?: -1L }) { record ->
-                        StatsLegendRow(record = record, otherLabel = otherLabel)
+                        StatsLegendRow(
+                            record = record,
+                            otherLabel = otherLabel,
+                            onClick = record.manga?.let { m -> { statsForManga = m } },
+                        )
                     }
                 }
             }
@@ -208,8 +218,13 @@ private fun PieChart(segments: List<Pair<Float, Color>>, modifier: Modifier) {
 }
 
 @Composable
-private fun StatsLegendRow(record: StatsRecord, otherLabel: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun StatsLegendRow(record: StatsRecord, otherLabel: String, onClick: (() -> Unit)? = null) {
+    Row(
+        modifier = (if (onClick != null) Modifier.fillMaxWidth().clickable(onClick = onClick) else Modifier.fillMaxWidth())
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Box(
             modifier = Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(statsColor(record.manga)),
         )
@@ -227,6 +242,29 @@ private fun StatsLegendRow(record: StatsRecord, otherLabel: String) {
             )
         }
     }
+}
+
+/** Per-manga reading stats (Doki MangaStatsSheet): total read time + pages for the tapped manga. */
+@Composable
+private fun MangaStatsDialog(manga: Manga, onDismiss: () -> Unit) {
+    val statsRepository = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.stats.data.StatsRepository>()
+    var info by remember(manga.id) { mutableStateOf<org.nekosukuriputo.nekuva.stats.domain.MangaStatsInfo?>(null) }
+    androidx.compose.runtime.LaunchedEffect(manga.id) {
+        info = runCatching { statsRepository.getMangaStats(manga.id) }.getOrNull()
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(manga.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            val data = info
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val totalMin = ((data?.totalDurationMs ?: 0L) / 60_000L).toInt()
+                Text(stringResource(Res.string.reading_time) + ": " + formatDuration(totalMin / 60, totalMin % 60))
+                Text(stringResource(Res.string.pages) + ": " + (data?.totalPages ?: 0))
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.close)) } },
+    )
 }
 
 /** Deterministic per-manga colour for chart segments + legend (Doki KotatsuColors.ofManga). */

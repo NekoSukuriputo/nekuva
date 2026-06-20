@@ -139,6 +139,11 @@ class FavouritesRepository(
 		db.getFavouriteCategoriesDao().updateVisibility(id, isVisible)
 	}
 
+	/** Rename a category (Doki Edit category) without touching its sort/tracking/visibility. */
+	suspend fun renameCategory(id: Long, title: String) {
+		db.getFavouriteCategoriesDao().updateTitle(id, title)
+	}
+
 	suspend fun removeCategories(ids: Collection<Long>) {
 		db.withTransactionKmp {
 			for (id in ids) {
