@@ -40,6 +40,31 @@ class HistoryViewModel(
     private val _filters = MutableStateFlow<Set<ListFilterOption>>(emptySet())
     val filters: StateFlow<Set<ListFilterOption>> = _filters.asStateFlow()
 
+    // Available quick-filter chips incl. popular sources + tags (Doki getAvailableFilterOptions).
+    private val _availableFilters = MutableStateFlow<List<ListFilterOption>>(emptyList())
+    val availableFilters: StateFlow<List<ListFilterOption>> = _availableFilters.asStateFlow()
+
+    init {
+        loadAvailableFilters()
+    }
+
+    private fun loadAvailableFilters() {
+        viewModelScope.launch {
+            val tags = runCatching { historyRepository.getPopularTags(3) }.getOrDefault(emptyList())
+            val sources = runCatching { historyRepository.getPopularSources(3) }.getOrDefault(emptyList())
+            _availableFilters.value = buildList {
+                add(ListFilterOption.Downloaded)
+                if (settings.isTrackerEnabled) add(ListFilterOption.Macro.NEW_CHAPTERS)
+                add(ListFilterOption.Macro.COMPLETED)
+                add(ListFilterOption.Macro.FAVORITE)
+                add(ListFilterOption.NOT_FAVORITE)
+                if (!settings.isNsfwContentDisabled) add(ListFilterOption.Macro.NSFW)
+                tags.forEach { add(ListFilterOption.Tag(it)) }
+                sources.forEach { add(ListFilterOption.Source(it)) }
+            }
+        }
+    }
+
     val uiState: StateFlow<HistoryUiState> =
         combine(limit, _sortOrder, _filters) { lim, order, filters -> Triple(lim, order, filters) }
             .flatMapLatest { (lim, order, filters) ->
@@ -77,6 +102,20 @@ class HistoryViewModel(
     fun clearAllHistory() {
         viewModelScope.launch {
             historyRepository.clear()
+        }
+    }
+
+    /** Clear history entries updated at/after [minDateMillis] (Doki clearHistory(minDate)). */
+    fun clearHistoryAfter(minDateMillis: Long) {
+        viewModelScope.launch {
+            historyRepository.deleteAfter(minDateMillis)
+        }
+    }
+
+    /** Remove every history entry that is not in any favourite category (Doki removeNotFavorite). */
+    fun removeNotFavorite() {
+        viewModelScope.launch {
+            historyRepository.deleteNotFavorite()
         }
     }
 

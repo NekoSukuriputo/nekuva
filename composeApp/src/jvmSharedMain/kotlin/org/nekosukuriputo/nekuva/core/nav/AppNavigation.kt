@@ -69,7 +69,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onResumeClick = { mangaId, chapterId ->
                             openReader(mangaId, chapterId, -1, false)
-                        }
+                        },
+                        onStatsClick = { navController.navigate(StatsRoute) },
                     )
                 }
                 composable<FavoritesTabRoute> {
