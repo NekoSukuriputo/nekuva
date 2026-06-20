@@ -1238,8 +1238,9 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **Selection mode ✅** (`mode_local`): Select-all / Share / **Edit override (single)** / Delete (+ konfirmasi).
   Reuse `EditOverrideDialog`; VM `setOverride`.
 - ✅ List mode (CORE-3) + overlay cover/progress + saved badge.
-- **Defer kecil (Doki-conditional):** **Filter** lokal (Doki sembunyikan saat `!isFilterSupported`) — sheet filter
-  by-tags belum ada (bagian AREA `filter`); item disembunyikan, bukan disabled.
+- **Filter ✅**: `LocalFilterSheet` (ModalBottomSheet, FlowRow tag chips dari `getFilterOptions().availableTags`) →
+  tulis ke `LocalFilterHolder` (Koin single, jembatan shell↔VM). `LocalListViewModel` observasi holder → re-query
+  `getList(filter = MangaListFilter(tags=...))`. Item **Filter** di overflow shell Local (Doki opt_local action_filter).
 
 ### LAYAR: Feed / Updates (Doki `tracker/ui/feed` + `opt_feed`)
 - 🟡 Overflow: Update (refresh manual — verifikasi), **Show updated** (toggle), **Clear feed**.

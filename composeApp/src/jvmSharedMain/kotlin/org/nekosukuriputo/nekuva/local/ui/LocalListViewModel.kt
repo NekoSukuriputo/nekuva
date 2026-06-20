@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
@@ -17,6 +18,7 @@ class LocalListViewModel(
     private val localStorageChanges: MutableSharedFlow<LocalManga?>,
     private val mangaDataRepository: org.nekosukuriputo.nekuva.core.parser.MangaDataRepository,
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
+    private val filterHolder: org.nekosukuriputo.nekuva.local.domain.LocalFilterHolder,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LocalListUiState>(LocalListUiState.Loading)
@@ -38,7 +40,14 @@ class LocalListViewModel(
         viewModelScope.launch {
             localStorageChanges.collect { loadManga() }
         }
+        // Re-query when the local filter (tags) changes (Doki local filter). drop(1): skip the initial value.
+        viewModelScope.launch {
+            filterHolder.tags.drop(1).collect { loadManga() }
+        }
     }
+
+    /** Currently-applied local filter tags (Doki filter), exposed for the filter sheet's initial state. */
+    val appliedTags: StateFlow<Set<org.nekosukuriputo.nekuva.parsers.model.MangaTag>> get() = filterHolder.tags
 
     fun deleteManga(manga: org.nekosukuriputo.nekuva.parsers.model.Manga) {
         viewModelScope.launch {
@@ -77,7 +86,10 @@ class LocalListViewModel(
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
             try {
-                val raw = localMangaRepository.getList(0, settings.localListOrder, null)
+                val tags = filterHolder.tags.value
+                val filter = if (tags.isEmpty()) null
+                    else org.nekosukuriputo.nekuva.parsers.model.MangaListFilter.EMPTY.copy(tags = tags)
+                val raw = localMangaRepository.getList(0, settings.localListOrder, filter)
                 // Store local manga in the DB so Details/Reader can resolve them by id.
                 raw.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
                 // Apply user overrides (custom title/cover) for display (Doki MangaListMapper.getOverrides()).

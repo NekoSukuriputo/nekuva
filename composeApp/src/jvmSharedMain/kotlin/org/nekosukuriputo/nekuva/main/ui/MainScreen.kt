@@ -70,6 +70,7 @@ fun MainScreen(
     var listConfigKey by remember { mutableStateOf<String?>(null) }
     var showClearHistory by remember { mutableStateOf(false) }
     var showImportChoice by remember { mutableStateOf(false) }
+    var showLocalFilter by remember { mutableStateOf(false) }
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -78,6 +79,7 @@ fun MainScreen(
         onListOptions = { listConfigKey = it },
         onClearHistory = { showClearHistory = true },
         onImport = { showImportChoice = true },
+        onLocalFilter = { showLocalFilter = true },
         incognitoOn = incognitoOn,
         onToggleIncognito = { settings.isIncognitoModeEnabled = !incognitoOn },
     )
@@ -348,6 +350,11 @@ fun MainScreen(
             },
         )
     }
+
+    // Local filter sheet (Doki local filter): filter the local library by tags.
+    if (showLocalFilter) {
+        org.nekosukuriputo.nekuva.local.ui.LocalFilterSheet(onDismiss = { showLocalFilter = false })
+    }
 }
 
 /** Doki's main-screen "resume reading" FAB. */
@@ -372,6 +379,7 @@ private fun rememberOverflowItems(
     onListOptions: (String) -> Unit,
     onClearHistory: () -> Unit,
     onImport: () -> Unit,
+    onLocalFilter: () -> Unit,
     incognitoOn: Boolean,
     onToggleIncognito: () -> Unit,
 ): List<OverflowItem> {
@@ -409,9 +417,9 @@ private fun rememberOverflowItems(
             OverflowItem(sourcesCatalog, enabled = true, onClick = { navController.navigate(SourcesCatalogRoute) }),
         )
         has(FeedTabRoute) -> listOf(disabled(update), disabled(showUpdated), disabled(clearFeed))
-        // Local (Doki opt_local): Import + List options + Directories. Filter hidden until the local
-        // filter sheet exists (Doki hides it when !isFilterSupported).
+        // Local (Doki opt_local): Filter + Import + List options + Directories.
         has(HomeRoute) -> listOf(
+            OverflowItem(filter, enabled = true, onClick = onLocalFilter),
             OverflowItem(importLabel, enabled = true, onClick = onImport),
             listOpt(AppSettings.KEY_LIST_MODE),
             OverflowItem(directoriesLabel, enabled = true, onClick = { navController.navigate(StorageNetworkSettingsRoute) }),
