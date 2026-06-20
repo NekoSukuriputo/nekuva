@@ -175,6 +175,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onRelatedClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                         onAlternativesClick = { id -> navController.navigate(AlternativesRoute(id)) },
                         onOpenManga = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onSearchInSource = { sourceName, query -> navController.navigate(RemoteListRoute(sourceName, query)) },
+                        onGlobalSearch = { query -> navController.navigate(GlobalSearchRoute(query)) },
+                        onOpenBrowser = { url -> navController.navigate(BrowserRoute(url)) },
                     )
                 }
                 composable<AlternativesRoute> {

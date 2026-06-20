@@ -43,6 +43,7 @@ import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
+import org.nekosukuriputo.nekuva.parsers.model.MangaTag
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,6 +59,9 @@ fun DetailsScreen(
     onRelatedClick: (mangaId: Long) -> Unit = {},
     onAlternativesClick: (mangaId: Long) -> Unit = {},
     onOpenManga: (mangaId: Long) -> Unit = {},
+    onSearchInSource: (sourceName: String, query: String) -> Unit = { _, _ -> },
+    onGlobalSearch: (query: String) -> Unit = {},
+    onOpenBrowser: (url: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
@@ -75,11 +79,37 @@ fun DetailsScreen(
     var showMangaStats by remember { mutableStateOf(false) }
     var showEditOverride by remember { mutableStateOf(false) }
     var fullScreenCover by remember { mutableStateOf<String?>(null) }
+    var tagDialogFor by remember { mutableStateOf<MangaTag?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val downloadStartedMsg = stringResource(Res.string.download_started)
     val downloadAddedMsg = stringResource(Res.string.download_added)
     val detailsLabel = stringResource(Res.string.details)
+
+    // Tag/genre click (Doki showTagDialog): search this tag in the source, or everywhere.
+    tagDialogFor?.let { tag ->
+        val sourceName = (uiState as? DetailsUiState.Success)?.manga?.source?.name ?: tag.source.name
+        val sourceTitle = org.nekosukuriputo.nekuva.parsers.model.MangaParserSource.entries
+            .find { it.name == sourceName }?.title ?: sourceName
+        AlertDialog(
+            onDismissRequest = { tagDialogFor = null },
+            title = { Text(tag.title) },
+            text = {
+                Column {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.search_on_s, sourceTitle)) },
+                        onClick = { tagDialogFor = null; onSearchInSource(sourceName, tag.title) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.search_everywhere)) },
+                        onClick = { tagDialogFor = null; onGlobalSearch(tag.title) },
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { tagDialogFor = null }) { Text(stringResource(Res.string.close)) } },
+        )
+    }
 
     val editOverrideState = uiState
     if (showEditOverride && editOverrideState is DetailsUiState.Success) {
@@ -240,6 +270,26 @@ fun DetailsScreen(
                                     },
                                 )
                             }
+                            // Open the manga's web page (Doki action_browser) — remote manga only.
+                            if (onlineManga != null && !onlineManga.isLocal && onlineManga.publicUrl.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.open_in_browser)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        onOpenBrowser(onlineManga.publicUrl)
+                                    },
+                                )
+                            }
+                            // Delete a saved/local manga (Doki action_delete) — local only.
+                            if (onlineManga != null && onlineManga.isLocal) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.delete)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.deleteLocal { onBackClick() }
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -302,6 +352,7 @@ fun DetailsScreen(
                     onRelatedClick = onRelatedClick,
                     readingTimeText = readingTime?.let { formatReadingTime(it) },
                     onCoverClick = { fullScreenCover = it },
+                    onTagClick = { tagDialogFor = it },
                     paddingValues = paddingValues
                 )
             }
@@ -320,6 +371,7 @@ fun MangaDetailsContent(
     onRelatedClick: (mangaId: Long) -> Unit = {},
     readingTimeText: String? = null,
     onCoverClick: (String?) -> Unit = {},
+    onTagClick: (MangaTag) -> Unit = {},
     paddingValues: PaddingValues
 ) {
     val scrollState = androidx.compose.foundation.rememberScrollState()
@@ -452,19 +504,18 @@ fun MangaDetailsContent(
             }
         }
         
-        // Tags
+        // Genre/tag chips (Doki chipsTags): compact, tightly packed; tapping opens the tag search dialog.
         if (!manga.tags.isNullOrEmpty()) {
             FlowRow(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 manga.tags!!.forEach { tag ->
-                    FilterChip(
-                        selected = false,
-                        onClick = { /* Deferred: search tag */ },
-                        label = { Text(tag.title) },
-                        shape = RoundedCornerShape(16.dp)
+                    SuggestionChip(
+                        onClick = { onTagClick(tag) },
+                        label = { Text(tag.title, style = MaterialTheme.typography.labelLarge) },
+                        shape = RoundedCornerShape(16.dp),
                     )
                 }
             }

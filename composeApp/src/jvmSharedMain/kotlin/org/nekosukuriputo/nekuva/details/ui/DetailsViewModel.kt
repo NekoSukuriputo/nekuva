@@ -203,6 +203,15 @@ class DetailsViewModel(
         }
     }
 
+    /** Delete a saved/local manga from storage (Doki action_delete); [onDone] runs after (e.g. pop back). */
+    fun deleteLocal(onDone: () -> Unit) {
+        viewModelScope.launch {
+            val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
+            runCatching { localMangaRepository.delete(m) }
+            onDone()
+        }
+    }
+
     fun removeFromHistory() {
         viewModelScope.launch {
             val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
