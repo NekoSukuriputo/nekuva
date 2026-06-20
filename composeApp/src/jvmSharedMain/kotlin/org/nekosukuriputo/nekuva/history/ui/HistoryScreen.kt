@@ -12,9 +12,13 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SelectAll
@@ -68,6 +72,8 @@ fun HistoryScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
     var grouping by remember { mutableStateOf(settings.isHistoryGroupingEnabled) }
     var showConfigSheet by remember { mutableStateOf(false) }
+    var showFavDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     // Quick-filter chips (Doki HistoryListQuickFilter): Downloaded/New/Completed/Favorite/Not-favorite/NSFW
     // + popular sources + tags (loaded by the VM).
     val appliedFilters by viewModel.filters.collectAsState()
@@ -105,8 +111,26 @@ fun HistoryScreen(
                         IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selectedMangas()); selection.clear() }) {
                             Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
                         }
+                        // Save = download whole manga (Doki action_save).
+                        IconButton(onClick = { viewModel.downloadManga(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.Download, contentDescription = stringResource(Res.string.save))
+                        }
+                        // Add to favourites (Doki action_favourite) -> category picker.
+                        IconButton(onClick = { showFavDialog = true }) {
+                            Icon(Icons.Filled.FavoriteBorder, contentDescription = stringResource(Res.string.add_to_favourites))
+                        }
                         IconButton(onClick = { viewModel.markAsRead(selectedMangas()); selection.clear() }) {
                             Icon(Icons.Filled.DoneAll, contentDescription = stringResource(Res.string.mark_as_completed))
+                        }
+                        // Auto-fix selected (Doki action_fix): migrate broken/selected to the best alternative.
+                        IconButton(onClick = { viewModel.autoFix(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.AutoFixHigh, contentDescription = stringResource(Res.string.fix))
+                        }
+                        // Edit override (Doki action_edit_override) — single selection only.
+                        if (selection.count == 1) {
+                            IconButton(onClick = { showEditDialog = true }) {
+                                Icon(Icons.Filled.Edit, contentDescription = stringResource(Res.string.edit))
+                            }
                         }
                         IconButton(onClick = { viewModel.removeHistory(selectedMangas()); selection.clear() }) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.remove))
@@ -246,6 +270,55 @@ fun HistoryScreen(
             onGroupingChange = { settings.isHistoryGroupingEnabled = it; grouping = it },
             onDismiss = { showConfigSheet = false },
         )
+    }
+
+    if (showFavDialog) {
+        val categories by viewModel.favouriteCategories.collectAsState()
+        val toAdd = selectedMangas()
+        AlertDialog(
+            onDismissRequest = { showFavDialog = false },
+            title = { Text(stringResource(Res.string.add_to_favourites)) },
+            text = {
+                Column {
+                    // Default category (id 0) + user categories (Doki favourite picker).
+                    val rows = buildList {
+                        add(0L to stringResource(Res.string.default_category))
+                        categories.forEach { add(it.id to it.title) }
+                    }
+                    rows.forEach { (id, label) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.addToFavourites(id, toAdd); showFavDialog = false; selection.clear()
+                            }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFavDialog = false }) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
+    }
+
+    if (showEditDialog) {
+        val target = selectedMangas().firstOrNull()
+        if (target != null) {
+            org.nekosukuriputo.nekuva.core.ui.components.EditOverrideDialog(
+                currentTitle = target.title,
+                currentCoverUrl = target.coverUrl,
+                onDismiss = { showEditDialog = false },
+                onSave = { title, coverUrl ->
+                    viewModel.setOverride(target, title, coverUrl)
+                    showEditDialog = false
+                    selection.clear()
+                },
+            )
+        } else {
+            showEditDialog = false
+        }
     }
 }
 

@@ -83,7 +83,7 @@ fun DetailsScreen(
 
     val editOverrideState = uiState
     if (showEditOverride && editOverrideState is DetailsUiState.Success) {
-        EditOverrideDialog(
+        org.nekosukuriputo.nekuva.core.ui.components.EditOverrideDialog(
             currentTitle = editOverrideState.manga.title,
             currentCoverUrl = editOverrideState.manga.coverUrl,
             onDismiss = { showEditOverride = false },
@@ -511,74 +511,6 @@ fun DetailRow(label: String, value: String) {
             overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-/**
- * Edit custom title / cover (Doki OverrideConfig, CORE-7). Cover is set by URL (cross-platform);
- * a blank field reverts that part to the source value. File-picker / "pick page" deferred (MIGRATION.md).
- */
-@Composable
-private fun EditOverrideDialog(
-    currentTitle: String,
-    currentCoverUrl: String?,
-    onDismiss: () -> Unit,
-    onSave: (title: String?, coverUrl: String?) -> Unit,
-) {
-    var title by remember { mutableStateOf(currentTitle) }
-    var coverUrl by remember { mutableStateOf(currentCoverUrl.orEmpty()) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.edit)) },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Cover preview + URL field (Doki change_cover; here via URL instead of file picker).
-                if (coverUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = coverUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .width(96.dp)
-                            .aspectRatio(13f / 18f)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                }
-                OutlinedTextField(
-                    value = coverUrl,
-                    onValueChange = { coverUrl = it },
-                    label = { Text(stringResource(Res.string.change_cover)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (coverUrl.isNotEmpty()) {
-                            TextButton(onClick = { coverUrl = "" }) { Text(stringResource(Res.string.reset)) }
-                        }
-                    },
-                )
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(Res.string.name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(Res.string.manga_override_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(title, coverUrl) }) { Text(stringResource(Res.string.save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
-        },
-    )
 }
 
 /** Per-manga reading stats (Doki MangaStatsSheet, simplified): total read time + pages, on demand. */

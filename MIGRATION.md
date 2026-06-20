@@ -1180,12 +1180,19 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   Subcompose (perlu untuk sizing zoom). **Grid rapi:** `MangaGridItem` judul kini FIXED 2 baris (`minLines=2,maxLines=2`,
   ikut Doki `android:lines="2"`) → tinggi kartu seragam; buang Card berat → Column + cover rounded 13:18 + spacing 8dp.
   **Catatan render umum:** untuk list panjang selalu pakai `AsyncImage` (bukan Subcompose) + `key` stabil.
-- 🟡 Overflow: Clear history dgn opsi (2 jam / hari ini / bukan favorit / semua) — PENDING (kini cuma clear all). Statistik ✅.
-- 🟡 List modes (LIST/DETAILED_LIST/GRID) — PENDING UI config sheet (list-mode + grid-size + grouping + sort).
-- 🟡 Quick filters: Downloaded/NewChapters/Completed/Favorite/NSFW ✅; **filter by source + tags + Not-favorite** PENDING.
-- 🟡 Selection: Select-all/Share/Mark-completed/Remove ✅; **Save(download)/Favourite/Fix/Edit override** PENDING.
+- **Overflow ✅**: Clear history dgn opsi (Last 2h / Today / Not in favorites / All) via dialog single-choice +
+  Statistics (gated `isStatsEnabled`, buka StatsScreen). VM `clearHistoryAfter(minDate)` + `removeNotFavorite()`.
+- **List modes ✅ (LIST/DETAILED_LIST/GRID)**: komponen reusable `core/ui/components/ListConfigSheet` (Doki
+  ListConfigBottomSheet) — segmented List/Detailed/Grid + slider grid-size (grid only) + switch group-by-date +
+  radio sort. History render: GRID→`MangaGridItem`, LIST/DETAILED→`MangaListRow(detailed=)` (hapus row bespoke lama).
+- **Quick filters ✅**: Downloaded/NewChapters/Completed/Favorite/**Not-favorite**/NSFW + **popular sources + tags**
+  (VM `loadAvailableFilters` via `getPopularSources(3)`/`getPopularTags(3)`; Not-favorite = `Inverted` → query builder
+  `NOT(...)`). Chip label per Tag/Source/Inverted.
+- **Selection ✅**: Select-all/Share/**Save(download via DownloadManager)**/ **Favourite (category picker)** /
+  Mark-completed/**Fix (AutoFix per item)**/**Edit override (single)** /Remove. `EditOverrideDialog` di-extract jadi
+  komponen `core/ui/components` (dipakai Details + History).
 - ✅ Sort order penuh + grouping (CORE-4), pagination (CORE-8), progress+badges (CORE-2/3), date header (CORE-0).
-- 🔴 Banner "Incognito mode" + empty-state ikon/teks primer-sekunder + string hardcode tersisa.
+- 🔴 Sisa kecil: banner "Incognito mode" saat incognito + empty-state ikon Doki + beberapa string hardcode.
 
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
 - 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
