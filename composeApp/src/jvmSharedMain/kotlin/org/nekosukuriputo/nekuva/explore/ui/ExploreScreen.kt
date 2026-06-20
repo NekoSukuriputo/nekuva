@@ -69,6 +69,10 @@ fun ExploreScreen(
 ) {
 	val uiState by viewModel.uiState.collectAsState()
 	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+	// Incognito banner (Doki): shown while incognito mode is on — reading progress isn't recorded.
+	val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+	val incognitoOn by settings.observeBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_INCOGNITO_MODE, false)
+		.collectAsState(initial = settings.isIncognitoModeEnabled)
 
 	when (val state = uiState) {
 		is ExploreUiState.Loading -> {
@@ -91,6 +95,11 @@ fun ExploreScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (incognitoOn) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            org.nekosukuriputo.nekuva.core.ui.components.IncognitoBanner()
+                        }
+                    }
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         FlowRow(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),

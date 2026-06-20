@@ -9,9 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
-import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
-import org.nekosukuriputo.nekuva.network.createHttpClient
 import org.nekosukuriputo.nekuva.core.parser.AppMangaLoaderContext
 import org.koin.compose.koinInject
 import androidx.compose.foundation.layout.Column
@@ -38,10 +37,16 @@ import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 fun InstallNekuvaImageLoader() {
     setSingletonImageLoaderFactory { context ->
         val faviconCache = org.koin.core.context.GlobalContext.get().get<org.nekosukuriputo.nekuva.core.image.FaviconCache>()
+        // Use the app OkHttp client for image network calls: it carries the DoH resolver, CloudFlare
+        // clearance cookies (shared with the WebView) and rate-limiting, so covers/pages/thumbnails from
+        // CloudFlare/DoH-protected sources load just like the parser's requests do (Doki parity).
+        val okHttpClient = org.koin.core.context.GlobalContext.get().get<okhttp3.OkHttpClient>()
         ImageLoader.Builder(context).components {
+            // Per-source HTTP headers (Referer, UA) on image requests (Doki MangaSourceHeaderInterceptor).
+            add(org.nekosukuriputo.nekuva.core.image.MangaSourceHeaderInterceptor())
             // Local manga page/cover images (zip:/file:) must come before the network fetcher.
             add(org.nekosukuriputo.nekuva.core.image.LocalImageFetcher.Factory())
-            add(KtorNetworkFetcherFactory(createHttpClient()))
+            add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
             add(org.nekosukuriputo.nekuva.core.image.FaviconFetcher.Factory(faviconCache))
         }
             // Persist images (esp. source favicons) on disk so they're fetched once, not every launch (Doki).

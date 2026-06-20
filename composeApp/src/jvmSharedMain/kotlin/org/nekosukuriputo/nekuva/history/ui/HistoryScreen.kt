@@ -160,7 +160,7 @@ fun HistoryScreen(
               Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 // Incognito banner (Doki InfoModel): reading progress isn't recorded while incognito is on.
                 if (settings.isIncognitoModeEnabled) {
-                    IncognitoBanner()
+                    org.nekosukuriputo.nekuva.core.ui.components.IncognitoBanner()
                 }
                 // Quick-filter chips scroll above the list (Doki adds them as the first list item).
                 if (state.list.isNotEmpty() || appliedFilters.isNotEmpty()) {
@@ -336,39 +336,6 @@ fun HistoryClearDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
         },
     )
-}
-
-/** Banner shown while incognito mode is on (Doki InfoModel) — reading progress isn't recorded. */
-@Composable
-private fun IncognitoBanner() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Filled.VisibilityOff,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        Spacer(Modifier.width(12.dp))
-        Column {
-            Text(
-                text = stringResource(Res.string.incognito_mode),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            Text(
-                text = stringResource(Res.string.incognito_mode_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

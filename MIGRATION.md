@@ -1248,7 +1248,16 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 
 ### LAYAR: Explore (Doki `explore/ui` + `opt_explore`)
 - ✅ Manage sources / Catalog (FASE 2). Bookmarks/Downloads shortcut ✅.
+- **Incognito banner ✅**: saat `isIncognitoModeEnabled` tampil `IncognitoBanner` (komponen bersama, juga di History).
 - 🔴 **Open random** (buka manga acak) shortcut. 🔴 Verifikasi grouping bahasa + long-press pin sama Doki.
+
+### PERF/NETWORK: Coil image loader pakai OkHttp app-client (CloudFlare/DoH) ✅
+- **Masalah:** cover/thumbnail (Details Pages) + halaman reader TIDAK load untuk source yang butuh CloudFlare/DoH,
+  walau proxy DoH aktif. **Sebab:** `InstallNekuvaImageLoader` pakai **Ktor** fetcher (`createHttpClient`) yang tak
+  punya cookie CloudFlare / DoH / rate-limit. **Fix:** ganti ke `OkHttpNetworkFetcherFactory(callFactory={ koin OkHttpClient })`
+  (client yang sama dgn parser: DoHManager + cookieJar CloudFlare + CloudFlareInterceptor) + tambah
+  `MangaSourceHeaderInterceptor` (Referer/UA per-source). Tambah dep `coil-network-okhttp` di jvmSharedMain.
+  Memperbaiki gambar di Details thumbnail + reader sekaligus.
 
 ### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`)
 - 🔴 Overflow penuh: **Share**, Download ✅, **Delete** (lokal), **Edit** (override), **Tracking** (lihat bawah),

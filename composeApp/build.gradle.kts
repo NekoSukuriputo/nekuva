@@ -74,6 +74,9 @@ kotlin {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp.tls)
                 implementation(libs.okhttp.dnsoverhttps)
+                // Coil network fetcher backed by the app OkHttp client (DoH + CloudFlare cookies + source headers)
+                // so protected-source covers/pages/thumbnails load like the parser does.
+                implementation(libs.coil.network)
                 implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.1") {
                     exclude(group = "org.json", module = "json")
                 }
