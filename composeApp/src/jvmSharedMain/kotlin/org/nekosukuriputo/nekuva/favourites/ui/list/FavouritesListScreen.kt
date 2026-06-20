@@ -2,11 +2,18 @@ package org.nekosukuriputo.nekuva.favourites.ui.list
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +57,8 @@ fun FavouritesListScreen(
     val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
     val mangas = (uiState as? FavouritesUiState.Success)?.mangas.orEmpty()
     fun selected() = mangas.filter { selection.isSelected(it.id) }
+    var showCategoriesDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -68,8 +77,26 @@ fun FavouritesListScreen(
                         IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selected()); selection.clear() }) {
                             Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
                         }
+                        // Save = download whole manga (Doki action_save).
+                        IconButton(onClick = { viewModel.downloadManga(selected()); selection.clear() }) {
+                            Icon(Icons.Filled.Download, contentDescription = stringResource(Res.string.save))
+                        }
+                        // Categories = move selected into favourite categories (Doki action_favourite).
+                        IconButton(onClick = { showCategoriesDialog = true }) {
+                            Icon(Icons.Filled.Label, contentDescription = stringResource(Res.string.categories))
+                        }
                         IconButton(onClick = { viewModel.markAsRead(selected()); selection.clear() }) {
                             Icon(Icons.Filled.DoneAll, contentDescription = stringResource(Res.string.mark_as_completed))
+                        }
+                        // Auto-fix selected (Doki action_fix).
+                        IconButton(onClick = { viewModel.autoFix(selected()); selection.clear() }) {
+                            Icon(Icons.Filled.AutoFixHigh, contentDescription = stringResource(Res.string.fix))
+                        }
+                        // Edit override (Doki action_edit_override) — single selection only.
+                        if (selection.count == 1) {
+                            IconButton(onClick = { showEditDialog = true }) {
+                                Icon(Icons.Filled.Edit, contentDescription = stringResource(Res.string.edit))
+                            }
                         }
                         IconButton(onClick = { viewModel.removeFromFavourites(selection.selected); selection.clear() }) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(Res.string.remove))
@@ -96,6 +123,34 @@ fun FavouritesListScreen(
                     selectedIds = selection.selected,
                 )
             }
+        }
+    }
+
+    if (showCategoriesDialog) {
+        val categories by viewModel.categories.collectAsState()
+        val toMove = selected()
+        org.nekosukuriputo.nekuva.core.ui.components.CategoryPickerDialog(
+            categories = categories,
+            onConfirm = { ids -> viewModel.addToCategories(ids, toMove); selection.clear() },
+            onDismiss = { showCategoriesDialog = false },
+        )
+    }
+
+    if (showEditDialog) {
+        val target = selected().firstOrNull()
+        if (target != null) {
+            org.nekosukuriputo.nekuva.core.ui.components.EditOverrideDialog(
+                currentTitle = target.title,
+                currentCoverUrl = target.coverUrl,
+                onDismiss = { showEditDialog = false },
+                onSave = { title, coverUrl ->
+                    viewModel.setOverride(target, title, coverUrl)
+                    showEditDialog = false
+                    selection.clear()
+                },
+            )
+        } else {
+            showEditDialog = false
         }
     }
 }

@@ -25,6 +25,10 @@ class FavouritesListViewModel(
     private val repository: FavouritesRepository,
     private val markAsReadUseCase: org.nekosukuriputo.nekuva.history.domain.MarkAsReadUseCase,
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
+    private val downloadManager: org.nekosukuriputo.nekuva.download.domain.DownloadManager,
+    private val alternativesUseCase: org.nekosukuriputo.nekuva.alternatives.domain.AlternativesUseCase,
+    private val autoFixUseCase: org.nekosukuriputo.nekuva.alternatives.domain.AutoFixUseCase,
+    private val mangaDataRepository: org.nekosukuriputo.nekuva.core.parser.MangaDataRepository,
 ) : ViewModel() {
 
     val categories: StateFlow<List<FavouriteCategory>> = repository.observeCategories()
@@ -60,6 +64,61 @@ class FavouritesListViewModel(
     fun markAsRead(mangas: Collection<Manga>) {
         if (mangas.isEmpty()) return
         viewModelScope.launch { runCatching { markAsReadUseCase(mangas) } }
+    }
+
+    /** Selection-mode: download the whole of each selected manga (Doki action_save). */
+    fun downloadManga(mangas: Collection<Manga>) {
+        if (mangas.isEmpty()) return
+        viewModelScope.launch {
+            runCatching {
+                downloadManager.schedule(
+                    mangas.map {
+                        org.nekosukuriputo.nekuva.download.domain.DownloadTask(
+                            manga = it, chaptersIds = null, destination = null, format = null, startPaused = false,
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    /** Selection-mode: add selected manga to the chosen favourite categories (Doki action_favourite). */
+    fun addToCategories(categoryIds: Set<Long>, mangas: Collection<Manga>) {
+        if (categoryIds.isEmpty() || mangas.isEmpty()) return
+        viewModelScope.launch {
+            categoryIds.forEach { id -> runCatching { repository.addToCategory(id, mangas.toList()) } }
+        }
+    }
+
+    /** Selection-mode: auto-fix each selected manga — best alternative source + migrate (Doki action_fix). */
+    fun autoFix(mangas: Collection<Manga>) {
+        if (mangas.isEmpty()) return
+        viewModelScope.launch {
+            for (manga in mangas) {
+                runCatching {
+                    val matches = ArrayList<Manga>()
+                    alternativesUseCase(manga, throughDisabledSources = false).collect { matches.add(it) }
+                    autoFixUseCase(manga, matches)
+                }
+            }
+        }
+    }
+
+    /** Selection-mode (single): save a custom title/cover override (Doki action_edit_override). */
+    fun setOverride(manga: Manga, title: String?, coverUrl: String?) {
+        viewModelScope.launch {
+            val existing = runCatching { mangaDataRepository.getOverride(manga.id) }.getOrNull()
+            runCatching {
+                mangaDataRepository.setOverride(
+                    manga,
+                    org.nekosukuriputo.nekuva.core.model.MangaOverride(
+                        coverUrl = coverUrl?.trim()?.ifEmpty { null },
+                        title = title?.trim()?.ifEmpty { null },
+                        contentRating = existing?.contentRating,
+                    ),
+                )
+            }
+        }
     }
 
     fun removeCategories(ids: Collection<Long>) {

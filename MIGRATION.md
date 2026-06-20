@@ -1214,10 +1214,19 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   - Empty state `empty_stats_text`.
   - **Defer kecil:** tap segmen/legend → MangaStatsSheet per-manga (Doki) — belum (Details sudah punya stats dialog).
 
-### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
-- 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
-- 🔴 Selection mode: Share, Remove, Save, **Categories** (pindah kategori), Fix, Edit, Mark as completed, Select-all.
-- 🔴 Sort order per kategori + 🔴 list mode + 🔴 overlay cover (CORE-2/3/4). 🔴 Empty state per kategori.
+### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`) — SELESAI
+- **Toolbar tunggal ✅**: container tak lagi punya TopAppBar sendiri → shell search bar. Overflow shell Favorites:
+  **List options** (`ListConfigSheet` kini + sort `ListSortOrder.FAVORITES`) + **Manage categories** (fungsional →
+  CategoriesRoute). Sort live (`allFavoritesSortOrder`, semua tab re-query).
+- **Tabs ✅**: "All favourites" (jika visible) + kategori library-visible (`observeCategoriesForLibrary`); tab Default
+  dummy dihapus (favourite default tampil di "All", ikut Doki). **Long-press tab** → popup: kategori = Edit/Delete/Hide
+  (`popup_fav_tab`), "All" = Hide/Manage (`popup_fav_tab_all`). VM `hide()` (setCategoryVisibility / isAllFavouritesVisible),
+  `deleteCategory()`.
+- **Selection mode ✅** (`mode_favourites`): Select-all/Share/**Save(download)**/**Categories (CategoryPickerDialog
+  multi-select → addToCategory)**/Mark-completed/**Fix(AutoFix)**/**Edit override(single)**/Remove. Komponen baru
+  `core/ui/components/CategoryPickerDialog` (checkbox multi-kategori, reusable).
+- ✅ Sort + list mode (CORE-3/4 via shell), overlay cover/progress (CORE-2), empty state.
+- **Defer kecil:** Edit-category dari long-press buka layar Manage (bukan dialog rename inline) — fungsional, refinement.
 
 ### LAYAR: Local / Penyimpanan lokal (Doki `local/ui` + `opt_local` + `mode_local`)
 - 🔴 Overflow: **Import** (file/folder → AREA picker), Filter, Directories.
