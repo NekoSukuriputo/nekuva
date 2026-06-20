@@ -1,9 +1,13 @@
 package org.nekosukuriputo.nekuva.history.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -169,6 +173,10 @@ fun HistoryScreen(
             is HistoryUiState.Error -> ErrorState(error = state.error, onRetry = { }, modifier = Modifier.padding(paddingValues))
             is HistoryUiState.Success -> {
               Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                // Incognito banner (Doki InfoModel): reading progress isn't recorded while incognito is on.
+                if (settings.isIncognitoModeEnabled) {
+                    IncognitoBanner()
+                }
                 // Quick-filter chips scroll above the list (Doki adds them as the first list item).
                 if (state.list.isNotEmpty() || appliedFilters.isNotEmpty()) {
                     HistoryQuickFilterRow(
@@ -181,6 +189,9 @@ fun HistoryScreen(
                     EmptyState(
                         message = stringResource(
                             if (appliedFilters.isEmpty()) Res.string.text_history_holder_primary else Res.string.nothing_found,
+                        ),
+                        secondary = stringResource(
+                            if (appliedFilters.isEmpty()) Res.string.text_history_holder_secondary else Res.string.text_empty_holder_secondary_filtered,
                         ),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
@@ -390,6 +401,39 @@ private fun HistoryOverflowMenu(
                 TextButton(onClick = { showClearDialog = false }) { Text(stringResource(Res.string.cancel)) }
             },
         )
+    }
+}
+
+/** Banner shown while incognito mode is on (Doki InfoModel) — reading progress isn't recorded. */
+@Composable
+private fun IncognitoBanner() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.secondaryContainer)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.VisibilityOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = stringResource(Res.string.incognito_mode),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                text = stringResource(Res.string.incognito_mode_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
     }
 }
 

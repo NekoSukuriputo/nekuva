@@ -37,8 +37,24 @@ fun ErrorState(error: Throwable?, onRetry: () -> Unit, modifier: Modifier = Modi
 }
 
 @Composable
-fun EmptyState(message: String, modifier: Modifier = Modifier) {
+fun EmptyState(message: String, modifier: Modifier = Modifier, secondary: String? = null) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.foundation.layout.Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (secondary != null) {
+                Text(
+                    text = secondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
     }
 }

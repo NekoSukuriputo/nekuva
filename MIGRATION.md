@@ -1192,7 +1192,10 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   Mark-completed/**Fix (AutoFix per item)**/**Edit override (single)** /Remove. `EditOverrideDialog` di-extract jadi
   komponen `core/ui/components` (dipakai Details + History).
 - ✅ Sort order penuh + grouping (CORE-4), pagination (CORE-8), progress+badges (CORE-2/3), date header (CORE-0).
-- 🔴 Sisa kecil: banner "Incognito mode" saat incognito + empty-state ikon Doki + beberapa string hardcode.
+- **Incognito banner ✅** (saat `isIncognitoModeEnabled`) + **empty-state primer+sekunder ✅** (`EmptyState` kini
+  punya param `secondary`; filtered → nothing_found + reset hint). Judul/aksi via `Res.string`.
+- **LAYAR HISTORY: SELESAI** (Desktop+Android compile + `assembleDebug` hijau). Sisa: run-verify GUI Anda; ikon
+  empty-state khusus (Doki ic_empty_history) opsional.
 
 ### LAYAR: Favourites (Doki `favourites/ui/container` + `opt_favourites_container` + `mode_favourites`)
 - 🟡 Tab per-kategori (ScrollableTabRow "Semua" + tiap kategori) — verifikasi UI sama Doki. Manage categories ✅.
