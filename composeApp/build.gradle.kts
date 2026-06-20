@@ -197,7 +197,10 @@ android {
             applicationIdSuffix = ".debug"
         }
         getByName("release") {
-            isMinifyEnabled = true
+            // R8/minify is OFF until a vetted proguard-rules.pro exists (Koin/serialization/exts-parser keeps),
+            // otherwise the minified release can crash at runtime. This build is still non-debuggable + AOT,
+            // which is what matters for judging real (non-debug) performance.
+            isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
         }
     }
