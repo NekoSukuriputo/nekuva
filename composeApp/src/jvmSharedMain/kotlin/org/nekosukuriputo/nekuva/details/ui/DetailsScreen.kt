@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -72,6 +73,7 @@ fun DetailsScreen(
     val bookmarks by viewModel.bookmarks.collectAsState()
     val relatedManga by viewModel.relatedManga.collectAsState()
     val readingTime by viewModel.readingTime.collectAsState()
+    val downloadedChapterIds by viewModel.downloadedChapterIds.collectAsState()
 
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
@@ -310,6 +312,8 @@ fun DetailsScreen(
                     onDownloadClick = { showDownloadDialog = true },
                     onForget = { viewModel.removeFromHistory() },
                     onViewPageImage = { url -> fullScreenCover = url },
+                    downloadedIds = downloadedChapterIds,
+                    onDownloadChapter = { chapter -> viewModel.downloadChapter(chapter) },
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp))
@@ -645,6 +649,8 @@ fun ChaptersSheetContent(
     onDownloadClick: () -> Unit,
     onForget: () -> Unit,
     onViewPageImage: (String) -> Unit = {},
+    downloadedIds: Set<Long> = emptySet(),
+    onDownloadChapter: (MangaChapter) -> Unit = {},
 ) {
     val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val pagesEnabled = tabSettings.isPagesTabEnabled
@@ -777,7 +783,12 @@ fun ChaptersSheetContent(
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         items(chapters) { chapter ->
-                            ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter) })
+                            ChapterItem(
+                                chapter = chapter,
+                                onClick = { onChapterClick(chapter) },
+                                isDownloaded = chapter.id in downloadedIds,
+                                onDownload = { onDownloadChapter(chapter) },
+                            )
                         }
                     }
                     org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
@@ -899,7 +910,12 @@ private fun DetailsBookmarkThumb(bookmark: Bookmark, onClick: () -> Unit) {
 }
 
 @Composable
-fun ChapterItem(chapter: MangaChapter, onClick: () -> Unit) {
+fun ChapterItem(
+    chapter: MangaChapter,
+    onClick: () -> Unit,
+    isDownloaded: Boolean = false,
+    onDownload: () -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -915,9 +931,19 @@ fun ChapterItem(chapter: MangaChapter, onClick: () -> Unit) {
                 Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        
-        IconButton(onClick = { /* Deferred: Download chapter */ }) {
-            Icon(Icons.Outlined.FileDownload, contentDescription = "Download")
+
+        if (isDownloaded) {
+            // Doki: a downloaded chapter shows an SD-card badge instead of the download button.
+            Icon(
+                Icons.Filled.SdCard,
+                contentDescription = stringResource(Res.string.on_device),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(12.dp),
+            )
+        } else {
+            IconButton(onClick = onDownload) {
+                Icon(Icons.Outlined.FileDownload, contentDescription = stringResource(Res.string.download))
+            }
         }
     }
 }

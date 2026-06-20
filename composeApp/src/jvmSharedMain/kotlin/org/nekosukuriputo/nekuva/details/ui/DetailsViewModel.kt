@@ -23,6 +23,7 @@ import org.nekosukuriputo.nekuva.core.model.FavouriteCategory
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlin.math.roundToInt
@@ -38,6 +39,7 @@ class DetailsViewModel(
     private val localMangaRepository: org.nekosukuriputo.nekuva.local.data.LocalMangaRepository,
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
     private val statsRepository: org.nekosukuriputo.nekuva.stats.data.StatsRepository,
+    private val downloadManager: org.nekosukuriputo.nekuva.download.domain.DownloadManager,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -47,6 +49,36 @@ class DetailsViewModel(
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
     private val loadedManga = MutableStateFlow<Manga?>(null)
+
+    /**
+     * Chapter ids already saved on disk (Doki: chapter list shows an SD-card badge for downloaded chapters).
+     * Recomputed whenever the manga loads or any download finishes.
+     */
+    val downloadedChapterIds: StateFlow<Set<Long>> =
+        kotlinx.coroutines.flow.combine(loadedManga.filterNotNull(), downloadManager.downloads) { m, _ -> m }
+            .mapLatest { m ->
+                runCatching {
+                    localMangaRepository.findSavedManga(m, withDetails = true)?.manga?.chapters
+                        ?.mapTo(HashSet()) { it.id }
+                }.getOrNull() ?: emptySet()
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
+    /** Download a single chapter (Doki per-chapter download from the chapters list). */
+    fun downloadChapter(chapter: org.nekosukuriputo.nekuva.parsers.model.MangaChapter) {
+        val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return
+        viewModelScope.launch {
+            runCatching {
+                downloadManager.schedule(
+                    listOf(
+                        org.nekosukuriputo.nekuva.download.domain.DownloadTask(
+                            manga = m, chaptersIds = setOf(chapter.id), destination = null, format = null, startPaused = false,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
 
     /** Current user override (custom title/cover) for this manga, for prefilling the edit dialog (CORE-7). */
     private val _override = MutableStateFlow<org.nekosukuriputo.nekuva.core.model.MangaOverride?>(null)

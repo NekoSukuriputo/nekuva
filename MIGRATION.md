@@ -1259,13 +1259,17 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   `MangaSourceHeaderInterceptor` (Referer/UA per-source). Tambah dep `coil-network-okhttp` di jvmSharedMain.
   Memperbaiki gambar di Details thumbnail + reader sekaligus.
 
-### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`)
-- 🔴 Overflow penuh: **Share**, Download ✅, **Delete** (lokal), **Edit** (override), **Tracking** (lihat bawah),
-  Statistics ✅, **Find similar / Alternatives / Online variant** (AREA alternatives), **Open in browser**, **Create shortcut**.
-- 🔴 **Scrobbling/Tracking di Details** (`action_scrobbling`): selector "ikat manga ke tracker" + tampil kartu `ScrobblingInfo`
-  (status/skor/progres per layanan). (scrobbler engine sudah ✅, UI di Details belum.)
-- 🔴 **Chapter list context** (`opt_chapters`): multi-select bab → download terpilih / mark-as-read / save; long-press bab.
+### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`) — sebagian besar SELESAI
+- **Genre/tag chips ✅**: `SuggestionChip` kompak + spasi rapat (Doki chipsTags). **Klik → tag dialog** (Doki
+  showTagDialog): "Search on <source>" (→ RemoteList) / "Search everywhere" (→ global).
+- **Overflow ✅**: Share, Download, **Edit override**, **Alternatives**, **Online variant** (lokal), **Open in browser**
+  (remote), **Delete** (lokal), Statistics, Create shortcut. (Doki opt_details).
+- **Chapter list download ✅** (Doki): tombol download per-bab fungsional (`DownloadManager.schedule` 1 bab); bab yang
+  sudah tersimpan tampil **ikon SD-card** (`downloadedChapterIds` dari `findSavedManga`, live saat download selesai).
+- **Thumbnail (Pages) tab ✅** + cover/page **CloudFlare/DoH** load ✅ (lihat entri image loader di atas).
 - ✅ Related manga row, reading-time, per-manga stats dialog.
+- 🔴 **Scrobbling/Tracking di Details** (`action_scrobbling`): UI selector + kartu `ScrobblingInfo` belum (engine ✅).
+  **Find similar** menu item (related-row inline sudah ada). Chapter multi-select (`opt_chapters`) belum.
 
 ### LAYAR: Main shell (Doki `main/ui` + `opt_main`)
 - 🟡 Global search entry (kotak cari ✅ + suggestions ✅) — 🔴 tambah **toggle Incognito** di menu utama (`action_incognito`).
