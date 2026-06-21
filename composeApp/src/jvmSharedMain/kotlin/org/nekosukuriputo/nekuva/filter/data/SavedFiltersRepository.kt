@@ -142,6 +142,16 @@ class SavedFiltersRepository(
         version.value++
     }
 
+    /** Every saved filter across all sources (Doki backup). */
+    fun getAllFilters(): List<PersistableFilter> =
+        settings.keys.filter { it.startsWith("__pf_") }.mapNotNull { decode(settings.getStringOrNull(it)) }
+
+    /** Restore a saved filter from a backup (keeps its source + name). */
+    fun restore(filter: PersistableFilter) {
+        settings.putString(key(filter.sourceName, filter.id), json.encodeToString(filter))
+        version.value++
+    }
+
     private fun decode(raw: String?): PersistableFilter? = raw?.let {
         try {
             json.decodeFromString<PersistableFilter>(it)

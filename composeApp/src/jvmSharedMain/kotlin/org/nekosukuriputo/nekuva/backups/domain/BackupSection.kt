@@ -9,9 +9,13 @@ enum class BackupSection(val entryName: String) {
     HISTORY("history"),
     CATEGORIES("categories"),
     FAVOURITES("favourites"),
+    SETTINGS("settings"),
+    SETTINGS_READER_GRID("reader_grid"),
     BOOKMARKS("bookmarks"),
+    SOURCES("sources"),
     SCROBBLING("scrobbling"),
     STATS("statistics"),
+    SAVED_FILTERS("saved_filters"),
     ;
 
     companion object {

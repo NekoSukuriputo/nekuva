@@ -165,9 +165,13 @@ private fun sectionLabel(section: org.nekosukuriputo.nekuva.backups.domain.Backu
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.HISTORY -> Res.string.history
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.CATEGORIES -> Res.string.favourites_categories
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.FAVOURITES -> Res.string.favourites
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.SETTINGS -> Res.string.settings
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.SETTINGS_READER_GRID -> Res.string.reader_actions
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.BOOKMARKS -> Res.string.bookmarks
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.SOURCES -> Res.string.remote_sources
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.SCROBBLING -> Res.string.tracking
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.STATS -> Res.string.statistics
+        org.nekosukuriputo.nekuva.backups.domain.BackupSection.SAVED_FILTERS -> Res.string.saved_filters
         org.nekosukuriputo.nekuva.backups.domain.BackupSection.INDEX -> Res.string.backup_restore
     },
 )
