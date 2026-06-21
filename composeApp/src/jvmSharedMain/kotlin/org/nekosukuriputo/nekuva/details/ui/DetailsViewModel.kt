@@ -4,6 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -381,7 +386,22 @@ class DetailsViewModel(
                 val pages = localMangaRepository.getPagesIfDownloaded(m, chapter) ?: run {
                     val source = MangaParserSource.entries.find { it.name == m.source.name }
                         ?: throw IllegalStateException("Unknown source: ${m.source.name}")
-                    repositoryFactory.create(source).getPages(chapter)
+                    val repo = repositoryFactory.create(source)
+                    val raw = repo.getPages(chapter)
+                    // Resolve the final image URL (Doki getPageUrl) for pages WITHOUT a thumbnail preview, so the
+                    // grid loads on sources where MangaPage.url is an intermediate (e.g. blank pages otherwise).
+                    coroutineScope {
+                        val sem = Semaphore(4)
+                        raw.map { p ->
+                            async {
+                                if (!p.preview.isNullOrEmpty() || !p.url.startsWith("http", ignoreCase = true)) {
+                                    p
+                                } else {
+                                    sem.withPermit { runCatching { p.copy(url = repo.getPageUrl(p)) }.getOrDefault(p) }
+                                }
+                            }
+                        }.awaitAll()
+                    }
                 }
                 _pagesState.value = if (pages.isEmpty()) PagesPreviewState.Empty
                     else PagesPreviewState.Success(chapter.id, pages)

@@ -35,6 +35,7 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.parsers.model.MangaChapter
 import org.nekosukuriputo.nekuva.parsers.model.MangaPage
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
+import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -433,6 +434,19 @@ class ReaderViewModel(
         val source = MangaParserSource.entries.find { it.name == m.source.name }
             ?: throw IllegalArgumentException("Unknown source: ${m.source.name}")
         return repositoryFactory.create(source).getPages(chapter)
+    }
+
+    /**
+     * Resolve a remote page's final image URL (Doki getPageUrl): some sources return an intermediate page
+     * URL in [MangaPage.url] that must be resolved to the actual image src before loading (else the reader
+     * shows blank pages). Local/downloaded pages (non-http) are returned unchanged. Called lazily per page.
+     */
+    suspend fun resolvePageUrl(page: MangaPage): String {
+        if (!page.url.startsWith("http", ignoreCase = true)) return page.url
+        val source = MangaParserSource.entries.find { it.name == manga?.source?.name } ?: return page.url
+        return runCatchingCancellable {
+            repositoryFactory.create(source).getPageUrl(page)
+        }.getOrDefault(page.url)
     }
 
     /** Called as the user scrolls; [index] is the first visible page index in [loadedPages]. */

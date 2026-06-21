@@ -321,6 +321,7 @@ fun ReaderScreen(
                   CompositionLocalProvider(
                       LocalReaderImageOptions provides readerImageOptions,
                       LocalReaderMangaSource provides state.manga.source,
+                      LocalReaderPageUrlResolver provides viewModel::resolvePageUrl,
                   ) {
                     ReaderContent(
                         pages = state.pages,
@@ -1571,7 +1572,7 @@ private fun PagedReader(
                             DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid, onAspect)
                         } else {
                             val pageIndex = unitPages?.firstOrNull() ?: 0
-                            ZoomablePage(pages.getOrNull(pageIndex)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
+                            ZoomablePage(rememberResolvedPageUrl(pages.getOrNull(pageIndex)?.page), colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
                         }
                     }
                 }
@@ -1657,7 +1658,7 @@ private fun DoublePageSpread(
             ordered.forEach { idx ->
                 Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                     SubcomposeAsyncImage(
-                        model = rememberReaderPageModel(pages.getOrNull(idx)?.page?.url),
+                        model = rememberReaderPageModel(rememberResolvedPageUrl(pages.getOrNull(idx)?.page)),
                         contentDescription = null,
                         contentScale = contentScale,
                         colorFilter = colorFilter,
@@ -1701,7 +1702,7 @@ private fun WebtoonPageItem(page: MangaPage, index: Int, colorFilter: ColorFilte
     var retryHash by remember { mutableIntStateOf(0) }
     key(retryHash) {
         SubcomposeAsyncImage(
-            model = rememberReaderPageModel(page.url),
+            model = rememberReaderPageModel(rememberResolvedPageUrl(page)),
             contentDescription = "Page $index",
             contentScale = ContentScale.FillWidth,
             colorFilter = colorFilter,

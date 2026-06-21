@@ -597,8 +597,8 @@
     <string name="default_webtoon_zoom_out">Zoom webtoon default</string>
     <string name="last_used">Terakhir digunakan</string>
     <string name="_new">Terbaru</string>
-    <string name="hours_short">%d j</string>
-    <string name="minutes_short">%d m</string>
+    <string name="hours_short">%1$d j</string>
+    <string name="minutes_short">%1$d m</string>
     <string name="hours_minutes_short">%1$d j %2$d m</string>
     <string name="default_page_save_dir">Direktori penyimpanan halaman default</string>
     <string name="clear_stats">Bersihkan statistik</string>

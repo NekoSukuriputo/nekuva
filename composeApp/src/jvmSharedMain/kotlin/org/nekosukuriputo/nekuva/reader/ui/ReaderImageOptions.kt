@@ -28,6 +28,26 @@ val LocalReaderImageOptions = staticCompositionLocalOf { ReaderImageOptions() }
  *  Referer/UA + CloudFlare handling (protected sources load). Provided by the reader screen. */
 val LocalReaderMangaSource = staticCompositionLocalOf<MangaSource?> { null }
 
+/** Resolves a page's final image URL (Doki getPageUrl) — some sources return an intermediate page URL.
+ *  Provided by the reader screen; null = identity (use the raw url). */
+val LocalReaderPageUrlResolver =
+    staticCompositionLocalOf<(suspend (org.nekosukuriputo.nekuva.parsers.model.MangaPage) -> String)?> { null }
+
+/**
+ * Resolve [page]'s image URL lazily (Doki getPageUrl), falling back to its raw url. Cached per page via
+ * [androidx.compose.runtime.produceState] so a source that needs a network resolve isn't called on every
+ * recomposition, and the reader opens without blocking on all pages at once.
+ */
+@Composable
+fun rememberResolvedPageUrl(page: org.nekosukuriputo.nekuva.parsers.model.MangaPage?): String? {
+	if (page == null) return null
+	val resolver = LocalReaderPageUrlResolver.current ?: return page.url
+	val state = androidx.compose.runtime.produceState(initialValue = page.url, page) {
+		value = runCatching { resolver(page) }.getOrDefault(page.url)
+	}
+	return state.value
+}
+
 /**
  * Build the Coil model for a reader page, applying the active [ReaderImageOptions]. Returns null for a
  * null url (placeholder); otherwise an [ImageRequest] carrying the crop transformation + color config.
