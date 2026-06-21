@@ -47,7 +47,6 @@ fun BackupSettingsScreen(
     onBackClick: () -> Unit,
     onPeriodicClick: () -> Unit = {},
 ) {
-    val isBusy by viewModel.isBusy.collectAsState()
     val restorePrompt by viewModel.restorePrompt.collectAsState()
     val backupIo = rememberBackupIo()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -84,31 +83,27 @@ fun BackupSettingsScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
+        // No blocking spinner: backup/restore runs in the background (BackupRestoreManager) with a
+        // notification + snackbar, so the screen stays usable and the user can navigate away (Doki parity).
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column {
                 SettingsItem(
                     title = stringResource(Res.string.create_backup),
                     summary = stringResource(Res.string.backup_information),
                     icon = Icons.Outlined.Backup,
-                    enabled = !isBusy,
                     onClick = { viewModel.createBackup(backupIo, defaultBackupName()) },
                 )
                 SettingsItem(
                     title = stringResource(Res.string.restore_backup),
                     summary = stringResource(Res.string.restore_summary),
                     icon = Icons.Outlined.Restore,
-                    enabled = !isBusy,
                     onClick = { viewModel.restoreBackup(backupIo) },
                 )
                 SettingsItem(
                     title = stringResource(Res.string.periodic_backups),
                     icon = Icons.Outlined.Schedule,
-                    enabled = !isBusy,
                     onClick = onPeriodicClick,
                 )
-            }
-            if (isBusy) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             }
         }
     }

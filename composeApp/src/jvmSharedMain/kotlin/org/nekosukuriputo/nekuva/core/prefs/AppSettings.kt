@@ -695,7 +695,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 		val raw = prefs.getStringSet(KEY_MANGA_LIST_BADGES, mangaListBadgesDefault)
 		var result = 0
 		for (item in raw) {
-			result = result or item.toInt()
+			// Defensive: a malformed value (e.g. a cross-app backup that stored this as a JSON array) must
+			// not crash the whole list screen — skip items that aren't plain integers.
+			result = result or (item.trim().toIntOrNull() ?: continue)
 		}
 		return result
 	}
