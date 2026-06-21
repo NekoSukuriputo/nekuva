@@ -422,6 +422,8 @@ class ReaderViewModel(
                 scrollToken++
                 emitSuccess()
             } catch (e: Exception) {
+                System.err.println("NEKUVA_READER_ERROR (loadInitial): $e")
+                e.printStackTrace()
                 _uiState.value = ReaderUiState.Error(e)
             }
         }
@@ -430,10 +432,15 @@ class ReaderViewModel(
     private suspend fun fetchPages(m: Manga, chapter: MangaChapter): List<MangaPage> {
         // Offline-first (Doki parity): read the chapter from disk if it's downloaded — even for a
         // remote manga where only some chapters are downloaded — else fetch online.
-        localMangaRepository.getPagesIfDownloaded(m, chapter)?.let { return it }
+        localMangaRepository.getPagesIfDownloaded(m, chapter)?.let {
+            System.err.println("NEKUVA_READER_PAGES (downloaded): ${it.size} pages, first=${it.firstOrNull()?.url}")
+            return it
+        }
         val source = MangaParserSource.entries.find { it.name == m.source.name }
             ?: throw IllegalArgumentException("Unknown source: ${m.source.name}")
-        return repositoryFactory.create(source).getPages(chapter)
+        val pages = repositoryFactory.create(source).getPages(chapter)
+        System.err.println("NEKUVA_READER_PAGES (online): ${pages.size} pages, first=${pages.firstOrNull()?.url}")
+        return pages
     }
 
     /**
@@ -444,9 +451,14 @@ class ReaderViewModel(
     suspend fun resolvePageUrl(page: MangaPage): String {
         if (!page.url.startsWith("http", ignoreCase = true)) return page.url
         val source = MangaParserSource.entries.find { it.name == manga?.source?.name } ?: return page.url
-        return runCatchingCancellable {
+        val resolved = runCatchingCancellable {
             repositoryFactory.create(source).getPageUrl(page)
-        }.getOrDefault(page.url)
+        }.getOrElse { e ->
+            System.err.println("NEKUVA_READER_RESOLVE_ERR in=${page.url}: $e")
+            page.url
+        }
+        System.err.println("NEKUVA_READER_RESOLVE in=${page.url} -> $resolved")
+        return resolved
     }
 
     /** Called as the user scrolls; [index] is the first visible page index in [loadedPages]. */
