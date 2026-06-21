@@ -90,12 +90,13 @@ fun AboutSettingsScreen(
                 enabled = !isChecking,
                 onClick = { viewModel.checkForUpdates(APP_VERSION) },
             )
-            // Changelog — disabled in Doki too (TODO there); shown for parity until release notes are wired.
+            // Changelog → GitHub releases page (Doki leaves this disabled; Nekuva already publishes releases,
+            // so open them rather than show a dead "coming soon").
             SettingsItem(
                 title = stringResource(Res.string.changelog),
                 summary = stringResource(Res.string.changelog_summary),
                 icon = Icons.Outlined.History,
-                enabled = false,
+                onClick = { uriHandler.openUri("$GITHUB_REPO/releases") },
             )
             // User manual → Kotatsu guide (Doki url_user_manual).
             SettingsItem(

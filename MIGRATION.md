@@ -169,8 +169,9 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & harus sama**, sesuai
       permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
       Beberapa BEHAVIOR menunggu area konsumennya (reader-advanced, tracker, sync, stats, biometric, proxy/DoH);
-      nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen (nav config, proxy, suggestions, login
-      tracker, discord) = "Segera hadir". Lihat ledger)
+      nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen nav config / proxy / suggestions / discord
+      = SUDAH wired & fungsional; hanya **login tracker/scrobbler** masih "Segera hadir" (blocked OAuth client id).
+      Lihat "LAYAR: Bookmarks / Downloads / Settings (sisa)" + ledger)
 - [ ] `alternatives`
 - **Isu source/parser (di `nekuva-exts`, BUKAN repo UI ini — §8):**
   - **MagusManga `JSONObject["author"] not found` (Android+Desktop):** parser `MagusToon` di nekuva-exts memanggil `getString("author")` pada entry tanpa field author → harus `getStringOrNull("author")`. Fix di repo nekuva-exts, lalu naikkan tag `exts` di `libs.versions.toml`.
@@ -544,7 +545,7 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
 | Setting (key) | Doki | Nekuva sekarang | Status |
 |---|---|---|---|
 | Saran pencarian (`search_suggest_types`) | tipe saran yg tampil | `SearchSuggestionViewModel` baca `searchSuggestionTypes` | ✅ |
-| Bagian layar utama (`nav_main`) | reorder/aktif tab (drag, `NavConfigFragment`) | "Segera hadir" | 🔴 |
+| Bagian layar utama (`nav_main`) | reorder/aktif tab (drag, `NavConfigFragment`) | `NavConfigScreen` (reorder ↑/↓ + remove + persist), wired dari Appearance | ✅ |
 | FAB lanjut baca (`main_fab`) | tombol mengambang "Lanjut baca" | `isMainFabEnabled` ada, tak ada FAB | 🟡 |
 | Label navbar (`nav_labels`) | tampil/sembunyi label tab | tersimpan, tanpa konsumen | 🟡 |
 | Sematkan nav (`nav_pinned`) | rail nav tersemat (tablet/desktop) | tersimpan, tanpa konsumen | 🟡 |
@@ -1465,10 +1466,23 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   `org.aomedia.avif.android.AvifDecoder` (port `decodeAvif`), klaim hanya source AVIF (brand ftyp); Desktop null.
   Didaftarkan di image-loader components. Memperbaiki halaman reader + thumbnail Detail + favicon AVIF.
 
-### LAYAR: Bookmarks / Downloads / Settings (sisa)
-- 🔴 Bookmarks: **Save pages** dari selection (butuh AREA image/save). Fungsi lain reader-sheet (sebagian).
-- 🔴 Downloads: **notifikasi foreground Android** (progress + pause/cancel) + multi-select.
-- 🟡 Settings: sub-screen "nav config" + sisa "Segera hadir"; backup-settings/sources (limit multiplatform-settings).
+### LAYAR: Bookmarks / Downloads / Settings (sisa) — SELESAI (2026-06-21), sisa hanya blocked-on-credentials
+- ✅ **Bookmarks: Save pages dari selection** — aksi Save di selection bar (Doki `mode_bookmarks` `action_save`):
+  `BookmarksViewModel.saveSelected()` → `PageSaveHelper.save` per bookmark (MangaPage dibangun dari bookmark),
+  snackbar "Page(s) saved". Bonus: thumbnail bookmark kini bawa `mangaSourceExtra` (thumbnail CF/DoH tak blank).
+- ✅ **Downloads: notifikasi foreground Android** — `ensureDownloadForeground()` expect/actual + `DownloadService`
+  (foreground `dataSync`): notifikasi ongoing progress (judul + % + jumlah aktif) + **aksi Pause/Resume-all &
+  Cancel-all** (PendingIntent → service action), berhenti sendiri saat antrean kosong. **Multi-select** sudah ada
+  (VM `mode_downloads` + selection bar). Desktop = no-op. (pending run-verify device)
+- ✅ **Settings: nav config** — `NavConfigScreen` (reorder ↑/↓ + remove + persist) wired dari Appearance
+  (`main_screen_sections` → `NavConfigRoute`). Ledger lama "Segera hadir" untuk nav config = STALE (sudah ada).
+- ✅ **Settings: Changelog** kini buka GitHub `/releases` (dulu disabled "coming soon" spt Doki).
+- 🟦 **Sisa "coming soon" = BLOCKED, bukan gap kode:** (a) **Scrobbler login** (Shikimori/AniList/MAL/Kitsu) —
+  butuh OAuth **client id** yang di-bake ke `ScrobblerConfig`; tampil disabled "coming soon" sampai kredensial
+  didaftarkan per layanan. (b) **Translate this app** — belum ada Weblate/Crowdin Nekuva (sama spt Doki disabled).
+  Keduanya N/A-sampai-eksternal, dicatat di ledger.
+- ℹ️ **backup-settings/sources** — `BackupSettingsScreen` + `PeriodicBackupScreen` + `BackupWorker`/`BackupScheduler`
+  (Android) sudah ada; "limit multiplatform-settings" hanya catatan (tak ada knob yang hilang signifikan).
 
 > **Catatan eksekusi (untuk fase nanti):** kerjakan **Bagian 1 (CORE)** dulu → lalu **Bagian 2 per-layar**
 > (urut: History → Favourites → Local → Feed → Details → Main shell → sisa). Tiap layar: baca Doki dulu
