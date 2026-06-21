@@ -43,6 +43,39 @@ itu gate terakhir sebelum Phase 1 dinyatakan selesai.
 
 ---
 
+## SESI 2026-06-22 — Desktop behavior, Favourites, Local filter/directories, Backup/Restore parity
+
+**A. Desktop behavior**
+- **A1 — scroll horizontal chip filter di Desktop:** `Modifier.horizontalWheelScroll(state)` expect/actual
+  (Desktop: wheel/trackpad → `scrollBy` horizontal; Android no-op). Dipasang di chip History + RemoteList.
+  (Chip Local menyusul saat ada — local pakai bottom-sheet filter.)
+- **A2 — arrow-key scroll reader Desktop (webtoon):** WebtoonReader dapat focus + `onKeyEvent`; Arrow/Page/Space
+  scroll **0.85× viewport** (bukan per-halaman) → tak "loncat" di window setengah.
+
+**B. Core bug + migrasi**
+- **B1 — tab Favorit bisa diklik:** `Tab(onClick={})` + combinedClickable di-ganti `Tab(onClick=pindah)` + long-press
+  via `awaitFirstDown(requireUnconsumed=false)`+`withTimeoutOrNull(longPress)` (tak mencuri tap). Klik tab pindah
+  kategori (Desktop + Android).
+- **B2 — bottom-sheet filter Local:** `LocalFilterSheet` diperluas = Doki: **Urutkan + Genre + Kecualikan genre +
+  Peringkat konten**. `LocalFilterHolder` (tags/tagsExclude/contentRating + revision) + VM apply.
+- **B3 — layar "Direktori Manga" (CRUD):** `MangaDirectoriesScreen` + VM (Doki MangaDirectoriesActivity): kartu
+  per-direktori + meter penyimpanan, tambah dir kustom (SAF Android/file chooser Desktop) → `userSpecifiedMangaDirectories`,
+  hapus dir kustom. Terintegrasi: dir kustom otomatis ter-scan oleh Local (getConfiguredStorageDirs). Overflow Local
+  "Direktori" → `MangaDirectoriesRoute` (dulu salah ke Storage settings).
+- **B4/B5/B6 — backup/restore PENUH kompatibel kotatsu/yukimi/Doki:** `BackupSection` lengkap (11 entri: +SETTINGS,
+  reader_grid, SOURCES, SAVED_FILTERS). Settings/reader_grid via `dumpAppPreferences`/`writeAppPreferences`
+  expect/actual (Android SharedPreferences `nekuva_prefs`; Desktop Preferences node "Nekuva"; format Doki `[{...}]`,
+  split tap_grid_, exclude password/incognito). SOURCES via `SourceBackup`+sourcesDao → **Explore reflect urutan+pin
+  live** (observeEnabledSources). SAVED_FILTERS via `getAllFilters()/restore()`. **Fix favorit bercampur antar
+  kategori:** backup pakai `dump()` (baris per-kategori), bukan `findAll()` (GROUP BY manga_id).
+- **B7 — backup/restore background + notifikasi:** `BackupRestoreManager` app-scope (bertahan saat pindah layar);
+  `notifyBackupStart/Finish` expect/actual — Android channel "backups", Desktop tray balloon (`java.awt.SystemTray`).
+  `BackupViewModel` jadi delegate tipis.
+
+Semua compile + assembleDebug hijau. **Pending run-verify per-point** (user verifikasi nanti).
+
+---
+
 ## Phase 0: Skeleton (Kerangka Multiplatform)
 Fokus: Bangun kerangka KMP/CMP tanpa memigrasikan fitur, memastikan aplikasi Android saat ini tetap bisa di-build.
 - Konversi Gradle ke Kotlin DSL (`settings.gradle.kts`, `build.gradle.kts`).
