@@ -63,6 +63,8 @@ fun InstallNekuvaImageLoader() {
             add(org.nekosukuriputo.nekuva.core.image.LocalImageFetcher.Factory())
             add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
             add(org.nekosukuriputo.nekuva.core.image.FaviconFetcher.Factory(faviconCache))
+            // AVIF decoder (Doki): Android's ImageDecoder fails on AVIF; many sources serve AVIF pages.
+            org.nekosukuriputo.nekuva.core.image.platformImageDecoderFactory()?.let { add(it) }
         }
             // Persist images (esp. source favicons) on disk so they're fetched once, not every launch (Doki).
             .diskCache {
