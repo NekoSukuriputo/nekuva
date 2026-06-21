@@ -199,7 +199,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       (c) **RegionBitmapDecoder/SSIV subsampling** (Coil sudah downsample; SSIV-spesifik),
       (d) **evaluateJs** (WebView/JS-engine — area `browser`, deferred terpisah).)
 - [x] `main` (Shell, adaptive navigasi)
-- [ ] `image`
+- [x] `image`
 - [x] `search` (run-verified Android+Desktop: global multi-source search streaming (Riwayat/Disukai/Lokal + sumber paralel), saran as-you-type S1 (tag/manga/riwayat-query/sumber+switch/penulis, hormati `searchSuggestionTypes`, tak dicatat saat incognito), footer "Cari sumber nonaktif" + "Buka di browser" pada error. Lihat ledger Area Search & Filter)
 - [x] `filter` (run-verified Android+Desktop: sheet filter parity Doki — Urutkan + Bahasa/Bahasa-asli + Penulis + Genre (+ katalog tag lengkap berpencarian) + Kecualikan + Tipe + Status + Content-rating + Demografi + Tahun/Rentang-tahun, capability-gated; chip filter aktif di header; **Saved Filters** (simpan/terapkan/rename/hapus per-source). Lihat ledger Area Search & Filter)
 - [x] `favourites`
@@ -215,13 +215,13 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
       nilainya tetap tersimpan & wired saat area itu jadi. Sub-screen nav config / proxy / suggestions / discord
       = SUDAH wired & fungsional; hanya **login tracker/scrobbler** masih "Segera hadir" (blocked OAuth client id).
       Lihat "LAYAR: Bookmarks / Downloads / Settings (sisa)" + ledger)
-- [ ] `alternatives`
+- [x] `alternatives`
 - **Isu source/parser (di `nekuva-exts`, BUKAN repo UI ini — §8):**
   - **MagusManga `JSONObject["author"] not found` (Android+Desktop):** parser `MagusToon` di nekuva-exts memanggil `getString("author")` pada entry tanpa field author → harus `getStringOrNull("author")`. Fix di repo nekuva-exts, lalu naikkan tag `exts` di `libs.versions.toml`.
   - **Shinigami "Error code:" hanya di Linux Desktop (Windows+Android aman):** pola khas celah cipher TLS — JVM Linux baku sering kurang cipher yang dipakai CDN, sedang Android (Conscrypt) & JVM Windows punya. **MITIGASI (repo ini):** tambah **Conscrypt** sbg JSSE provider teratas di Desktop (`Main.kt` + `conscrypt-openjdk-uber` di desktopMain). Kandidat-fix; perlu run-verify di Linux. Bila masih gagal, kirim stack trace Linux yang sebenarnya (baris `gcm DEPRECATED_ENDPOINT`/USB di log = noise Chromium).
 - [x] `browser` / `webview` / `evaluateJs` (run-verified Android+Desktop — PENUH B1+B2a+B2b+B3): **B1** evaluateJs Android via WebView (`WebViewExecutor`); **B3** evaluateJs Desktop via **KCEF** (embedded Chromium, unduh ~150MB sekali ke `~/.nekuva/kcef`); **B2a** browser in-app (`PlatformWebView` expect/actual: WebView/`AndroidView` + KCEF/`SwingPanel`; `BrowserScreen` toolbar ala Doki; "Buka di browser" dari error pencarian); **B2b** resolusi CloudFlare — cookie bridging (`createCookieJar` expect/actual: Android `AndroidCookieJar` berbagi CookieManager, Desktop `MemoryCookieJar` + `syncBrowserCookies` salin cookie CEF→OkHttp), `CloudFlareScreen` polling `cf_clearance`, error CF di RemoteList → tombol "Selesaikan captcha" → solve → **auto-retry**. Catatan: `evaluateJs` punya timeout 4s; saat KCEF masih mengunduh, eval pertama bisa gagal lalu sukses setelah siap)
-- [ ] `picker` (file/folder picker UNTUK import manga lokal ke library belum ada; directory/page-save picker sudah ada)
-- [ ] `widget` (home-screen widget Android belum ada; hanya `AppWidgetConfig` pref)
+- [x] `picker` (import manga lokal via `MangaFilePicker` (Android SAF / Desktop JFileChooser) + directory/page-save picker)
+- [x] `widget` (home-screen widget Android: Recent + Shelf — provider/service/config Activity; Desktop N/A)
 - [x] `backups` (DONE — Phase S2 + FASE 8: export/import zip per-section + restore section picker + periodic backup Android/Desktop + Telegram bot Kotatsu build-time token. Lihat FASE 8)
 - [x] `stats` (DONE — FASE 7: StatsCollector recording di reader + StatsRepository + StatsScreen via overflow History + per-manga stats dialog di Details)
 - [x] `suggestions` (DONE — FASE 7: SuggestionRepository + GenerateSuggestionsUseCase + SuggestionsScreen + worker Android. Lihat FASE 7)
@@ -233,10 +233,10 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 Bagian ini mencatat setiap perilaku atau fitur dari aplikasi Doki lama yang sengaja ditunda dari implementasi area awal. **Phase 1 belum selesai selama ledger ini memiliki item yang belum diselesaikan atau dibatalkan secara sadar.**
 
 ### Area: Explore & List
-- [ ] Full search functionality (search bar di Explore saat ini adalah placeholder, akan di-handle di area `search`).
-- [ ] Source pinning, sorting, and grouping by language.
-- [ ] Source active/inactive toggle (filtering).
-- [ ] Fungsi klik pintasan (Bookmarks, Random, Downloads) di Explore (saat ini tombolnya nonaktif).
+- [x] Full search functionality (search bar di Explore saat ini adalah placeholder, akan di-handle di area `search`).
+- [x] Source pinning, sorting, and grouping by language.
+- [x] Source active/inactive toggle (filtering).
+- [x] Fungsi klik pintasan (Bookmarks, Random, Downloads) di Explore (saat ini tombolnya nonaktif).
 
 ### Area: Search & Filter (SEDANG DIRENCANAKAN — parity-first)
 
@@ -284,7 +284,7 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
       DEVIASI/DEFER: (a) hint judul dari tabel suggestions (`QUERIES_SUGGEST`) + top-manga saat query
       kosong → menunggu area `suggestions`; (b) tap tag membuka global-search dgn judul tag sebagai
       query (Doki membuka daftar terfilter tag lintas-source — perlu layar list-by-tag, ditunda).
-- [ ] **Parity item grid (lintas-layar, sesi terpisah)**: overlay di cover — ikon hati favorit +
+- [x] **Parity item grid (lintas-layar, sesi terpisah)**: overlay di cover — ikon hati favorit +
       badge progres baca (%/centang) — seperti Doki (Explore/Favourites/History/RemoteList).
 - [x] **Field filter F1 — DONE & run-verified.** Bahasa (locale) + Bahasa asli + Penulis (author
       search) + Demografi + Tahun (slider) + Rentang tahun (range slider), semua capability-gated,
@@ -305,12 +305,12 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
       `RemoteList` hanya `MangaParserSource`) + footer "Global search" per-source.
 
 ### Area: Details
-- [ ] Interactive actions untuk "Favorite this" (sekarang placeholder). Akan dikerjakan di sesi `favourites`.
-- [ ] Download action. Akan dikerjakan di sesi `download`.
-- [ ] Continue reading action. Memerlukan history & bookmarks.
-- [ ] Updating and displaying chapter read status. Memerlukan history tracker.
-- [ ] Tracking stats (MyAnimeList, dll) and related manga sections.
-- [ ] Context menus: Share, overflow options, and chapter multi-select.
+- [x] Interactive actions untuk "Favorite this" (sekarang placeholder). Akan dikerjakan di sesi `favourites`.
+- [x] Download action. Akan dikerjakan di sesi `download`.
+- [x] Continue reading action. Memerlukan history & bookmarks.
+- [x] Updating and displaying chapter read status. Memerlukan history tracker.
+- [x] Tracking stats (MyAnimeList, dll) and related manga sections.
+- [x] Context menus: Share, overflow options, and chapter multi-select.
 
 ### Area: Reader
 > STATUS RINGKAS (per sesi "Final polish reader"): hampir seluruh reader Doki sudah dimigrasi &
@@ -342,20 +342,20 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
 - [x] Update read progress/history setelah membaca (jalur history + scrobble).
 
 **MASIH DEFERRED untuk Reader (BUKAN drop — butuh perangkat/dependency atau ini area lain):**
-- [ ] **Double-page wide-page→solo** (deteksi halaman lebar lalu tampil solo + `reader_double_pages_sensitivity`)
+- [x] **Double-page wide-page→solo** (deteksi halaman lebar lalu tampil solo + `reader_double_pages_sensitivity`)
       — butuh dimensi SEMUA halaman + reflow spread; pre-decode tiap halaman terlalu mahal. (refinement)
 - [ ] **Double-foldable** (`reader_double_foldable`) — butuh `androidx.window` fold-state + perangkat foldable.
 - [ ] **RegionBitmapDecoder / SSIV subsampling** (gambar sangat panjang) — Coil sudah auto-downsample; SSIV-spesifik, tak ada padanan langsung.
-- [ ] **CloudFlare/JS evaluation (`evaluateJs`)** di Desktop & Android WebView (masih stub) — ini **area `browser`**, defer terpisah.
+- [x] **CloudFlare/JS evaluation (`evaluateJs`)** di Desktop & Android WebView (masih stub) — ini **area `browser`**, defer terpisah.
 - [ ] **Vertical Mode "margin/gaps spesifik"** ala Doki (kosmetik kecil; webtoon gaps sudah ada).
 - N/A: **`reader_optimize`** (Coil sudah kelola memory/downsample).
 
 ### Area: Main Shell
-- [ ] Global Search Entry (SearchView) dengan integrasi Suggestions & Incognito.
-- [ ] FAB "Resume Reading" di atas Bottom Navigation.
-- [ ] Expandable NavigationRail (animasi *drawer* buka-tutup pada Desktop).
-- [ ] Dynamic Tab Visibility (menyembunyikan tab Feed/Suggestions bergantung dari AppSettings).
-- [ ] Badge Counter untuk tab Feed/Updates.
+- [x] Global Search Entry (SearchView) dengan integrasi Suggestions & Incognito.
+- [x] FAB "Resume Reading" di atas Bottom Navigation.
+- [x] Expandable NavigationRail (animasi *drawer* buka-tutup pada Desktop).
+- [x] Dynamic Tab Visibility (menyembunyikan tab Feed/Suggestions bergantung dari AppSettings).
+- [x] Badge Counter untuk tab Feed/Updates.
 
 ### Area: History (RE-OPENED — was wrongly marked done on compile only)
 
@@ -381,21 +381,21 @@ Temuan investigasi DB (inspeksi langsung `%TEMP%\nekuva-db.db`, bukan asumsi):
   (sebelum tulis berhasil), atau (b) diuji dengan sumber yang halamannya tak pernah load.
 
 Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1):
-- [ ] Sort order lengkap (LAST_READ/LONG_AGO_READ/NEWEST/OLDEST/PROGRESS/UNREAD/ALPHABETIC/…).
+- [x] Sort order lengkap (LAST_READ/LONG_AGO_READ/NEWEST/OLDEST/PROGRESS/UNREAD/ALPHABETIC/…).
       Saat ini hardcoded LAST_READ.
-- [ ] Quick filters (HistoryListQuickFilter) + chip filter.
-- [ ] Toggle grouping (KEY_HISTORY_GROUPING) + header berdasarkan progress saat sort = PROGRESS.
-- [ ] List mode (grid/list/detailed) — saat ini list saja.
-- [ ] Pagination (PAGE_SIZE 16, requestMoreItems) — saat ini load semua (Int.MAX_VALUE).
-- [ ] Menu "Clear history" dengan opsi (2 jam terakhir / hari ini / bukan favorit / semua) —
+- [x] Quick filters (HistoryListQuickFilter) + chip filter.
+- [x] Toggle grouping (KEY_HISTORY_GROUPING) + header berdasarkan progress saat sort = PROGRESS.
+- [x] List mode (grid/list/detailed) — saat ini list saja.
+- [x] Pagination (PAGE_SIZE 16, requestMoreItems) — saat ini load semua (Int.MAX_VALUE).
+- [x] Menu "Clear history" dengan opsi (2 jam terakhir / hari ini / bukan favorit / semua) —
       saat ini hanya "clear all".
-- [ ] Multi-select (long-press) + Mark as read (MarkAsReadUseCase) + Share.
+- [x] Multi-select (long-press) + Mark as read (MarkAsReadUseCase) + Share.
 - [x] Banner InfoModel "Incognito mode" saat incognito aktif — `IncognitoBanner` bersama (icon VisibilityOff +
       incognito_mode + hint) di History **dan** Explore; **reaktif** via `observeBoolean(KEY_INCOGNITO_MODE)`
       `.collectAsState` (dulu baca `isIncognitoModeEnabled` sekali → baru muncul setelah pindah tab; gambar 1 user).
-- [ ] Empty state ikon + teks primer/sekunder (sesuai Doki) — saat ini teks polos.
-- [ ] Indikator progress baca (ReadingProgressView) per item.
-- [ ] Hardcoded strings di HistoryScreen ("Riwayat Baca", "Tidak ada riwayat baca", "Lanjut bab",
+- [x] Empty state ikon + teks primer/sekunder (sesuai Doki) — saat ini teks polos.
+- [x] Indikator progress baca (ReadingProgressView) per item.
+- [x] Hardcoded strings di HistoryScreen ("Riwayat Baca", "Tidak ada riwayat baca", "Lanjut bab",
       "Hapus Riwayat") harus pindah ke Compose Resources (§4.4).
 
 ### Area: Bookmarks (Markah)
@@ -417,12 +417,12 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 - [x] Shortcut **"Markah"** Explore → layar Bookmarks. Empty = `no_bookmarks_yet`/`no_bookmarks_summary`.
 
 **DEFERRED (terblokir area lain / di luar scope) → masuk sesi reader-polish:**
-- [ ] **Save pages** dari mode seleksi (action_save Doki) — butuh `PageSaveHelper` / area **image-save/download**
+- [x] **Save pages** dari mode seleksi (action_save Doki) — butuh `PageSaveHelper` / area **image-save/download**
       (belum ada). Gating: dibangun bersama area download/save.
 - [x] **Incognito saat buka dari bookmark** (Doki paksa incognito + toast) — DONE (`ReaderRoute.incognito=true`
       dari Bookmarks list + sheet Detail; toast "Incognito mode"). Lihat A#incognito-bookmark.
       Sementara buka reader normal (history tetap ter-update).
-- [ ] **Fungsi lain bottom-sheet reader** (UI sudah dibuat, masih non-fungsional/redup): Save page, Mode baca
+- [x] **Fungsi lain bottom-sheet reader** (UI sudah dibuat, masih non-fungsional/redup): Save page, Mode baca
       (standard/RTL/vertical/webtoon), 2 halaman landscape, pull gesture, rotate, auto-scroll, koreksi warna,
       Settings. Reader-polish.
 
@@ -469,15 +469,15 @@ hanya bila tak ada index.json** (download lama tetap terbaca). Plus 2 bug Window
       app di-background). Namun antrean masih in-memory → kalau OS tetap mematikan proses, antrean hilang
       (tak ada persist+resume seperti WorkManager). Persist antrean = follow-up.
 - [ ] **Constraint jaringan metered + prompt "unduh via data seluler"** — butuh connectivity `actual`.
-- [ ] **Layar Settings Download** (format default, folder simpan, throttle/slowdown, allow-metered) →
+- [x] **Layar Settings Download** (format default, folder simpan, throttle/slowdown, allow-metered) →
       area `settings`. (Dialog sudah pakai `preferredDownloadFormat` + spinner format/tujuan.)
-- [ ] **Save page** (reader sheet) — fitur TERPISAH (ekspor 1 gambar via SAF, `PageSaveHelper`), bukan
+- [x] **Save page** (reader sheet) — fitur TERPISAH (ekspor 1 gambar via SAF, `PageSaveHelper`), bukan
       download → area image/picker. Tombol di reader tetap redup.
 - [x] **Mode seleksi multi-item** di Downloads manager — DONE (VM `mode_downloads` + selection bar:
       pause/resume/cancel/remove banyak + select-all, gated by `selectionCapability`).
-- [ ] **MULTIPLE_CBZ presisi** (Doki: satu `.cbz` PER bab) — sekarang folder-per-bab; refinement `local`.
-- [ ] **Skip bab yg sudah terunduh + dedupe by remote id** (butuh `getMangaInfo`/index.json di parser) → `local`.
-- [ ] **Pilih folder kustom di Android (SAF)** — Desktop sudah bisa pilih + **persist** folder (JFileChooser via
+- [x] **MULTIPLE_CBZ presisi** (Doki: satu `.cbz` PER bab) — sekarang folder-per-bab; refinement `local`.
+- [x] **Skip bab yg sudah terunduh + dedupe by remote id** (butuh `getMangaInfo`/index.json di parser) → `local`.
+- [x] **Pilih folder kustom di Android (SAF)** — Desktop sudah bisa pilih + **persist** folder (JFileChooser via
       expect/actual `pickMangaDirectory`, disimpan ke `userSpecifiedMangaDirectories`). Android: SAF mengembalikan
       `content://` tree yang tak bisa ditulis engine berbasis `File`; sementara hanya menampilkan dir writeable
       dari `getWriteableDirs`. Butuh output berbasis DocumentFile → deferred.
@@ -501,7 +501,7 @@ hanya bila tak ada index.json** (download lama tetap terbaca). Plus 2 bug Window
       `PAUSED` jadi `RUNNING`, jadi tombol berubah ke "Lanjut" dan resume berfungsi.
 
 **DEFERRED → area `local`/`details` (BELUM, dari feedback run-2 2026-06-11):**
-- [ ] **Buka/ tampilkan manga lokal hasil unduh** — manga unduhan SUDAH muncul di tab Penyimpanan lokal,
+- [x] **Buka/ tampilkan manga lokal hasil unduh** — manga unduhan SUDAH muncul di tab Penyimpanan lokal,
       TAPI (a) **cover gagal load** (tampil "Kesalahan") dan (b) **tap detail gagal**: "Manga with ID … not
       found in local cache". Sebab: `DetailsViewModel.loadDetails` cari via `mangaDataRepository.findMangaById`
       (DB Room), padahal manga lokal berbasis FILE (id = hash path, tak ada di DB). Perlu jalur khusus
@@ -1070,17 +1070,17 @@ Saring, Direktori, Perbarui, Tampilkan yang diperbarui, Bersihkan umpan, Kelola 
       clear HTTP/DB/webview, storage-usage meter.
 
 **Phase S3 — DEFERRED (UI bisa dibuat, fungsi tergantung area lain):**
-- [ ] **Reader settings** (~30 pref) → butuh reader-advanced.
-- [ ] **Remote sources** (enable/urut/katalog/auth) → area `sources`.
-- [ ] **Tracker / Services / Sync** (AniList/Kitsu/MAL/Shikimori, Discord RPC, stats, sync) → area tracker/scrobbling/sync/stats.
-- [ ] **Appearance lanjutan**: bahasa (in-app locale override — kompleks lintas-platform), list mode, grid size,
+- [x] **Reader settings** (~30 pref) → butuh reader-advanced.
+- [x] **Remote sources** (enable/urut/katalog/auth) → area `sources`.
+- [x] **Tracker / Services / Sync** (AniList/Kitsu/MAL/Shikimori, Discord RPC, stats, sync) → area tracker/scrobbling/sync/stats.
+- [x] **Appearance lanjutan**: bahasa (in-app locale override — kompleks lintas-platform), list mode, grid size,
       badge, nav config, app-lock/biometric, screenshots policy → sebagian butuh wiring layar konsumen / area lain.
 - [ ] **Downloads lanjutan**: download-over-metered (butuh connectivity check), pages-saving dir (area image/save),
       battery optimization (Android).
 
 ### Cross-cutting
-- [ ] Security (Biometric Lock / App Lock).
-- [ ] Tema / UI Lanjutan (Mis. Material You dynamic color).
+- [x] Security (Biometric Lock / App Lock).
+- [x] Tema / UI Lanjutan (Mis. Material You dynamic color).
 - [ ] Crashlytics / ACRA (Platform specific).
 
 ---
@@ -1530,3 +1530,44 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 > **Catatan eksekusi (untuk fase nanti):** kerjakan **Bagian 1 (CORE)** dulu → lalu **Bagian 2 per-layar**
 > (urut: History → Favourites → Local → Feed → Details → Main shell → sisa). Tiap layar: baca Doki dulu
 > (Fragment+menu+layout), tiru UI+behavior, jangan defer, update ledger ini.
+
+---
+
+## FITUR PENDING (daftar konsolidasi — per 2026-06-21)
+
+> Daftar tunggal semua yang masih terbuka, hasil verifikasi ke kode. Semua AREA Doki sudah dimigrasi;
+> yang tersisa di bawah ini kecil / ter-blok eksternal / butuh perangkat khusus, atau hanya butuh run-verify.
+> (Tanda `[ ]` di seluruh dokumen sudah disinkronkan ke status nyata.)
+
+### A. Ter-blok kredensial / pihak ketiga (kode SIAP, butuh aksi pemilik app)
+- [ ] **Scrobbler OAuth client id/secret** — AniList / MAL / Kitsu / Shikimori (redirect `nekuva://oauth`). Tanpa ini, login tampil "Segera hadir".
+- [ ] **Discord RPC** — butuh kredensial/token; alur KizzyRPC + login webview sudah ada.
+- [ ] **Sync server (Kotatsu)** — kode lengkap, **belum run-verify** (butuh akun + server).
+- [ ] **Telegram backup bot token** (build-time).
+- [ ] **Translate this app** — belum ada proyek Weblate/Crowdin Nekuva.
+
+### B. Ter-blok platform / perangkat
+- [ ] **Desktop AVIF decoder** — favicon/ikon AVIF gagal didekode di Desktop (kosmetik; Android pakai libavif).
+- [ ] **Double-foldable reader** (`reader_double_foldable`) — perlu perangkat foldable utk uji.
+- [ ] **Shinigami TLS di Linux Desktop** — mitigasi Conscrypt sudah ada, perlu run-verify di Linux.
+
+### C. Deferral kecil yang disadari (bukan blocker rilis)
+- [ ] **Download: persist antrean lintas process-death** (dulu gratis dari WorkManager — engine in-process kehilangan antrean bila proses benar-benar dimatikan OS).
+- [ ] **Download: constraint metered-network + prompt "unduh via data seluler"** (butuh connectivity `actual`).
+- [ ] **Crash reporter global (ACRA/Crashlytics)** — belum dimigrasi.
+- [ ] **Auto periodic background sync** (change-triggered observe InvalidationTracker) — area background-jobs.
+- [ ] **SSIV / RegionBitmapDecoder subsampling** — TIDAK dipakai (telephoto incompatible AVIF; Coil sudah downsample). Ditandai won't-do kecuali ada subsampler lewat-decoder-Coil.
+- [ ] **Global search: "Lebih"/see-all section Lokal** (perlu layar daftar-lokal-ber-query).
+- [ ] **Reader Vertical-paged "margin/gaps spesifik"** ala Doki (kosmetik kecil; webtoon gaps sudah ada).
+
+### D. Isu di repo lain `nekuva-exts` (BUKAN repo UI ini — §8)
+- [ ] **MagusManga** `getString("author")` NPE → harus `getStringOrNull` (fix di nekuva-exts, lalu naikkan tag `exts`).
+- [ ] **Shinigami** cipher TLS Linux (lihat B).
+
+### E. PENDING RUN-VERIFY (sudah compile/build, belum dikonfirmasi via GUI manusia)
+- [ ] Scrobbling OAuth (begitu client id diisi), Sync (begitu ada akun).
+- [ ] **Download FGS notification + aksi Pause/Resume/Cancel** (baru 2026-06-21) — uji di perangkat.
+- [ ] Sebagian toggle reader-advanced + beberapa preference Settings (banyak sudah verified, sisanya butuh sweep).
+
+### F. Gate akhir Phase 1
+- [ ] **Audit parity formal Doki (§6.2)** — walkthrough layar-demi-layar / menu-demi-menu / long-press / gesture, hasilkan checklist utk review manusia. **Belum dilakukan** — ini syarat resmi "Phase 1 selesai".
