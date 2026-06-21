@@ -37,25 +37,14 @@ import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
 fun InstallNekuvaImageLoader() {
     setSingletonImageLoaderFactory { context ->
         val faviconCache = org.koin.core.context.GlobalContext.get().get<org.nekosukuriputo.nekuva.core.image.FaviconCache>()
-        // Use the app OkHttp client for image network calls: it carries the DoH resolver, CloudFlare
-        // clearance cookies (shared with the WebView) and rate-limiting, so covers/pages/thumbnails from
-        // CloudFlare/DoH-protected sources load just like the parser's requests do (Doki parity).
-        // Add CommonHeadersInterceptor so the X-Manga-Source header (set per request from the source extra)
-        // resolves to the source's Referer/User-Agent + per-source interceptor (CloudFlare).
+        // Reader/cover/favicon images use the SAME "manga" OkHttp client as the parser engine (Doki's
+        // @MangaHttpClient): it carries the DoH resolver, CloudFlare clearance cookies (shared with the
+        // WebView), rate-limiting, CommonHeadersInterceptor (per-source Referer/UA + CloudFlare via the
+        // X-Manga-Source header) AND CacheLimitInterceptor — so CDN images that send no-store/short max-age
+        // (e.g. desu.photos / DoujinDesu) are still disk-cached, instead of re-downloading on every
+        // scroll-back. This is what makes prefetch actually stick and stops the slow page-by-page reload.
         val koin = org.koin.core.context.GlobalContext.get()
-        val okHttpClient = koin.get<okhttp3.OkHttpClient>().newBuilder()
-            .apply {
-                // Prepend (index 0 = outermost, Doki order) so the per-source Referer/User-Agent are set
-                // BEFORE the CloudFlare interceptor inspects the request — matching the parser's own chain.
-                interceptors().add(
-                    0,
-                    org.nekosukuriputo.nekuva.core.network.CommonHeadersInterceptor(
-                        lazy { koin.get<org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory>() },
-                        lazy { koin.get<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext>() },
-                    ),
-                )
-            }
-            .build()
+        val okHttpClient = koin.get<okhttp3.OkHttpClient>(org.koin.core.qualifier.named("manga"))
         ImageLoader.Builder(context).components {
             // Per-source HTTP headers (Referer, UA) on image requests (Doki MangaSourceHeaderInterceptor).
             add(org.nekosukuriputo.nekuva.core.image.MangaSourceHeaderInterceptor())
@@ -74,17 +63,6 @@ fun InstallNekuvaImageLoader() {
                     .build()
             }
             .crossfade(true)
-            // Log image loads + failures (page URL + error) so blank-page issues are diagnosable in logcat
-            // (tag "coil3"). Coil failures are otherwise silent.
-            .logger(coil3.util.DebugLogger())
-            // Explicit failure logging to System.err (caught by `logcat -s System.err:*`): prints the failing
-            // image URL + exception with a NEKUVA_IMG_ERROR marker, so blank pages are diagnosable for sure.
-            .eventListener(object : coil3.EventListener() {
-                override fun onError(request: coil3.request.ImageRequest, result: coil3.request.ErrorResult) {
-                    System.err.println("NEKUVA_IMG_ERROR data=${request.data} : ${result.throwable}")
-                    result.throwable.printStackTrace()
-                }
-            })
             .build()
     }
 }

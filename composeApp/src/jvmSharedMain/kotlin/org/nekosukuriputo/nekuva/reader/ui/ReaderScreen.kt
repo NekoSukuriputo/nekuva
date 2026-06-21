@@ -1256,7 +1256,10 @@ private fun ReaderPagePreloader(pages: List<LoadedPage>, currentIndex: Int, enab
     }
 }
 
-private const val PRELOAD_AHEAD = 3
+// Pages to warm into Coil's cache ahead of the current page (Doki PageLoader PREFETCH_LIMIT = 6/10). With
+// the manga client's CacheLimitInterceptor forcing a min cache age, these stick on disk so slow CDNs
+// (e.g. desu.photos) don't re-download on scroll-back.
+private const val PRELOAD_AHEAD = 5
 
 /** Continuous vertical reader (full-width images, multi-chapter append). */
 @Composable

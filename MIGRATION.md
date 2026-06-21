@@ -1312,6 +1312,50 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   - Compile ✅ Desktop + Android + assembleDebug. **Belum run-verified GUI** — minta user buka source ber-CloudFlare,
     cek cover Explore + thumbnail sheet + halaman reader ter-load.
 
+### NETWORK: parser request TIDAK dapat `getRequestHeaders` per-source → DoujinDesu reader blank — FIX ✅ run-verified (Desktop)
+- **Gejala:** DoujinDesu (NSFW, butuh CloudFlare) — list/detail/cover FETCH OK, tapi buka chapter → **blank hitam**.
+  Source CF lain (komiktap) normal. Doki dgn fork exts yang SAMA berhasil. Log desktop: `getPages` balik **0 pages**,
+  tanpa exception, dan **tak ada satu pun request gambar** (no NEKUVA_IMG_REQ) → gagal di tahap daftar-halaman, bukan
+  tahap gambar.
+- **Sebab (dari decompile exts):** `DoujinDesuParser.getPages` = 2 langkah: GET halaman chapter → baca `#reader[data-id]`
+  → **POST `/themes/ajax/ch.php`** → `select("img")`. Parser-nya override `getRequestHeaders()` =
+  **`X-Requested-With: XMLHttpRequest`** (+ Referer). Endpoint ajax itu hanya balas daftar gambar kalau ada header itu.
+  TAPI di Nekuva, **engine parser (`AppMangaLoaderContext.httpClient`) memakai BASE OkHttpClient yang TANPA
+  `CommonHeadersInterceptor`** — jadi `getRequestHeaders()` + `interceptSafe` per-source HANYA terpasang di client Coil
+  (gambar), tak pernah di request HTTP parser sendiri. POST ch.php keluar tanpa `X-Requested-With` → balas non-image →
+  `select("img")` kosong → `getPages` = 0 → reader blank. (komiktap embed `<img>` langsung di HTML chapter, tak butuh
+  header ajax → makanya lolos & menutupi bug.)
+- **Fix (samakan struktur Doki `NetworkModule` `@BaseHttpClient` vs `@MangaHttpClient`):** tambah singleton OkHttpClient
+  `named("manga")` = base + `CacheLimitInterceptor` + `CommonHeadersInterceptor`. `AppMangaLoaderContext` + `MirrorSwitcher`
+  kini pakai client "manga" ini. `OkHttpWebClient` (exts) sudah `addTags(MangaSource)` tiap request, yang dibaca
+  `CommonHeadersInterceptor` untuk resolve header + interceptor per-source. Berlaku untuk **Android & Desktop** (kode
+  jvmShared). Run-verified Desktop: `getPages` balik N>0, `NEKUVA_IMG_REQ -> 200 image/webp`, halaman tampil.
+
+### PERF: reader DoujinDesu lambat (CDN desu.photos) + cache + prefetch — FIX ✅ (pending run-verify)
+- **Gejala:** halaman load lambat satu-per-satu; saat scroll status jadi `Cancelled` lalu re-download.
+- **Sebab:** (a) Coil pakai BASE client (tanpa `CacheLimitInterceptor`) → gambar dari CDN yang kirim `no-store`/max-age
+  pendek (desu.photos) **tak masuk disk-cache** → tiap scroll-back unduh ulang. (b) prefetch cuma 3 halaman (Doki 6/10).
+- **Fix:** Coil image loader kini pakai client `named("manga")` yang sama (dapat `CacheLimitInterceptor` → cache min 1 jam,
+  Doki parity — Coil Doki juga pakai `@MangaHttpClient`). `PRELOAD_AHEAD` 3 → 5. `Cancelled` saat scroll = perilaku
+  normal Coil (batalkan request off-screen); dgn cache aktif, re-view jadi instan.
+
+### CLEANUP: hapus logging diagnostik image/reader yang berisik (teks merah di terminal)
+- Diagnostik sesi debug (`NEKUVA_IMG_REQ`, `NEKUVA_READER_PAGES/RESOLVE/ERROR`, Coil `DebugLogger`, `eventListener
+  onError`/`NEKUVA_IMG_ERROR`) DIHAPUS — semuanya `System.err`/logger tak-terjaga yang ikut jalan di release.
+  Error state reader tetap di-set (UI), hanya println-nya yang dibuang.
+
+### SSIV / telephoto — tetap DIBATALKAN (keputusan dikonfirmasi sesi ini)
+- User tanya apakah SSIV (telephoto) bisa ditambah lagi untuk optimasi. **Jawaban: tidak**, karena telephoto
+  `zoomable-image-coil3` tile-decode via `BitmapRegionDecoder` yang **tak bisa baca AVIF/WebP-animasi** + bypass decoder
+  Coil → halaman HITAM persis bug DoujinDesu. Coil `SubcomposeAsyncImage` (manual zoom) sudah auto-downsample (tak OOM).
+  Re-evaluasi HANYA jika ada subsampler yang lewat decoder Coil / guard format non-AVIF (lihat catatan SSIV di bawah).
+
+### FAVICON AVIF di Desktop — cosmetic, DEFERRED
+- `NEKUVA_IMG_ERROR data=favicon://... Failed to Image::makeFromEncoded` (SkiaImageDecoder) di Desktop: favicon source
+  yang AVIF gagal didekode karena Desktop belum punya decoder AVIF (`platformImageDecoderFactory()` = null di Desktop;
+  Android pakai libavif). Cosmetic (ikon Explore). TODO: decoder AVIF JVM / fallback ikon default. Log error-nya sudah
+  dibuang jadi tak berisik lagi.
+
 ### NETWORK: CloudFlare captcha-solve flow di SEMUA layar (Doki ExceptionResolver) — pending run-verify
 - **Doki:** error apa pun yang bisa di-resolve menampilkan tombol resolve (CF → "Selesaikan captcha") di layar mana pun;
   klik → buka browser in-app (CloudFlareActivity) → solve → tutup → operasi diulang otomatis.

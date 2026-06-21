@@ -49,16 +49,7 @@ class CommonHeadersInterceptor (
 			headersBuilder.trySet(CommonHeaders.ACCEPT, "image/webp,image/png;q=0.9,image/jpeg,*/*;q=0.8")
 		}
 		val newRequest = request.newBuilder().headers(headersBuilder.build()).build()
-		val resp = repository?.interceptSafe(ProxyChain(chain, newRequest)) ?: chain.proceed(newRequest)
-		// Diagnostic: log every source image request (final, post per-source interceptor) — URL + HTTP code +
-		// content-type + length. Reveals blank-page causes (403 / text-html / image-avif / etc.).
-		if (source != null) {
-			System.err.println(
-				"NEKUVA_IMG_REQ url=${newRequest.url} -> ${resp.code} " +
-					"type=${resp.header("Content-Type")} len=${resp.header("Content-Length")}",
-			)
-		}
-		return resp
+		return repository?.interceptSafe(ProxyChain(chain, newRequest)) ?: chain.proceed(newRequest)
 	}
 
 	private fun Headers.Builder.trySet(name: String, value: String) = try {
