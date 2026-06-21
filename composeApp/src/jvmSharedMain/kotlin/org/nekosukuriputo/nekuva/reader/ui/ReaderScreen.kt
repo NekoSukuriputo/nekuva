@@ -1674,13 +1674,14 @@ private fun DoublePageSpread(
 }
 
 /**
- * A single reader page with pinch-zoom + pan (expect/actual). Android uses telephoto's subsampling
- * (Doki RegionDecoder/SSIV — huge pages tile-decode); Desktop uses a manual-zoom Coil image. A one-finger
- * drag at 1× is NOT consumed so the pager still receives swipes; while zoomed the parent disables pager
- * scroll (via [onZoomChanged]) so panning never flips the page.
+ * A single reader page with pinch-zoom + pan over a Coil image (so all Coil decoders, incl. AVIF, apply).
+ * Telephoto subsampling was dropped: it tile-decodes the raw cached file via BitmapRegionDecoder, which
+ * can't read AVIF (DoujinDesu etc.) and bypasses Coil's decoders → black pages. Coil already downsamples
+ * to the view size (no OOM). A one-finger drag at 1× is NOT consumed so the pager still receives swipes;
+ * while zoomed the parent disables pager scroll (via [onZoomChanged]) so panning never flips the page.
  */
 @Composable
-expect fun ZoomablePage(
+private fun ZoomablePage(
     url: String?,
     colorFilter: ColorFilter?,
     contentScale: ContentScale,
@@ -1689,7 +1690,70 @@ expect fun ZoomablePage(
     zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, isLongTap: Boolean) -> Unit,
-)
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val zoomed = scale > 1f
+    LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        zoomCommands.collect { factor ->
+            scale = (scale * factor).coerceIn(1f, 5f)
+            val maxX = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
+            val maxY = (size.height * (scale - 1f)).coerceAtLeast(0f) / 2f
+            offset = Offset(offset.x.coerceIn(-maxX, maxX), offset.y.coerceIn(-maxY, maxY))
+        }
+    }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        offset = if (scale > 1f) {
+            val maxX = (size.width * (scale - 1f)) / 2f
+            val maxY = (size.height * (scale - 1f)) / 2f
+            Offset(
+                (offset.x + panChange.x).coerceIn(-maxX, maxX),
+                (offset.y + panChange.y).coerceIn(-maxY, maxY),
+            )
+        } else {
+            Offset.Zero
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { size = it }
+            .transformable(state = transformState, enabled = zoomed)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onTap(it, size, false) },
+                    onDoubleTap = {
+                        if (scale > 1f) {
+                            scale = 1f; offset = Offset.Zero
+                        } else {
+                            scale = 2.5f
+                        }
+                    },
+                    onLongPress = { onTap(it, size, true) },
+                )
+            },
+        contentAlignment = pageAlignment,
+    ) {
+        SubcomposeAsyncImage(
+            model = rememberReaderPageModel(url, foreground = active),
+            contentDescription = null,
+            contentScale = contentScale,
+            colorFilter = colorFilter,
+            modifier = Modifier.fillMaxSize().graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y,
+            ),
+            loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
+            error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
+        )
+    }
+}
 
 /** Report a loaded page's aspect ratio (width/height) from a Coil success state, for wide-page detection. */
 private fun reportAspect(state: coil3.compose.AsyncImagePainter.State.Success, onAspect: (Float) -> Unit) {

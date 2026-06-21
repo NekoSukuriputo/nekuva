@@ -134,9 +134,6 @@ kotlin {
                 implementation(libs.androidx.core.splashscreen)
                 // Foldable posture (Doki auto_double_foldable): WindowInfoTracker fold features.
                 implementation(libs.androidx.window)
-                // Subsampling zoomable image (RegionDecoder/SSIV) for the reader — Android only (telephoto's
-                // Coil3 integration has no Desktop variant; Desktop keeps the manual-zoom renderer).
-                implementation(libs.telephoto.zoomable.image.coil)
                 // AVIF decoder (Doki): the platform ImageDecoder fails on AVIF ("unimplemented"); many sources
                 // (e.g. DoujinDesu) serve AVIF pages, so a Coil AVIF decoder is needed or pages render blank.
                 implementation(libs.avif.decoder)

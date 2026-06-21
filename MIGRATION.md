@@ -1399,12 +1399,16 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   dipasangkan; unit Pager dibangun ulang saat flag wide terdeteksi (cover juga selalu solo).
 - **Double-foldable ✅** (Doki auto_double_foldable): `expect/actual rememberIsBookPosture` via `androidx.window`
   `WindowInfoTracker` (Android HALF_OPENED → book posture paksa dua-halaman); Desktop = false.
-- **RegionDecoder/SSIV subsampling ✅** (Doki SubsamplingScaleImageView): `ZoomablePage` jadi **expect/actual** —
-  **Android** pakai **telephoto** `ZoomableAsyncImage` (Coil3) yang tile-decode halaman besar saat zoom (pinch/double-tap
-  zoom+pan, colorFilter tetap, header per-source CloudFlare tetap via model Coil). **Desktop** tetap manual-zoom Coil
-  (telephoto `zoomable-image-coil3` tak punya artefak JVM; Coil sudah downsample ke ukuran view → tak OOM). Dependensi
-  `me.saket.telephoto:zoomable-image-coil3:0.16.0` ditambahkan ke androidMain.
-  **Catatan: compile ✅ Desktop+Android+assembleDebug; belum run-verify GUI** (wide-repair & telephoto perlu dicek di perangkat).
+- **RegionDecoder/SSIV subsampling — DIBATALKAN (telephoto incompatible dgn AVIF)**: sempat pakai telephoto
+  `ZoomableAsyncImage` (Android), TAPI sub-sampling telephoto tile-decode file mentah via `BitmapRegionDecoder` yang
+  **tak bisa baca AVIF** (DoujinDesu dll.) + **mem-bypass decoder Coil** → halaman HITAM. Di-revert: `ZoomablePage`
+  kembali pakai Coil `SubcomposeAsyncImage` (manual zoom) di kedua platform, jadi **decoder AVIF Coil dipakai** →
+  halaman AVIF tampil. Coil tetap downsample ke ukuran view (tak OOM). Telephoto dihapus dari deps. SSIV bisa
+  dipertimbangkan ulang nanti dgn guard format (bukan untuk AVIF).
+- **AVIF decoder ✅** (Doki BitmapDecoderCompat / libavif): platform `ImageDecoder` gagal AVIF ("unimplemented");
+  source spt DoujinDesu serve halaman AVIF → blank. Tambah Coil `Decoder` (expect/actual): Android decode via
+  `org.aomedia.avif.android.AvifDecoder` (port `decodeAvif`), klaim hanya source AVIF (brand ftyp); Desktop null.
+  Didaftarkan di image-loader components. Memperbaiki halaman reader + thumbnail Detail + favicon AVIF.
 
 ### LAYAR: Bookmarks / Downloads / Settings (sisa)
 - 🔴 Bookmarks: **Save pages** dari selection (butuh AREA image/save). Fungsi lain reader-sheet (sebagian).
