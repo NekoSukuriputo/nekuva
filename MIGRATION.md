@@ -1551,14 +1551,25 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - [ ] **Double-foldable reader** (`reader_double_foldable`) — perlu perangkat foldable utk uji.
 - [ ] **Shinigami TLS di Linux Desktop** — mitigasi Conscrypt sudah ada, perlu run-verify di Linux.
 
-### C. Deferral kecil yang disadari (bukan blocker rilis)
-- [ ] **Download: persist antrean lintas process-death** (dulu gratis dari WorkManager — engine in-process kehilangan antrean bila proses benar-benar dimatikan OS).
-- [ ] **Download: constraint metered-network + prompt "unduh via data seluler"** (butuh connectivity `actual`).
-- [ ] **Crash reporter global (ACRA/Crashlytics)** — belum dimigrasi.
-- [ ] **Auto periodic background sync** (change-triggered observe InvalidationTracker) — area background-jobs.
-- [ ] **SSIV / RegionBitmapDecoder subsampling** — TIDAK dipakai (telephoto incompatible AVIF; Coil sudah downsample). Ditandai won't-do kecuali ada subsampler lewat-decoder-Coil.
-- [ ] **Global search: "Lebih"/see-all section Lokal** (perlu layar daftar-lokal-ber-query).
-- [ ] **Reader Vertical-paged "margin/gaps spesifik"** ala Doki (kosmetik kecil; webtoon gaps sudah ada).
+### C. Deferral kecil yang disadari — SELESAI (2026-06-21)
+- [x] **Download: persist antrean lintas process-death** — `DownloadQueueStore` (`downloads_queue.json`) +
+      `DownloadManager.persistQueue()` (tulis tiap set unfinished berubah) + `restoreQueue()` saat launch
+      (re-enqueue, skip bab yang sudah diunduh via index.json). Manga di-rekonstruksi dari Room by id.
+- [x] **Download: constraint metered-network + prompt** — constraint DISABLED sudah di-enforce engine
+      (`awaitMeteredAllowed`); prompt ASK ditambah di DownloadDialog ("download over cellular?",
+      `download_cellular_confirm`) saat ASK + jaringan metered.
+- [x] **Crash reporter global (ACRA/Crashlytics)** — `CrashReporter.install()` (uncaught handler → tulis
+      report ke filesDir/crash (Android) / ~/.nekuva/crash (Desktop), simpan 10 terbaru, delegasi ke handler
+      lama). Dipasang di NekuvaApp + Main.
+- [x] **Auto periodic background sync** — `scheduleSync()` expect/actual: Android WorkManager periodik
+      (`SyncWorker`, ~12 jam, saat logged-in), Desktop no-op. (Re)schedule saat launch + login/logout.
+- [x] **SSIV / RegionBitmapDecoder subsampling** — WON'T-DO (telephoto incompatible AVIF; Coil sudah
+      downsample). Dikonfirmasi tidak dikerjakan; bukan fitur user-facing yang hilang.
+- [x] **Global search: "Lebih"/see-all section Lokal** — COMPLETE-BY-DESIGN: section Lokal sudah
+      menampilkan SEMUA hasil cocok inline (LazyRow, `getList(offset=0)` tak di-cap), jadi tak ada yang
+      tersembunyi → see-all redundant (beda dari Doki yang truncate+More, tapi fungsional setara).
+- [x] **Reader Vertical-paged "margin/gaps spesifik"** — `pageSpacing` di VerticalPager/HorizontalPager,
+      gated oleh setting "gaps" bersama webtoon. (Bonus: fix vertical-pager pakai `rememberResolvedPageUrl`.)
 
 ### D. Isu di repo lain `nekuva-exts` (BUKAN repo UI ini — §8)
 - [ ] **MagusManga** `getString("author")` NPE → harus `getStringOrNull` (fix di nekuva-exts, lalu naikkan tag `exts`).
