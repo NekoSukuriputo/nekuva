@@ -96,6 +96,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -1284,6 +1285,15 @@ private fun WebtoonReader(
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Preload upcoming pages into Coil's cache (Doki prefetch), gated by the network policy.
     ReaderPagePreloader(pages, listState.firstVisibleItemIndex, preloadAllowed)
+    // Desktop keyboard scroll: arrow Up/Down + PageUp/Down + Space scroll by a fraction of the VISIBLE
+    // viewport (not a whole page image), so reading stays continuous even in a half-height window.
+    val focusRequester = remember { FocusRequester() }
+    val keyScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+    fun scrollByKey(dir: Int) {
+        val vp = listState.layoutInfo.viewportSize.height.takeIf { it > 0 } ?: 1200
+        keyScope.launch { listState.animateScrollBy(vp * 0.85f * dir) }
+    }
     var ready by remember { mutableStateOf(false) }
     LaunchedEffect(scrollToken) {
         if (pages.isNotEmpty()) listState.scrollToItem(scrollToIndex.coerceIn(0, pages.lastIndex))
@@ -1341,6 +1351,26 @@ private fun WebtoonReader(
     Box(
         modifier = Modifier.fillMaxSize()
             .onSizeChanged { size = it }
+            // Desktop keyboard scrolling (re-acquire focus on any press, like the paged reader).
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    runCatching { focusRequester.requestFocus() }
+                }
+            }
+            .focusRequester(focusRequester)
+            .focusable()
+            .onKeyEvent { event ->
+                if (event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onKeyEvent false
+                when (event.key) {
+                    androidx.compose.ui.input.key.Key.DirectionDown,
+                    androidx.compose.ui.input.key.Key.PageDown,
+                    androidx.compose.ui.input.key.Key.Spacebar -> { scrollByKey(1); true }
+                    androidx.compose.ui.input.key.Key.DirectionUp,
+                    androidx.compose.ui.input.key.Key.PageUp -> { scrollByKey(-1); true }
+                    else -> false
+                }
+            }
             .pointerInput(Unit) {
                 // Webtoon is continuous-scroll, so any tap toggles the UI (Doki-like); long-press = menu.
                 detectTapGestures(
