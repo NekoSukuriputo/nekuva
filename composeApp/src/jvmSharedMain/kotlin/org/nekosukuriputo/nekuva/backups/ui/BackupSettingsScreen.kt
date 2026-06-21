@@ -1,6 +1,8 @@
 package org.nekosukuriputo.nekuva.backups.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -126,7 +128,11 @@ private fun RestoreSectionsDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.restore_backup)) },
         text = {
-            androidx.compose.foundation.layout.Column {
+            // Scrollable: with all 10 sections the list overflows the dialog and the bottom rows were
+            // clipped (looked like a label-less checkbox).
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 for (section in sections) {
                     androidx.compose.foundation.layout.Row(
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
