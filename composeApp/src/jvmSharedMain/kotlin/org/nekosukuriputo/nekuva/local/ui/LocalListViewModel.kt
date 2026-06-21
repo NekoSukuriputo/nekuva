@@ -40,9 +40,9 @@ class LocalListViewModel(
         viewModelScope.launch {
             localStorageChanges.collect { loadManga() }
         }
-        // Re-query when the local filter (tags) changes (Doki local filter). drop(1): skip the initial value.
+        // Re-query when the filter sheet applies (one bump = one reload; covers tags/exclude/rating/sort).
         viewModelScope.launch {
-            filterHolder.tags.drop(1).collect { loadManga() }
+            filterHolder.revision.drop(1).collect { loadManga() }
         }
     }
 
@@ -86,9 +86,16 @@ class LocalListViewModel(
         viewModelScope.launch {
             _uiState.value = LocalListUiState.Loading
             try {
-                val tags = filterHolder.tags.value
-                val filter = if (tags.isEmpty()) null
-                    else org.nekosukuriputo.nekuva.parsers.model.MangaListFilter.EMPTY.copy(tags = tags)
+                _sortOrder.value = settings.localListOrder // keep the displayed sort in sync with the sheet
+                val filter = if (filterHolder.isEmpty) {
+                    null
+                } else {
+                    org.nekosukuriputo.nekuva.parsers.model.MangaListFilter.EMPTY.copy(
+                        tags = filterHolder.tags.value,
+                        tagsExclude = filterHolder.tagsExclude.value,
+                        contentRating = filterHolder.contentRating.value,
+                    )
+                }
                 val raw = localMangaRepository.getList(0, settings.localListOrder, filter)
                 // Store local manga in the DB so Details/Reader can resolve them by id.
                 raw.forEach { runCatching { mangaDataRepository.storeManga(it, replaceExisting = false) } }
