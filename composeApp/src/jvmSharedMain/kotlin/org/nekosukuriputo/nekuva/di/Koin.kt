@@ -266,6 +266,7 @@ val scrobblingModule = module {
 
 val backupsModule = module {
     single { org.nekosukuriputo.nekuva.backups.data.BackupRepository(get(), get()) }
+    single { org.nekosukuriputo.nekuva.backups.domain.BackupRestoreManager(get()) }
     factory { org.nekosukuriputo.nekuva.backups.ui.BackupViewModel(get()) }
     // Telegram backup upload (Doki): uses the shared OkHttp client + settings (chat id).
     single { org.nekosukuriputo.nekuva.backups.domain.TelegramBackupUploader(get(), get()) }
