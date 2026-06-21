@@ -1394,14 +1394,17 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **Chapters bottom-sheet: badge SD-card untuk bab terunduh ✅** (gambar 5 user / Doki reader chapter list):
   `ReaderChapterItem.isDownloaded` (dari `localMangaRepository.findSavedManga` saat load) → ikon `SdCard` di baris bab
   pada sheet reader (tab daftar), selain highlight bab saat ini. (Tab daftar/grid/bookmark + branch selector sudah ada.)
-- 🔴 **Double-page wide-page→solo + sensitivity / double-foldable / RegionDecoder(SSIV) subsampling** — TERTUNDA dgn
-  alasan arsitektur (bukan drop diam): ketiganya di Doki berbasis **RecyclerView** (custom `DoublePageLayoutManager`
-  ukur lebar bitmap → span wide solo; `DoublePageSnapHelper` pakai `readerDoublePagesSensitivity` utk jarak fling;
-  `SubsamplingScaleImageView` utk tiling) yang **tak memetakan** ke Compose `Pager` + Coil `AsyncImage` Nekuva.
-  Wide-detect butuh decode-bounds async → re-pair unit Pager (janky), foldable butuh `androidx.window` + perangkat
-  lipat, SSIV butuh **dependensi baru** (mis. telephoto SubSamplingImage) + ganti core render. Semua **tak bisa
-  run-verify** tanpa GUI/hardware → menunggu keputusan (tambah dependensi? perangkat foldable?). Setting sudah ada
-  (`readerDoublePagesSensitivity`, `readerDoubleFoldable`).
+- **Double-page wide-page→solo + sensitivity ✅** (Doki DoublePageLayoutManager): di mode dua-halaman, halaman yang
+  rasio-nya (dari Coil `onSuccess`) melebihi ambang (di-tune `readerDoublePagesSensitivity`) ditampilkan **solo**, bukan
+  dipasangkan; unit Pager dibangun ulang saat flag wide terdeteksi (cover juga selalu solo).
+- **Double-foldable ✅** (Doki auto_double_foldable): `expect/actual rememberIsBookPosture` via `androidx.window`
+  `WindowInfoTracker` (Android HALF_OPENED → book posture paksa dua-halaman); Desktop = false.
+- **RegionDecoder/SSIV subsampling ✅** (Doki SubsamplingScaleImageView): `ZoomablePage` jadi **expect/actual** —
+  **Android** pakai **telephoto** `ZoomableAsyncImage` (Coil3) yang tile-decode halaman besar saat zoom (pinch/double-tap
+  zoom+pan, colorFilter tetap, header per-source CloudFlare tetap via model Coil). **Desktop** tetap manual-zoom Coil
+  (telephoto `zoomable-image-coil3` tak punya artefak JVM; Coil sudah downsample ke ukuran view → tak OOM). Dependensi
+  `me.saket.telephoto:zoomable-image-coil3:0.16.0` ditambahkan ke androidMain.
+  **Catatan: compile ✅ Desktop+Android+assembleDebug; belum run-verify GUI** (wide-repair & telephoto perlu dicek di perangkat).
 
 ### LAYAR: Bookmarks / Downloads / Settings (sisa)
 - 🔴 Bookmarks: **Save pages** dari selection (butuh AREA image/save). Fungsi lain reader-sheet (sebagian).

@@ -1571,7 +1571,7 @@ private fun PagedReader(
                             DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid, onAspect)
                         } else {
                             val pageIndex = unitPages?.firstOrNull() ?: 0
-                            ZoomablePage(pages.getOrNull(pageIndex)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid, { if (useDouble) onAspect(pageIndex, it) })
+                            ZoomablePage(pages.getOrNull(pageIndex)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
                         }
                     }
                 }
@@ -1673,13 +1673,13 @@ private fun DoublePageSpread(
 }
 
 /**
- * A single page with pinch-zoom + pan. Two-finger pinch zooms (even from 1×), double-tap toggles
- * zoom, and while zoomed a one-finger drag pans (clamped to edges). A one-finger drag at 1× is NOT
- * consumed, so the pager still receives swipes; while zoomed the pager scroll is disabled by the
- * parent so pan never flips the page.
+ * A single reader page with pinch-zoom + pan (expect/actual). Android uses telephoto's subsampling
+ * (Doki RegionDecoder/SSIV — huge pages tile-decode); Desktop uses a manual-zoom Coil image. A one-finger
+ * drag at 1× is NOT consumed so the pager still receives swipes; while zoomed the parent disables pager
+ * scroll (via [onZoomChanged]) so panning never flips the page.
  */
 @Composable
-private fun ZoomablePage(
+expect fun ZoomablePage(
     url: String?,
     colorFilter: ColorFilter?,
     contentScale: ContentScale,
@@ -1688,76 +1688,7 @@ private fun ZoomablePage(
     zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, isLongTap: Boolean) -> Unit,
-    onAspect: (Float) -> Unit = {},
-) {
-    var scale by remember { mutableStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-    var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
-    val zoomed = scale > 1f
-    // Tell the pager to stop owning drags while zoomed, so pan goes to this page (not page-flip).
-    LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
-    // On-screen zoom buttons (Doki ZoomControl) act on the CURRENT page only.
-    LaunchedEffect(active) {
-        if (!active) return@LaunchedEffect
-        zoomCommands.collect { factor ->
-            scale = (scale * factor).coerceIn(1f, 5f)
-            val maxX = (size.width * (scale - 1f)).coerceAtLeast(0f) / 2f
-            val maxY = (size.height * (scale - 1f)).coerceAtLeast(0f) / 2f
-            offset = Offset(offset.x.coerceIn(-maxX, maxX), offset.y.coerceIn(-maxY, maxY))
-        }
-    }
-    // Official transform gesture (pinch + pan). Enabled ONLY while zoomed so that at 1× a one-finger
-    // drag stays with the HorizontalPager (page swipe). Enter zoom via double-tap.
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 5f)
-        offset = if (scale > 1f) {
-            val maxX = (size.width * (scale - 1f)) / 2f
-            val maxY = (size.height * (scale - 1f)) / 2f
-            Offset(
-                (offset.x + panChange.x).coerceIn(-maxX, maxX),
-                (offset.y + panChange.y).coerceIn(-maxY, maxY),
-            )
-        } else {
-            Offset.Zero
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { size = it }
-            .transformable(state = transformState, enabled = zoomed)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onTap(it, size, false) },
-                    onDoubleTap = {
-                        if (scale > 1f) {
-                            scale = 1f; offset = Offset.Zero
-                        } else {
-                            scale = 2.5f
-                        }
-                    },
-                    onLongPress = { onTap(it, size, true) },
-                )
-            },
-        contentAlignment = pageAlignment,
-    ) {
-        SubcomposeAsyncImage(
-            model = rememberReaderPageModel(url, foreground = active),
-            contentDescription = null,
-            contentScale = contentScale,
-            colorFilter = colorFilter,
-            modifier = Modifier.fillMaxSize().graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offset.x,
-                translationY = offset.y,
-            ),
-            onSuccess = { st -> reportAspect(st) { onAspect(it) } },
-            loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
-            error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
-        )
-    }
-}
+)
 
 /** Report a loaded page's aspect ratio (width/height) from a Coil success state, for wide-page detection. */
 private fun reportAspect(state: coil3.compose.AsyncImagePainter.State.Success, onAspect: (Float) -> Unit) {

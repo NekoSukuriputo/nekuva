@@ -134,6 +134,9 @@ kotlin {
                 implementation(libs.androidx.core.splashscreen)
                 // Foldable posture (Doki auto_double_foldable): WindowInfoTracker fold features.
                 implementation(libs.androidx.window)
+                // Subsampling zoomable image (RegionDecoder/SSIV) for the reader — Android only (telephoto's
+                // Coil3 integration has no Desktop variant; Desktop keeps the manual-zoom renderer).
+                implementation(libs.telephoto.zoomable.image.coil)
             }
         }
         val desktopMain by getting {
