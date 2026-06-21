@@ -186,6 +186,10 @@ fun ReaderScreen(
     }
     val animatePages = remember { settings.readerAnimation != org.nekosukuriputo.nekuva.core.prefs.ReaderAnimation.NONE }
     val doubleOnLandscape = remember { settings.isReaderDoubleOnLandscape }
+    // Doki auto_double_foldable: two-page automatically when the device is in foldable book posture.
+    val doubleOnFoldable = remember { settings.isReaderDoubleOnFoldable }
+    val isBookPosture = org.nekosukuriputo.nekuva.reader.domain.rememberIsBookPosture()
+    val wideSensitivity = remember { settings.readerDoublePagesSensitivity }
     val controls = remember { viewModel.readerControls }
     // Configurable tap zones (Doki TapGridSettings). tapsReversed = follow RTL reading direction.
     val tapGridSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.reader.data.TapGridSettings>()
@@ -334,6 +338,8 @@ fun ReaderScreen(
                         webtoonZoomOut = webtoonZoomOut,
                         animatePages = animatePages,
                         doubleOnLandscape = doubleOnLandscape,
+                        forceDouble = doubleOnFoldable && isBookPosture,
+                        wideSensitivity = wideSensitivity,
                         tapGridSettings = tapGridSettings,
                         tapsReversed = tapsReversed,
                         navEvents = navEvents,
@@ -949,6 +955,8 @@ fun ReaderContent(
     webtoonZoomOut: Int,
     animatePages: Boolean,
     doubleOnLandscape: Boolean,
+    forceDouble: Boolean,
+    wideSensitivity: Float,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
@@ -961,15 +969,16 @@ fun ReaderContent(
     onShowMenu: () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-        // Double-page only applies in landscape + a horizontal paged mode (Doki).
+        // Double-page applies in landscape (Doki double_on_landscape) OR foldable book posture (forceDouble),
+        // in a horizontal paged mode.
         val landscape = maxWidth > maxHeight
-        val doublePage = doubleOnLandscape && landscape &&
-            (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.STANDARD ||
-                mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED)
+        val isPaged = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.STANDARD ||
+            mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED
+        val doublePage = isPaged && ((doubleOnLandscape && landscape) || forceDouble)
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
             WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, webtoonZoomEnabled, webtoonZoomOut, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
-            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, tapGridSettings, tapsReversed, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
+            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, wideSensitivity, tapGridSettings, tapsReversed, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
     }
 }
@@ -1401,6 +1410,7 @@ private fun PagedReader(
     pageAlignment: Alignment,
     animatePages: Boolean,
     doublePage: Boolean,
+    wideSensitivity: Float,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
@@ -1415,8 +1425,17 @@ private fun PagedReader(
     val isVertical = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.VERTICAL
     val isReversed = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED
     val useDouble = doublePage && !isVertical
-    // Display units: each is one page (single) or a spread of up to two (double, with the cover solo).
-    val units = remember(pages.size, useDouble) {
+    // Wide-page detection (Doki double-page: a landscape/spread page is shown SOLO, not paired). Each page's
+    // aspect ratio is learned from Coil as it loads; a page wider than the sensitivity-tuned threshold is wide.
+    // Higher sensitivity → lower threshold → more pages treated as wide spreads.
+    val wideThreshold = remember(wideSensitivity) { 1f + (1f - wideSensitivity.coerceIn(0f, 1f)) * 0.3f }
+    val wideFlags = remember(pages.size) { androidx.compose.runtime.mutableStateMapOf<Int, Boolean>() }
+    val onAspect: (Int, Float) -> Unit = remember(wideThreshold) {
+        { index, aspect -> if (index in pages.indices) wideFlags[index] = aspect >= wideThreshold }
+    }
+    // Display units: each is one page (single) or a spread of up to two (double, cover + wide pages solo).
+    val wideKey = if (useDouble) wideFlags.entries.count { it.value } else 0
+    val units = remember(pages.size, useDouble, wideKey, wideThreshold) {
         if (!useDouble) {
             List(pages.size) { intArrayOf(it) }
         } else {
@@ -1425,7 +1444,12 @@ private fun PagedReader(
                     add(intArrayOf(0)) // cover page solo
                     var i = 1
                     while (i < pages.size) {
-                        if (i + 1 < pages.size) { add(intArrayOf(i, i + 1)); i += 2 } else { add(intArrayOf(i)); i += 1 }
+                        // A wide page (or one whose partner is wide) stands alone — never half a pair.
+                        if (i + 1 < pages.size && wideFlags[i] != true && wideFlags[i + 1] != true) {
+                            add(intArrayOf(i, i + 1)); i += 2
+                        } else {
+                            add(intArrayOf(i)); i += 1
+                        }
                     }
                 }
             }
@@ -1544,9 +1568,10 @@ private fun PagedReader(
                     ) {
                         val unitPages = units.getOrNull(u)
                         if (useDouble && unitPages != null && unitPages.size == 2) {
-                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
+                            DoublePageSpread(unitPages, pages, isReversed, colorFilter, contentScale, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid, onAspect)
                         } else {
-                            ZoomablePage(pages.getOrNull(unitPages?.firstOrNull() ?: 0)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
+                            val pageIndex = unitPages?.firstOrNull() ?: 0
+                            ZoomablePage(pages.getOrNull(pageIndex)?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid, { if (useDouble) onAspect(pageIndex, it) })
                         }
                     }
                 }
@@ -1571,6 +1596,7 @@ private fun DoublePageSpread(
     zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTapGrid: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, Boolean) -> Unit,
+    onAspect: (Int, Float) -> Unit = { _, _ -> },
 ) {
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -1636,6 +1662,7 @@ private fun DoublePageSpread(
                         contentScale = contentScale,
                         colorFilter = colorFilter,
                         modifier = Modifier.fillMaxSize(),
+                        onSuccess = { st -> reportAspect(st) { onAspect(idx, it) } },
                         loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
                         error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
                     )
@@ -1661,6 +1688,7 @@ private fun ZoomablePage(
     zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     onZoomChanged: (Boolean) -> Unit,
     onTap: (androidx.compose.ui.geometry.Offset, androidx.compose.ui.unit.IntSize, isLongTap: Boolean) -> Unit,
+    onAspect: (Float) -> Unit = {},
 ) {
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
@@ -1724,10 +1752,17 @@ private fun ZoomablePage(
                 translationX = offset.x,
                 translationY = offset.y,
             ),
+            onSuccess = { st -> reportAspect(st) { onAspect(it) } },
             loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
             error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
         )
     }
+}
+
+/** Report a loaded page's aspect ratio (width/height) from a Coil success state, for wide-page detection. */
+private fun reportAspect(state: coil3.compose.AsyncImagePainter.State.Success, onAspect: (Float) -> Unit) {
+    val img = state.result.image
+    if (img.height > 0) onAspect(img.width.toFloat() / img.height.toFloat())
 }
 
 @Composable

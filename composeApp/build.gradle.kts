@@ -132,6 +132,8 @@ kotlin {
                 implementation(libs.kizzyrpc)
                 // Splash screen (Doki): backports the Android 12 splash to API 23+.
                 implementation(libs.androidx.core.splashscreen)
+                // Foldable posture (Doki auto_double_foldable): WindowInfoTracker fold features.
+                implementation(libs.androidx.window)
             }
         }
         val desktopMain by getting {
