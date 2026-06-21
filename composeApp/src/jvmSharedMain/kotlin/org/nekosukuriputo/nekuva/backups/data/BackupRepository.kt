@@ -52,8 +52,13 @@ import java.util.zip.ZipOutputStream
 data class RestoreResult(val restored: Int, val failed: Int)
 
 private const val TAP_GRID_PREFIX = "tap_grid_"
-// Sensitive / device-local keys excluded from the settings backup (Doki parity).
-private val EXCLUDED_SETTINGS = setOf("app_password", "app_password_num", "proxy_login", "proxy_password", "incognito")
+// Sensitive / device-local keys excluded from the settings backup (Doki parity). The manga-directory
+// paths (local_manga_dirs / local_storage) are device/OS-specific — restoring Android paths onto Desktop
+// (or vice versa) creates broken directories, so they must NOT cross devices.
+private val EXCLUDED_SETTINGS = setOf(
+    "app_password", "app_password_num", "proxy_login", "proxy_password", "incognito",
+    "local_manga_dirs", "local_storage",
+)
 
 @OptIn(ExperimentalSerializationApi::class)
 class BackupRepository(

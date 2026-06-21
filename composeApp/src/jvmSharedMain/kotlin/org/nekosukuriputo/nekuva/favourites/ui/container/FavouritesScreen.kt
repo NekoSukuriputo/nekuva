@@ -24,10 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withTimeout
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen
@@ -88,10 +89,22 @@ fun FavouritesScreen(
                         modifier = Modifier.pointerInput(tab.id) {
                             awaitEachGesture {
                                 awaitFirstDown(requireUnconsumed = false)
-                                val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                                    waitForUpOrCancellation()
+                                // Right-click (Desktop) → menu immediately.
+                                if (currentEvent.buttons.isSecondaryPressed) {
+                                    menuForTab = tab
+                                    return@awaitEachGesture
                                 }
-                                if (up == null) menuForTab = tab // held past the long-press threshold
+                                // Long-press (Android + Desktop) → menu only if held past the threshold.
+                                // withTimeout (not withTimeoutOrNull) so a normal click — whose up is
+                                // CONSUMED by Tab's selectable, making waitForUpOrCancellation return null —
+                                // isn't mistaken for a long-press (that's what popped the menu on a tap).
+                                val isLongPress = try {
+                                    withTimeout(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
+                                    false
+                                } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                                    true
+                                }
+                                if (isLongPress) menuForTab = tab
                             }
                         },
                         text = { Text(tab.title) },

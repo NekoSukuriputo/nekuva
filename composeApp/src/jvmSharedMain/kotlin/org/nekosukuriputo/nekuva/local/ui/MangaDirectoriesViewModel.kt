@@ -31,6 +31,8 @@ data class DirectoryConfigModel(
 class MangaDirectoriesViewModel(
     private val storageManager: LocalStorageManager,
     private val settings: AppSettings,
+    // Shared storage-change signal observed by the Local list — emit so it re-scans when dirs change.
+    private val localStorageChanges: kotlinx.coroutines.flow.MutableSharedFlow<org.nekosukuriputo.nekuva.local.domain.model.LocalManga?>,
 ) : ViewModel() {
 
     private val _items = MutableStateFlow<List<DirectoryConfigModel>>(emptyList())
@@ -46,6 +48,7 @@ class MangaDirectoriesViewModel(
                 settings.userSpecifiedMangaDirectories = settings.userSpecifiedMangaDirectories + path
             }
             loadList()
+            localStorageChanges.emit(null) // make the Local list re-scan the new directory
         }
     }
 
@@ -53,25 +56,33 @@ class MangaDirectoriesViewModel(
         settings.userSpecifiedMangaDirectories = settings.userSpecifiedMangaDirectories - model.path
         if (settings.mangaStorageDir == model.path) settings.mangaStorageDir = null
         loadList()
+        viewModelScope.launch { localStorageChanges.emit(null) }
     }
 
     private fun loadList() {
         viewModelScope.launch {
             _items.value = withContext(Dispatchers.IO) {
-                val defaultDir = storageManager.getDefaultWriteableDir()
-                val appDirs = storageManager.getApplicationStorageDirs()
-                val customDirs = settings.userSpecifiedMangaDirectories.map { File(it) }.filter { it !in appDirs }
+                val defaultDir = storageManager.getDefaultWriteableDir()?.absolutePath
+                val appPaths = storageManager.getApplicationStorageDirs().map { it.absolutePath }.toSet()
                 buildList {
-                    appDirs.forEach { add(it.toModel(it == defaultDir, isAppPrivate = true)) }
-                    customDirs.forEach { add(it.toModel(it == defaultDir, isAppPrivate = false)) }
+                    storageManager.getApplicationStorageDirs().forEach { dir ->
+                        add(dir.toModel(rawPath = dir.absolutePath, isDefault = dir.absolutePath == defaultDir, isAppPrivate = true))
+                    }
+                    // Custom dirs: key the model on the RAW stored string so Remove matches it even when the
+                    // stored value isn't a valid absolute path (e.g. a foreign path left by an old restore).
+                    settings.userSpecifiedMangaDirectories
+                        .filter { File(it).absolutePath !in appPaths }
+                        .forEach { raw ->
+                            add(File(raw).toModel(rawPath = raw, isDefault = raw == settings.mangaStorageDir, isAppPrivate = false))
+                        }
                 }
             }
         }
     }
 
-    private suspend fun File.toModel(isDefault: Boolean, isAppPrivate: Boolean) = DirectoryConfigModel(
+    private suspend fun File.toModel(rawPath: String, isDefault: Boolean, isAppPrivate: Boolean) = DirectoryConfigModel(
         title = storageManager.getDirectoryDisplayName(this, isFullPath = false),
-        path = absolutePath,
+        path = rawPath,
         isDefault = isDefault,
         isAppPrivate = isAppPrivate,
         availableBytes = runCatching { usableSpace }.getOrDefault(0L),

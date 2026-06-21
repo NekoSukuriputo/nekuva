@@ -45,7 +45,12 @@ fun FavouritesListScreen(
     categoryId: Long = 0L,
     onMangaClick: (Long) -> Unit
 ) {
-    val viewModel: FavouritesListViewModel = koinViewModel(parameters = { parametersOf(categoryId) })
+    // Key per category — otherwise every Favourites tab (same VM class, same nav entry) shares ONE
+    // ViewModel instance (the first tab's categoryId), so all tabs showed identical content.
+    val viewModel: FavouritesListViewModel = koinViewModel(
+        key = "favourites_$categoryId",
+        parameters = { parametersOf(categoryId) },
+    )
     val uiState by viewModel.uiState.collectAsState()
     val settings = koinInject<AppSettings>()
     val listMode = rememberMangaListMode(settings, AppSettings.KEY_LIST_MODE_FAVORITES)

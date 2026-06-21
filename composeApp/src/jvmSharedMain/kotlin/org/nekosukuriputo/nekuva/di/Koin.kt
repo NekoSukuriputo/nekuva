@@ -26,7 +26,7 @@ val localModule = module {
     // Shared local-filter state (bridges the shell Filter sheet ↔ the local list VM).
     single { org.nekosukuriputo.nekuva.local.domain.LocalFilterHolder() }
     factory { LocalListViewModel(get(), get(), get(), get(), get()) }
-    factory { org.nekosukuriputo.nekuva.local.ui.MangaDirectoriesViewModel(get(), get()) }
+    factory { org.nekosukuriputo.nekuva.local.ui.MangaDirectoriesViewModel(get(), get(), get()) }
 }
 
 val exploreModule = module {
