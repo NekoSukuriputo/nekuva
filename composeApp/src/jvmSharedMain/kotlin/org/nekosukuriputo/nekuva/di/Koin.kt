@@ -100,10 +100,12 @@ val suggestionsModule = module {
 }
 
 val appModule = module {
-    single { AppMangaLoaderContext(get(), get()) }
+    // Parser engine uses the "manga" client (base + CommonHeadersInterceptor) so per-source
+    // getRequestHeaders() (e.g. DoujinDesu X-Requested-With) + interceptSafe apply to parser requests.
+    single { AppMangaLoaderContext(get(org.koin.core.qualifier.named("manga")), get()) }
     single<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext> { get<AppMangaLoaderContext>() }
     single { org.nekosukuriputo.nekuva.core.cache.MemoryContentCache() }
-    single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get()) }
+    single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get(org.koin.core.qualifier.named("manga"))) }
     single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get()) }
     single {
         org.nekosukuriputo.nekuva.core.image.FaviconCache(

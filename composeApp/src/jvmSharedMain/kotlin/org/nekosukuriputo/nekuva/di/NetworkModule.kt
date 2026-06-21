@@ -2,8 +2,11 @@ package org.nekosukuriputo.nekuva.di
 
 import okhttp3.Cache
 import okhttp3.OkHttpClient
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
+import org.nekosukuriputo.nekuva.core.network.CacheLimitInterceptor
 import org.nekosukuriputo.nekuva.core.network.CloudFlareInterceptor
+import org.nekosukuriputo.nekuva.core.network.CommonHeadersInterceptor
 import org.nekosukuriputo.nekuva.core.network.DoHManager
 import org.nekosukuriputo.nekuva.core.network.GZipInterceptor
 import org.nekosukuriputo.nekuva.core.network.ProxyProvider
@@ -50,6 +53,24 @@ val networkModule = module {
             .addInterceptor(GZipInterceptor())
             .addInterceptor(CloudFlareInterceptor())
             .addInterceptor(RateLimitInterceptor())
+            .build()
+    }
+
+    // Manga/parser client (Doki @MangaHttpClient) = base client + CommonHeadersInterceptor. This is the
+    // client the parser engine (AppMangaLoaderContext.httpClient) uses, so per-source getRequestHeaders()
+    // (e.g. DoujinDesu's "X-Requested-With: XMLHttpRequest" on its /themes/ajax/ch.php page request) and the
+    // per-source interceptSafe (CloudFlare) are applied to PARSER requests, not just Coil image requests.
+    // Without it the DoujinDesu ajax POST returned no <img> → getPages() = 0 pages → blank reader.
+    // CommonHeadersInterceptor reads the MangaSource the WebClient tags onto each request (addTags).
+    single<OkHttpClient>(named("manga")) {
+        get<OkHttpClient>().newBuilder()
+            .addNetworkInterceptor(CacheLimitInterceptor())
+            .addInterceptor(
+                CommonHeadersInterceptor(
+                    lazy { get<org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory>() },
+                    lazy { get<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext>() },
+                ),
+            )
             .build()
     }
 }
