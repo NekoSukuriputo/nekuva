@@ -12,9 +12,14 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.nekosukuriputo.nekuva.core.prefs.DownloadFormat
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -85,6 +90,65 @@ class DownloadManager(
         val paused: MutableStateFlow<Boolean>,
     ) {
         var job: Job? = null
+    }
+
+    private val queueJson = Json { ignoreUnknownKeys = true }
+
+    init {
+        // Persist the unfinished queue whenever its membership changes (add / finish / cancel / remove),
+        // so an app-kill mid-download can be resumed on next launch (Doki's WorkManager survival). Progress
+        // ticks don't change the persisted fields, so key only on the set of unfinished download ids.
+        scope.launch {
+            _downloads
+                .map { list -> list.filterNot { it.isFinished }.map { it.id }.toSet() }
+                .distinctUntilChanged()
+                .collect { persistQueue() }
+        }
+    }
+
+    /**
+     * Restore + re-enqueue unfinished downloads saved by a previous run (call once at app start). Resumes
+     * each — already-downloaded chapters are skipped (index.json), so it's safe to re-run.
+     */
+    suspend fun restoreQueue() {
+        val file = downloadQueueFile()
+        if (!file.exists()) return
+        val saved = runCatching { queueJson.decodeFromString<List<PersistedDownload>>(file.readText()) }
+            .getOrNull().orEmpty()
+        runCatching { file.delete() } // scheduling re-persists the live set
+        for (p in saved) {
+            val manga = runCatching { mangaDataRepository.findMangaById(p.mangaId, withChapters = true) }
+                .getOrNull() ?: continue
+            val task = DownloadTask(
+                manga = manga,
+                chaptersIds = p.chaptersIds?.toSet(),
+                destination = p.destinationPath?.let { File(it) },
+                format = p.format?.let { f -> runCatching { DownloadFormat.valueOf(f) }.getOrNull() },
+                startPaused = false,
+            )
+            runCatching { schedule(listOf(task)) }
+        }
+    }
+
+    private fun persistQueue() {
+        val active = _downloads.value.filterNot { it.isFinished }.mapNotNull { state ->
+            val t = tasks[state.id] ?: return@mapNotNull null
+            PersistedDownload(
+                mangaId = t.manga.id,
+                chaptersIds = t.chaptersIds?.toList(),
+                destinationPath = t.destination?.absolutePath,
+                format = t.format?.name,
+            )
+        }
+        runCatching {
+            val file = downloadQueueFile()
+            if (active.isEmpty()) {
+                file.delete()
+            } else {
+                file.parentFile?.mkdirs()
+                file.writeText(queueJson.encodeToString(active))
+            }
+        }
     }
 
     /** Enqueue downloads; returns whether anything was started immediately (vs added paused). */

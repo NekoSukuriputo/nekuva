@@ -140,6 +140,22 @@ fun App() {
         runCatching { org.nekosukuriputo.nekuva.tracker.work.scheduleTracker() }
     }
 
+    // Background periodic sync (Doki SyncAdapter): (re)schedule on launch — Android WorkManager while
+    // logged in, Desktop no-op (manual sync via Settings → Services).
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching { org.nekosukuriputo.nekuva.sync.work.scheduleSync() }
+    }
+
+    // Resume downloads left unfinished by a previous run (Doki WorkManager survival) — re-enqueues the
+    // persisted queue; already-downloaded chapters are skipped.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching {
+            org.koin.core.context.GlobalContext.get()
+                .get<org.nekosukuriputo.nekuva.download.domain.DownloadManager>()
+                .restoreQueue()
+        }
+    }
+
     // Background suggestions refresh (Doki SuggestionsWorker): (re)schedule per the suggestions setting on
     // launch. Android = WorkManager periodic; Desktop = no-op (suggestions stay on-demand from the screen).
     androidx.compose.runtime.LaunchedEffect(Unit) {

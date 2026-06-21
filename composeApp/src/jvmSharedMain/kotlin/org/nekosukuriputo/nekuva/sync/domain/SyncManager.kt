@@ -39,11 +39,15 @@ class SyncManager(
 		settings.email = email.trim()
 		settings.password = password
 		settings.token = token
+		// Start periodic background sync now that we're logged in (Android only; Desktop no-op).
+		runCatching { org.nekosukuriputo.nekuva.sync.work.scheduleSync() }
 	}
 
 	fun logout() {
 		settings.logout()
 		_state.value = SyncState.Idle
+		// Cancel the periodic background sync.
+		runCatching { org.nekosukuriputo.nekuva.sync.work.scheduleSync() }
 	}
 
 	suspend fun syncNow() = mutex.withLock {

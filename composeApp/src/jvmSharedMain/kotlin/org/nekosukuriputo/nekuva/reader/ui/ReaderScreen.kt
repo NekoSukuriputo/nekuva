@@ -979,7 +979,7 @@ fun ReaderContent(
         if (mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.WEBTOON) {
             WebtoonReader(pages, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, webtoonGaps, webtoonZoomEnabled, webtoonZoomOut, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onToggleControls, onShowMenu)
         } else {
-            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, wideSensitivity, tapGridSettings, tapsReversed, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
+            PagedReader(pages, mode, scrollToIndex, scrollToken, colorFilter, autoScroll, autoScrollSpeed, contentScale, pageAlignment, animatePages, doublePage, wideSensitivity, tapGridSettings, tapsReversed, webtoonGaps, navEvents, zoomCommands, preloadAllowed, onVisibleIndexChanged, onVisibleBounds, onChapter, onToggleControls, onShowMenu)
         }
     }
 }
@@ -1417,6 +1417,7 @@ private fun PagedReader(
     wideSensitivity: Float,
     tapGridSettings: org.nekosukuriputo.nekuva.reader.data.TapGridSettings,
     tapsReversed: Boolean,
+    pageGaps: Boolean,
     navEvents: kotlinx.coroutines.flow.SharedFlow<Int>,
     zoomCommands: kotlinx.coroutines.flow.SharedFlow<Float>,
     preloadAllowed: Boolean,
@@ -1427,6 +1428,8 @@ private fun PagedReader(
     onShowMenu: () -> Unit,
 ) {
     val isVertical = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.VERTICAL
+    // Gap between pages in paged modes (Doki page margin) — reuse the "gaps" setting shared with webtoon.
+    val pageSpacing = if (pageGaps) 16.dp else 0.dp
     val isReversed = mode == org.nekosukuriputo.nekuva.core.prefs.ReaderMode.REVERSED
     val useDouble = doublePage && !isVertical
     // Wide-page detection (Doki double-page: a landscape/spread page is shown SOLO, not paired). Each page's
@@ -1551,8 +1554,10 @@ private fun PagedReader(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = !pageZoomed,
+                pageSpacing = pageSpacing,
             ) { u ->
-                ZoomablePage(pages.getOrNull(unitFirstPage(u))?.page?.url, colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
+                // Resolve getPageUrl (some sources return an intermediate page URL) — else blank in vertical mode.
+                ZoomablePage(rememberResolvedPageUrl(pages.getOrNull(unitFirstPage(u))?.page), colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
             }
         } else {
             // Right-to-left is done by flipping the layout direction (reliable swipe paging),
@@ -1565,6 +1570,7 @@ private fun PagedReader(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = !pageZoomed,
+                    pageSpacing = pageSpacing,
                 ) { u ->
                     // Keep page content laid out LTR regardless of the pager's RTL flow.
                     androidx.compose.runtime.CompositionLocalProvider(
