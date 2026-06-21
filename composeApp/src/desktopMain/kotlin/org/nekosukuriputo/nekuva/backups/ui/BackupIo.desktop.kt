@@ -3,10 +3,11 @@ package org.nekosukuriputo.nekuva.backups.ui
 import androidx.compose.runtime.Composable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.awt.FileDialog
+import java.awt.Frame
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 
 @Composable
@@ -31,17 +32,22 @@ private object DesktopBackupIo : BackupIo {
         return true
     }
 
-    // Native L&F is set at app startup (Main.kt), so this resolves redirected folders too.
+    // Use the NATIVE OS file dialog (java.awt.FileDialog), not Swing JFileChooser: the Windows-L&F
+    // JFileChooser does its folder listing on the EDT and freezes while navigating folders. FileDialog is
+    // the real OS dialog — the OS handles navigation, so the JVM/EDT never blocks. Shown on the EDT.
     private suspend fun chooseFile(save: Boolean, defaultName: String?): File? = withContext(Dispatchers.IO) {
         var result: File? = null
         SwingUtilities.invokeAndWait {
-            val chooser = JFileChooser().apply {
-                if (defaultName != null) selectedFile = File(defaultName)
-            }
-            val option = if (save) chooser.showSaveDialog(null) else chooser.showOpenDialog(null)
-            if (option == JFileChooser.APPROVE_OPTION) {
-                result = chooser.selectedFile
-            }
+            val dialog = FileDialog(
+                null as Frame?,
+                "Nekuva",
+                if (save) FileDialog.SAVE else FileDialog.LOAD,
+            )
+            if (defaultName != null) dialog.file = defaultName
+            dialog.isVisible = true
+            val dir = dialog.directory
+            val name = dialog.file
+            if (name != null && dir != null) result = File(dir, name)
         }
         result
     }

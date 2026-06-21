@@ -37,6 +37,8 @@ private object DesktopMangaFilePicker : MangaFilePicker {
         SwingUtilities.invokeAndWait {
             val chooser = JFileChooser().apply {
                 fileFilter = FileNameExtensionFilter("Comic book archive (*.cbz, *.zip)", "cbz", "zip")
+                // Avoid the Windows ShellFolder EDT freeze while navigating folders.
+                putClientProperty("FileChooser.useShellFolder", false)
             }
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
                 result = chooser.selectedFile
@@ -48,7 +50,10 @@ private object DesktopMangaFilePicker : MangaFilePicker {
     private suspend fun chooseDir(): File? = withContext(Dispatchers.IO) {
         var result: File? = null
         SwingUtilities.invokeAndWait {
-            val chooser = JFileChooser().apply { fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
+            val chooser = JFileChooser().apply {
+                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                putClientProperty("FileChooser.useShellFolder", false)
+            }
             if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
                 result = chooser.selectedFile
             }
