@@ -47,6 +47,8 @@ fun main() {
     // user create new folders — the cross-platform Metal L&F fails ("Error creating new folder") there.
     runCatching { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) }
     initKoin()
+    // Global crash reporter (Doki ACRA replacement): log uncaught exceptions to ~/.nekuva/crash.
+    org.nekosukuriputo.nekuva.core.diagnostics.CrashReporter.install()
     // Kick off the embedded-Chromium (KCEF) download/init in the background so JS-based sources and the
     // in-app browser are ready when needed. First run downloads ~150 MB into ~/.nekuva/kcef.
     runCatching { org.nekosukuriputo.nekuva.core.network.webview.KcefManager.start() }

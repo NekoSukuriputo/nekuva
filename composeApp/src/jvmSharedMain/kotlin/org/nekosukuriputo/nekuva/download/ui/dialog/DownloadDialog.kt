@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -51,6 +52,8 @@ import nekuva.composeapp.generated.resources.chapter_selection_hint
 import nekuva.composeapp.generated.resources.chapters
 import nekuva.composeapp.generated.resources.chapters_all
 import nekuva.composeapp.generated.resources.destination_directory
+import nekuva.composeapp.generated.resources.download_cellular_confirm
+import nekuva.composeapp.generated.resources.download_over_cellular
 import nekuva.composeapp.generated.resources.download_option_all_chapters
 import nekuva.composeapp.generated.resources.download_option_all_unread
 import nekuva.composeapp.generated.resources.download_option_first_n_chapters
@@ -91,6 +94,10 @@ fun DownloadDialog(
     var showMore by remember { mutableStateOf(false) }
     var selectedFormat by remember { mutableStateOf<DownloadFormat?>(null) }
     var selectedDestIndex by remember { mutableStateOf(0) }
+    // Metered-network prompt (Doki downloads_metered_network = ASK): confirm before downloading on cellular.
+    val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
+    val networkState = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.os.NetworkState>()
+    var pendingMeteredConfirm by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LaunchedEffect(defaultFormat) { if (selectedFormat == null) selectedFormat = defaultFormat }
     LaunchedEffect(Unit) { viewModel.onScheduled.collect { onScheduled(it) } }
@@ -294,18 +301,46 @@ fun DownloadDialog(
                                 DownloadOption.UNREAD -> options.unreadChapters
                             }
                             if (macro != null) {
-                                viewModel.confirm(
-                                    startNow = startNow,
-                                    macro = macro,
-                                    format = selectedFormat,
-                                    destination = destinations.getOrNull(selectedDestIndex),
-                                )
+                                val doConfirm = {
+                                    viewModel.confirm(
+                                        startNow = startNow,
+                                        macro = macro,
+                                        format = selectedFormat,
+                                        destination = destinations.getOrNull(selectedDestIndex),
+                                    )
+                                }
+                                // ASK + on a metered network → confirm "download over cellular?" first.
+                                if (startNow &&
+                                    settings.allowDownloadOnMeteredNetwork == org.nekosukuriputo.nekuva.core.prefs.TriStateOption.ASK &&
+                                    networkState.isMetered()
+                                ) {
+                                    pendingMeteredConfirm = doConfirm
+                                } else {
+                                    doConfirm()
+                                }
                             }
                         },
                     ) { Text(stringResource(Res.string.save)) }
                 }
             }
         }
+    }
+
+    // "Download over cellular?" confirmation (Doki metered ASK).
+    pendingMeteredConfirm?.let { action ->
+        AlertDialog(
+            onDismissRequest = { pendingMeteredConfirm = null },
+            title = { Text(stringResource(Res.string.download_over_cellular)) },
+            text = { Text(stringResource(Res.string.download_cellular_confirm)) },
+            confirmButton = {
+                TextButton(onClick = { pendingMeteredConfirm = null; action() }) {
+                    Text(stringResource(Res.string.start_download))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingMeteredConfirm = null }) { Text(stringResource(Res.string.cancel)) }
+            },
+        )
     }
 }
 

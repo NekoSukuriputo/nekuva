@@ -19,6 +19,8 @@ class NekuvaApp : Application(), KoinComponent {
         initKoin {
             androidContext(this@NekuvaApp)
         }
+        // Global crash reporter (Doki ACRA replacement): log uncaught exceptions to filesDir/crash.
+        org.nekosukuriputo.nekuva.core.diagnostics.CrashReporter.install()
         // Keep home-screen widgets in sync with history/favourites (Doki WidgetUpdater).
         WidgetUpdater(this, get(), get()).start(appScope)
     }
