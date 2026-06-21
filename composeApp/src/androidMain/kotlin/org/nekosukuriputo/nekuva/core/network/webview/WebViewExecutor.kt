@@ -43,7 +43,15 @@ object WebViewExecutor {
                     // Load the page so the script runs in that origin (location/cookies/DOM), like Doki.
                     suspendCoroutine { cont ->
                         webView.webViewClient = object : WebViewClient() {
+                            // onPageFinished can fire more than once per load (redirects / sub-frames). Guard so
+                            // the continuation is resumed exactly once — else "IllegalStateException: Already
+                            // resumed" crashes the app (e.g. fast-scrolling Explore fires many JS-source loads).
+                            // Mirror Doki: detach the client before resuming so later callbacks are no-ops.
+                            private var resumed = false
                             override fun onPageFinished(view: WebView?, url: String?) {
+                                if (resumed) return
+                                resumed = true
+                                view?.webViewClient = WebViewClient()
                                 cont.resume(Unit)
                             }
                         }
