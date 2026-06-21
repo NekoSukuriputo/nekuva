@@ -71,7 +71,11 @@ fun InstallNekuvaImageLoader() {
                     .maxSizeBytes(128L * 1024 * 1024)
                     .build()
             }
-            .crossfade(true).build()
+            .crossfade(true)
+            // Log image loads + failures (page URL + error) so blank-page issues are diagnosable in logcat
+            // (tag "coil3"). Coil failures are otherwise silent.
+            .logger(coil3.util.DebugLogger())
+            .build()
     }
 }
 

@@ -43,6 +43,11 @@ class CommonHeadersInterceptor (
 			val idn = IDN.toASCII(repository.domain)
 			headersBuilder.trySet(CommonHeaders.REFERER, "https://$idn/")
 		}
+		// Doki PageLoader.createPageRequest Accept: tell the host which formats we can decode, so it doesn't
+		// serve one Coil can't (e.g. AVIF) — a common cause of blank pages on some sources.
+		if (headersBuilder[CommonHeaders.ACCEPT] == null) {
+			headersBuilder.trySet(CommonHeaders.ACCEPT, "image/webp,image/png;q=0.9,image/jpeg,*/*;q=0.8")
+		}
 		val newRequest = request.newBuilder().headers(headersBuilder.build()).build()
 		return repository?.interceptSafe(ProxyChain(chain, newRequest)) ?: chain.proceed(newRequest)
 	}
