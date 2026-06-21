@@ -7,7 +7,9 @@
          normal app theme. Uses androidx core-splashscreen so it works on API 23+, not just Android 12+. -->
     <style name="Theme.Nekuva.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <!-- Padded logo (content in the inner ~66% safe-zone) so Android 12+'s circular splash mask
+             never clips the cat's ears / rounded-square corners. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
         <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
     </style>
 </resources>

@@ -3,7 +3,9 @@ package org.nekosukuriputo.nekuva.list.ui
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -44,7 +46,9 @@ fun ListConfigSheet(
     var gridSize by remember { mutableIntStateOf(settings.gridSize) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        // Scrollable: History/Favourites add a sort list that overflows the sheet on small screens —
+        // without this the last sort options are clipped at the screen bottom (looked like a stray radio).
+        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
             Text(
                 text = stringResource(Res.string.list_options),
                 style = MaterialTheme.typography.titleLarge,

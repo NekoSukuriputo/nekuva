@@ -116,7 +116,13 @@ private fun SplashContent(icon: Painter) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Image(painter = icon, contentDescription = null, modifier = Modifier.size(128.dp))
+            // Fit (not crop) so the square logo shows whole; 1024px source keeps it crisp.
+            Image(
+                painter = icon,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.size(160.dp),
+            )
             Text("Nekuva", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
     }
