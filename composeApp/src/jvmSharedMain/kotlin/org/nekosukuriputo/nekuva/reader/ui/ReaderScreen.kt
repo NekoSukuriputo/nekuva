@@ -1660,16 +1660,19 @@ private fun DoublePageSpread(
         ) {
             ordered.forEach { idx ->
                 Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    SubcomposeAsyncImage(
-                        model = rememberReaderPageModel(rememberResolvedPageUrl(pages.getOrNull(idx)?.page)),
-                        contentDescription = null,
-                        contentScale = contentScale,
-                        colorFilter = colorFilter,
-                        modifier = Modifier.fillMaxSize(),
-                        onSuccess = { st -> reportAspect(st) { onAspect(idx, it) } },
-                        loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
-                        error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
-                    )
+                    var retryHash by remember(idx) { mutableIntStateOf(0) }
+                    key(retryHash) {
+                        SubcomposeAsyncImage(
+                            model = rememberReaderPageModel(rememberResolvedPageUrl(pages.getOrNull(idx)?.page)),
+                            contentDescription = null,
+                            contentScale = contentScale,
+                            colorFilter = colorFilter,
+                            modifier = Modifier.fillMaxSize(),
+                            onSuccess = { st -> reportAspect(st) { onAspect(idx, it) } },
+                            loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
+                            error = { PageErrorRetry { retryHash++ } },
+                        )
+                    }
                 }
             }
         }
@@ -1697,6 +1700,9 @@ private fun ZoomablePage(
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    // Per-page retry (Doki): a network-failed page shows a Refresh button that re-requests the image.
+    // Keyed by url so moving to a new page resets it.
+    var retryHash by remember(url) { mutableIntStateOf(0) }
     val zoomed = scale > 1f
     LaunchedEffect(zoomed) { onZoomChanged(zoomed) }
     LaunchedEffect(active) {
@@ -1741,20 +1747,36 @@ private fun ZoomablePage(
             },
         contentAlignment = pageAlignment,
     ) {
-        SubcomposeAsyncImage(
-            model = rememberReaderPageModel(url, foreground = active),
-            contentDescription = null,
-            contentScale = contentScale,
-            colorFilter = colorFilter,
-            modifier = Modifier.fillMaxSize().graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offset.x,
-                translationY = offset.y,
-            ),
-            loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
-            error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error) } },
-        )
+        key(retryHash) {
+            SubcomposeAsyncImage(
+                model = rememberReaderPageModel(url, foreground = active),
+                contentDescription = null,
+                contentScale = contentScale,
+                colorFilter = colorFilter,
+                modifier = Modifier.fillMaxSize().graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y,
+                ),
+                loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() } },
+                error = { PageErrorRetry { retryHash++ } },
+            )
+        }
+    }
+}
+
+/** Error slot for a reader page that failed to load: message + Refresh button (Doki per-page retry). */
+@Composable
+private fun PageErrorRetry(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
     }
 }
 

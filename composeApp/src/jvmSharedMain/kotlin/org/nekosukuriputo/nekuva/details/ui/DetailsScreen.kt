@@ -23,6 +23,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
+import androidx.compose.material.icons.filled.Refresh
 import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -531,12 +533,27 @@ fun MangaDetailsContent(
                         .apply { mangaSourceExtra(manga.source) }
                         .build()
                 }
-                AsyncImage(
-                    model = coverModel,
-                    contentDescription = "Cover",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                // Cover load can fail on CloudFlare/DoH sources; show a Refresh button to re-request
+                // (Doki: failed cover/thumbnail is retryable), keyed so the tap re-fetches the same url.
+                var coverRetry by remember(coverModel) { mutableIntStateOf(0) }
+                key(coverRetry) {
+                    SubcomposeAsyncImage(
+                        model = coverModel,
+                        contentDescription = "Cover",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        error = {
+                            Box(
+                                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                IconButton(onClick = { coverRetry++ }) {
+                                    Icon(Icons.Filled.Refresh, contentDescription = stringResource(Res.string.retry))
+                                }
+                            }
+                        },
+                    )
+                }
                 // NSFW Badges
                 if (manga.contentRating == org.nekosukuriputo.nekuva.parsers.model.ContentRating.SUGGESTIVE) {
                     Badge(modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), containerColor = androidx.compose.ui.graphics.Color(0xFFF57C00)) { Text("16+") }

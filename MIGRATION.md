@@ -1356,6 +1356,13 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   Android pakai libavif). Cosmetic (ikon Explore). TODO: decoder AVIF JVM / fallback ikon default. Log error-nya sudah
   dibuang jadi tak berisik lagi.
 
+### UI: tombol Refresh saat gambar gagal (network error) — reader pages + Details cover (Doki per-page retry)
+- **Reader:** halaman mode webtoon sudah punya tombol retry; mode **paged (ZoomablePage)** + **double-page** dulu hanya
+  tampil teks "Kesalahan" memenuhi layar tanpa tombol (sesuai screenshot user). Ditambah `PageErrorRetry` (teks +
+  tombol Refresh) + `key(retryHash)` supaya tap me-request ulang URL yang sama.
+- **Details cover:** `AsyncImage` → `SubcomposeAsyncImage` dgn slot `error` = tombol Refresh (cover sering gagal di
+  source CloudFlare). Thumbnail grid halaman (chapters/pages) belum — bisa menyusul kalau perlu.
+
 ### NETWORK: CloudFlare captcha-solve flow di SEMUA layar (Doki ExceptionResolver) — pending run-verify
 - **Doki:** error apa pun yang bisa di-resolve menampilkan tombol resolve (CF → "Selesaikan captcha") di layar mana pun;
   klik → buka browser in-app (CloudFlareActivity) → solve → tutup → operasi diulang otomatis.
