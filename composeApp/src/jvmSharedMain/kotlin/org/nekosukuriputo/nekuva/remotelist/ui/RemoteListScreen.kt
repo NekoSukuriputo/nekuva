@@ -79,6 +79,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.nekosukuriputo.nekuva.core.ui.horizontalWheelScroll
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -327,8 +328,11 @@ private fun QuickFilterRow(
     val quickTags = remember(state.selectedTags, state.availableTags) {
         (state.selectedTags.toList() + state.availableTags.filter { it !in state.selectedTags }).take(12)
     }
+    val chipListState = androidx.compose.foundation.lazy.rememberLazyListState()
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        state = chipListState,
+        modifier = Modifier.fillMaxWidth()
+            .horizontalWheelScroll(chipListState), // Desktop: mouse-wheel scrolls the filter chips
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

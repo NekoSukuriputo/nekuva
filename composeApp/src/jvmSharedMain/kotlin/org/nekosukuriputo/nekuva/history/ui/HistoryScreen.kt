@@ -52,6 +52,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.prefs.ListMode
 import org.nekosukuriputo.nekuva.core.prefs.ProgressIndicatorMode
+import org.nekosukuriputo.nekuva.core.ui.horizontalWheelScroll
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -348,10 +349,12 @@ private fun HistoryQuickFilterRow(
     applied: Set<ListFilterOption>,
     onToggle: (ListFilterOption) -> Unit,
 ) {
+    val chipScroll = rememberScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
+            .horizontalScroll(chipScroll)
+            .horizontalWheelScroll(chipScroll) // Desktop: mouse-wheel scrolls the chip row
             .padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
