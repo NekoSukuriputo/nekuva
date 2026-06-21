@@ -306,6 +306,11 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onBackClick = { navController.popBackStack() },
                     )
                 }
+                composable<MangaDirectoriesRoute> {
+                    org.nekosukuriputo.nekuva.local.ui.MangaDirectoriesScreen(
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
                 composable<DataCleanupRoute> {
                     org.nekosukuriputo.nekuva.settings.ui.network.DataCleanupScreen(
                         onBackClick = { navController.popBackStack() },

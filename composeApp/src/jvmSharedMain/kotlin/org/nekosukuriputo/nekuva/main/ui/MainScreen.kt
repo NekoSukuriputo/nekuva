@@ -533,7 +533,7 @@ private fun rememberOverflowItems(
             OverflowItem(filter, enabled = true, onClick = onLocalFilter),
             OverflowItem(importLabel, enabled = true, onClick = onImport),
             listOpt(AppSettings.KEY_LIST_MODE),
-            OverflowItem(directoriesLabel, enabled = true, onClick = { navController.navigate(StorageNetworkSettingsRoute) }),
+            OverflowItem(directoriesLabel, enabled = true, onClick = { navController.navigate(org.nekosukuriputo.nekuva.core.nav.MangaDirectoriesRoute) }),
         )
         else -> emptyList()
     }

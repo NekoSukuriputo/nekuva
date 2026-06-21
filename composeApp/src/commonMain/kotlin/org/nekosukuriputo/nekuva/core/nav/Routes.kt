@@ -90,6 +90,10 @@ data object BackupSettingsRoute
 @Serializable
 data object StorageNetworkSettingsRoute
 
+/** "Manga directories" CRUD screen (Doki MangaDirectoriesActivity), opened from the Local overflow. */
+@Serializable
+data object MangaDirectoriesRoute
+
 @Serializable
 data object ProxySettingsRoute
 
