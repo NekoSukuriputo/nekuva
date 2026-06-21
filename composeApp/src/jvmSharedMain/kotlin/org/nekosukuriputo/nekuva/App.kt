@@ -75,6 +75,14 @@ fun InstallNekuvaImageLoader() {
             // Log image loads + failures (page URL + error) so blank-page issues are diagnosable in logcat
             // (tag "coil3"). Coil failures are otherwise silent.
             .logger(coil3.util.DebugLogger())
+            // Explicit failure logging to System.err (caught by `logcat -s System.err:*`): prints the failing
+            // image URL + exception with a NEKUVA_IMG_ERROR marker, so blank pages are diagnosable for sure.
+            .eventListener(object : coil3.EventListener() {
+                override fun onError(request: coil3.request.ImageRequest, result: coil3.request.ErrorResult) {
+                    System.err.println("NEKUVA_IMG_ERROR data=${request.data} : ${result.throwable}")
+                    result.throwable.printStackTrace()
+                }
+            })
             .build()
     }
 }
