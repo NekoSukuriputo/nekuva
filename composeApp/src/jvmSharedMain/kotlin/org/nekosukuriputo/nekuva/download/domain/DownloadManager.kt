@@ -90,6 +90,7 @@ class DownloadManager(
     /** Enqueue downloads; returns whether anything was started immediately (vs added paused). */
     suspend fun schedule(tasks: Collection<DownloadTask>): Boolean {
         if (tasks.isEmpty()) return false
+        ensureDownloadForeground() // Android: keep the process alive + show progress (Doki FGS); no-op on Desktop
         var startedAny = false
         for (task in tasks) {
             mangaDataRepository.storeManga(task.manga, replaceExisting = true)
@@ -120,6 +121,7 @@ class DownloadManager(
 
     fun resume(id: String) {
         controllers[id]?.paused?.value = false
+        ensureDownloadForeground() // restart the FGS if it stopped while everything was paused
     }
 
     fun cancel(id: String) {
@@ -138,6 +140,7 @@ class DownloadManager(
         val controller = Controller(MutableStateFlow(false))
         controllers[id] = controller
         controller.job = scope.launch { runDownload(id, task, controller, retryOnly) }
+        ensureDownloadForeground()
     }
 
     fun pauseAll() {
@@ -146,6 +149,7 @@ class DownloadManager(
 
     fun resumeAll() {
         controllers.values.forEach { it.paused.value = false }
+        ensureDownloadForeground()
     }
 
     fun cancelAll() {

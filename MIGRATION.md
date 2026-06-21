@@ -417,16 +417,20 @@ hanya bila tak ada index.json** (download lama tetap terbaca). Plus 2 bug Window
       cancel-all/remove-completed). Shortcut "Downloads" di Explore.
 
 **DEFERRED (UI dibuat tapi non-fungsional / N/A, masuk ledger):**
-- [ ] **Notifikasi foreground Android** (progress + aksi pause/cancel) — Android `actual`, follow-up.
-      Desktop = N/A (tak ada konsep). Engine jalan in-process tanpa notifikasi.
-- [ ] **Tahan app-kill** (gratis dari WorkManager) — engine in-process kehilangan antrean saat app dimatikan.
+- [x] **Notifikasi foreground Android** — DONE: `ensureDownloadForeground()` expect/actual + `DownloadService`
+      (foreground `dataSync`). Observe `DownloadManager.downloads`, notifikasi ongoing progress (judul manga +
+      %, jumlah aktif), berhenti sendiri saat antrean kosong. Dipanggil dari `schedule/resume/resumeAll/retry`.
+      Desktop = no-op. Aksi pause/cancel DI notifikasi (action buttons) belum — bisa menyusul. (pending run-verify device)
+- [~] **Tahan app-kill** — sebagian: FGS kini menjaga PROSES tetap hidup selama download jalan (tak di-kill saat
+      app di-background). Namun antrean masih in-memory → kalau OS tetap mematikan proses, antrean hilang
+      (tak ada persist+resume seperti WorkManager). Persist antrean = follow-up.
 - [ ] **Constraint jaringan metered + prompt "unduh via data seluler"** — butuh connectivity `actual`.
 - [ ] **Layar Settings Download** (format default, folder simpan, throttle/slowdown, allow-metered) →
       area `settings`. (Dialog sudah pakai `preferredDownloadFormat` + spinner format/tujuan.)
 - [ ] **Save page** (reader sheet) — fitur TERPISAH (ekspor 1 gambar via SAF, `PageSaveHelper`), bukan
       download → area image/picker. Tombol di reader tetap redup.
-- [ ] **Mode seleksi multi-item** di Downloads manager (pause/cancel/remove banyak sekaligus) — defer;
-      aksi per-item + menu all sudah ada.
+- [x] **Mode seleksi multi-item** di Downloads manager — DONE (VM `mode_downloads` + selection bar:
+      pause/resume/cancel/remove banyak + select-all, gated by `selectionCapability`).
 - [ ] **MULTIPLE_CBZ presisi** (Doki: satu `.cbz` PER bab) — sekarang folder-per-bab; refinement `local`.
 - [ ] **Skip bab yg sudah terunduh + dedupe by remote id** (butuh `getMangaInfo`/index.json di parser) → `local`.
 - [ ] **Pilih folder kustom di Android (SAF)** — Desktop sudah bisa pilih + **persist** folder (JFileChooser via

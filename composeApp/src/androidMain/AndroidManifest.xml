@@ -92,6 +92,13 @@
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
 
+        <!-- In-process download engine foreground service (Doki DownloadWorker FGS): ongoing progress
+             notification + keeps the process alive while downloads run. -->
+        <service
+            android:name=".download.service.DownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- Favourites "shelf" home-screen widget (Doki widget/shelf). -->
         <receiver
             android:name=".widget.shelf.ShelfWidgetProvider"
