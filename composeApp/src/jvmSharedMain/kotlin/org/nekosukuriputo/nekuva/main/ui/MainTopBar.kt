@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.search_manga
+import nekuva.composeapp.generated.resources.voice_search
 import org.jetbrains.compose.resources.stringResource
 
 /** An overflow-menu entry. [checked] != null renders a trailing checkbox (Doki checkable item, e.g. incognito). */
@@ -53,6 +55,8 @@ fun MainTopBar(
     onSearchFocusChanged: (Boolean) -> Unit = {},
     onCloseSearch: () -> Unit = {},
 ) {
+    // Voice search (Doki VoiceInputContract): null on Desktop / when no recognizer → no mic button.
+    val voiceSearch = org.nekosukuriputo.nekuva.core.os.rememberVoiceSearchLauncher { onQueryChange(it) }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -73,6 +77,14 @@ fun MainTopBar(
                     }
                 } else {
                     Icon(Icons.Default.Search, contentDescription = null)
+                }
+            },
+            // Mic (Doki voice search) — only when a recognizer is available.
+            trailingIcon = voiceSearch?.let { launch ->
+                {
+                    IconButton(onClick = launch) {
+                        Icon(Icons.Default.Mic, contentDescription = stringResource(Res.string.voice_search))
+                    }
                 }
             },
             singleLine = true,

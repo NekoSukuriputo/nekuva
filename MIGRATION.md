@@ -1381,6 +1381,15 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   preference) — live; user atur tab mana yang tampil. Doki tak auto-hide di luar preference ini → cocok.
 - **Badge counter tab Feed ✅**: `TabIcon` `BadgedBox` + `observeUnreadUpdatesCount` (99+ cap) di rail & bar.
 
+### POLISH: Search/badge UI (tiru Doki) ✅
+- **Badge "tersimpan" = ikon SD-card** (Doki) di `MangaListItems.BadgeRow` (dulu ikon Download) — Local & semua list.
+- **Kotak pencarian Catalog & Settings**: dari `TextField` filled tinggi → `OutlinedTextField` **rounded + kompak**
+  (leadingIcon Search, `bodyMedium`). Settings root kini punya **search** yang memfilter kategori (toggle ikon Search).
+- **Voice search** (Doki VoiceInputContract): `expect/actual rememberVoiceSearchLauncher` — Android
+  `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` (mic muncul hanya bila `SpeechRecognizer.isRecognitionAvailable`);
+  Desktop null (mic disembunyikan). Tombol mic di `MainTopBar` → isi query.
+- **Hapus riwayat pencarian** sudah ada (per-query X + "Clear history" di `SearchSuggestionPanel`) — terverifikasi.
+
 ### LAYAR: Reader (sisa kecil — refinement, prioritas rendah)
 - 🔴 Double-page **wide-page→solo** + sensitivity. 🔴 Double-foldable (perangkat foldable). 🔴 RegionDecoder/SSIV subsampling.
   (Mayoritas reader sudah ✅ — lihat bagian `[~] reader`.)

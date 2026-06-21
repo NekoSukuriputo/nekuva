@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -268,7 +269,8 @@ private fun BadgeRow(badges: MangaBadges, modifier: Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (badges.favourite) Icon(Icons.Filled.Favorite, null, tint = Color.White, modifier = Modifier.size(14.dp))
-        if (badges.saved) Icon(Icons.Filled.Download, null, tint = Color.White, modifier = Modifier.size(14.dp))
+        // "Saved on device" badge = SD-card icon (Doki) — matches the Details chapter downloaded indicator.
+        if (badges.saved) Icon(Icons.Filled.SdCard, null, tint = Color.White, modifier = Modifier.size(14.dp))
         if (badges.bookmarked) Icon(Icons.Filled.Bookmark, null, tint = Color.White, modifier = Modifier.size(14.dp))
     }
 }

@@ -29,6 +29,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -70,11 +72,15 @@ fun SourcesCatalogScreen(
             TopAppBar(
                 title = {
                     if (searchActive) {
-                        TextField(
+                        // Compact rounded search field (Doki search bar style) — not a bulky full-height filled box.
+                        OutlinedTextField(
                             value = query,
                             onValueChange = { query = it; viewModel.performSearch(it) },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                             singleLine = true,
+                            shape = RoundedCornerShape(24.dp),
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                             placeholder = { Text(stringResource(Res.string.search)) },
                         )
                     } else {
