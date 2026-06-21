@@ -76,6 +76,10 @@ class GlobalSearchViewModel(
 
     private val route = savedStateHandle.toRoute<GlobalSearchRoute>()
     val query: String = route.query
+    /** What the query means (Doki SearchKind): drives the per-source/DB filter (text / author / tag). */
+    val kind: org.nekosukuriputo.nekuva.search.domain.SearchKind =
+        runCatching { org.nekosukuriputo.nekuva.search.domain.SearchKind.valueOf(route.kind) }
+            .getOrDefault(org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE)
 
     private val _uiState = MutableStateFlow(GlobalSearchUiState())
     val uiState: StateFlow<GlobalSearchUiState> = _uiState.asStateFlow()
@@ -164,9 +168,11 @@ class GlobalSearchViewModel(
         }
         return runCatchingCancellable {
             requireNotNull(repo) { "No repository for ${source.name}" }
-            if (!repo.filterCapabilities.isSearchSupported) return null
+            // Build the per-source filter from the search kind (Doki SearchV2Helper.getFilter); a source that
+            // can't express this kind (e.g. no author/tag support) yields null → skip it.
+            val filter = buildSourceFilter(repo, source) ?: return null
             val sortOrder = if (SortOrder.RELEVANCE in repo.sortOrders) SortOrder.RELEVANCE else repo.defaultSortOrder
-            repo.getList(0, sortOrder, MangaListFilter(query = query))
+            repo.getList(0, sortOrder, filter)
         }.fold(
             onSuccess = { list ->
                 // distinctBy id: a manga can appear more than once (e.g. in several favourite
@@ -200,22 +206,56 @@ class GlobalSearchViewModel(
         )
     }
 
+    /**
+     * Per-source filter for the current [kind] (Doki SearchV2Helper.getFilter): text → query, AUTHOR → author
+     * (gated on capability, else query), TAG → resolve the tag by title in the source's tags. Returns null when
+     * the source can't express this kind, so the caller skips it.
+     */
+    private suspend fun buildSourceFilter(repo: MangaRepository, source: MangaSource): MangaListFilter? =
+        when (kind) {
+            org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR -> when {
+                repo.filterCapabilities.isAuthorSearchSupported -> MangaListFilter(author = query)
+                repo.filterCapabilities.isSearchSupported -> MangaListFilter(query = query)
+                else -> null
+            }
+            org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG -> {
+                val tags = runCatchingCancellable { mangaDataRepository.findTags(source) }.getOrDefault(emptyList()) +
+                    runCatchingCancellable { repo.getFilterOptions().availableTags }.getOrDefault(emptySet())
+                val tag = tags.find { it.title.equals(query, ignoreCase = true) }
+                if (tag != null) MangaListFilter(tags = setOf(tag)) else null
+            }
+            else -> if (repo.filterCapabilities.isSearchSupported) MangaListFilter(query = query) else null
+        }
+
     private suspend fun searchHistory(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
-        historyRepository.search(query, DB_SECTION_LIMIT)
+        historyRepository.search(query, DB_SECTION_LIMIT, kind)
     }.fold(
         onSuccess = { list -> dbSection("history", SearchSectionKind.HISTORY, list, skipNsfw) },
         onFailure = { errorSection("history", SearchSectionKind.HISTORY, it) },
     )
 
     private suspend fun searchFavourites(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
-        favouritesRepository.search(query, DB_SECTION_LIMIT)
+        favouritesRepository.search(query, DB_SECTION_LIMIT, kind)
     }.fold(
         onSuccess = { list -> dbSection("favourites", SearchSectionKind.FAVOURITES, list, skipNsfw) },
         onFailure = { errorSection("favourites", SearchSectionKind.FAVOURITES, it) },
     )
 
     private suspend fun searchLocal(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
-        localMangaRepository.getList(0, SortOrder.RELEVANCE, MangaListFilter(query = query))
+        // Local has no author index → AUTHOR degrades to text; TAG matches by tag title (LocalMangaRepository).
+        val filter = when (kind) {
+            org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG -> MangaListFilter(
+                tags = setOf(
+                    org.nekosukuriputo.nekuva.parsers.model.MangaTag(
+                        title = query,
+                        key = query,
+                        source = org.nekosukuriputo.nekuva.core.model.LocalMangaSource,
+                    ),
+                ),
+            )
+            else -> MangaListFilter(query = query)
+        }
+        localMangaRepository.getList(0, SortOrder.RELEVANCE, filter)
     }.fold(
         onSuccess = { list -> dbSection("local", SearchSectionKind.LOCAL, list, skipNsfw) },
         onFailure = { errorSection("local", SearchSectionKind.LOCAL, it) },

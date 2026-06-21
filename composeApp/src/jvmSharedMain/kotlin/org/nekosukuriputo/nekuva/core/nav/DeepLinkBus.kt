@@ -10,4 +10,9 @@ object DeepLinkBus {
     val openMangaId = MutableStateFlow<Long?>(null)
     fun requestOpenManga(id: Long) { openMangaId.value = id }
     fun consume() { openMangaId.value = null }
+
+    /** Launcher source shortcut tap → open that source's list (Doki action_shortcut on a source). */
+    val openSourceName = MutableStateFlow<String?>(null)
+    fun requestOpenSource(name: String) { openSourceName.value = name }
+    fun consumeSource() { openSourceName.value = null }
 }

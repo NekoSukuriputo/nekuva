@@ -12,6 +12,9 @@ import org.nekosukuriputo.nekuva.MainActivity
 /** Intent extra carrying the manga id a launcher shortcut opens (read by MainActivity). */
 const val EXTRA_MANGA_ID = "nekuva.manga_id"
 
+/** Intent extra carrying the source name a launcher source shortcut opens (read by MainActivity). */
+const val EXTRA_SOURCE_NAME = "nekuva.source_name"
+
 private const val MAX_SHORTCUTS = 4
 
 private object ShortcutContext : KoinComponent {
@@ -53,6 +56,25 @@ actual fun pinMangaShortcut(id: Long, title: String) {
             putExtra(EXTRA_MANGA_ID, id)
         }
         val info = ShortcutInfoCompat.Builder(context, "manga_pin_$id")
+            .setShortLabel(label.take(24))
+            .setLongLabel(label)
+            .setIcon(IconCompat.createWithResource(context, context.applicationInfo.icon))
+            .setIntent(intent)
+            .build()
+        ShortcutManagerCompat.requestPinShortcut(context, info, null)
+    }
+}
+
+actual fun pinSourceShortcut(name: String, title: String) {
+    val context = ShortcutContext.context
+    runCatching {
+        if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) return
+        val label = title.ifBlank { name }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra(EXTRA_SOURCE_NAME, name)
+        }
+        val info = ShortcutInfoCompat.Builder(context, "source_pin_$name")
             .setShortLabel(label.take(24))
             .setLongLabel(label)
             .setIcon(IconCompat.createWithResource(context, context.applicationInfo.icon))

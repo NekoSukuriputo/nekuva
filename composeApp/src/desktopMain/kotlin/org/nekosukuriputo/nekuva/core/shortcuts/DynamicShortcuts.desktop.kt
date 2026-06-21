@@ -7,3 +7,7 @@ actual fun updateDynamicShortcuts(shortcuts: List<MangaShortcut>) {
 // Desktop has no home-screen / launcher pin-shortcut concept.
 actual fun pinMangaShortcut(id: Long, title: String) {
 }
+
+// Desktop has no home-screen / launcher pin-shortcut concept.
+actual fun pinSourceShortcut(name: String, title: String) {
+}

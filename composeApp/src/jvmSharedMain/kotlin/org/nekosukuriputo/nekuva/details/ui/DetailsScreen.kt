@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material.icons.Icons
@@ -37,6 +38,13 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.UnfoldMore
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
@@ -61,10 +69,15 @@ fun DetailsScreen(
     onManageCategoriesClick: () -> Unit,
     onRelatedClick: (mangaId: Long) -> Unit = {},
     onAlternativesClick: (mangaId: Long) -> Unit = {},
+    onFindSimilar: (mangaId: Long) -> Unit = {},
     onOpenManga: (mangaId: Long) -> Unit = {},
-    onSearchInSource: (sourceName: String, query: String) -> Unit = { _, _ -> },
-    onGlobalSearch: (query: String) -> Unit = {},
+    // Doki showTagDialog/showAuthorDialog: "search in source" applies a genre/author FILTER (not free text).
+    onTagSearchInSource: (sourceName: String, tagKey: String, tagTitle: String) -> Unit = { _, _, _ -> },
+    onAuthorSearchInSource: (sourceName: String, author: String) -> Unit = { _, _ -> },
+    // Doki "Search everywhere": global search carrying the search kind (tag → TAG, author → AUTHOR).
+    onGlobalSearch: (query: String, kind: org.nekosukuriputo.nekuva.search.domain.SearchKind) -> Unit = { _, _ -> },
     onOpenBrowser: (url: String) -> Unit = {},
+    onResolveCloudFlare: (url: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
@@ -76,7 +89,10 @@ fun DetailsScreen(
     val relatedManga by viewModel.relatedManga.collectAsState()
     val readingTime by viewModel.readingTime.collectAsState()
     val downloadedChapterIds by viewModel.downloadedChapterIds.collectAsState()
+    val scrobblingInfo by viewModel.scrobblingInfo.collectAsState()
 
+    var showScrobblingSelector by remember { mutableStateOf(false) }
+    var editingScrobblingInfo by remember { mutableStateOf<org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingInfo?>(null) }
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -104,14 +120,14 @@ fun DetailsScreen(
                     Text(
                         text = stringResource(Res.string.search_on_s, sourceTitle),
                         modifier = Modifier.fillMaxWidth()
-                            .clickable { tagDialogFor = null; onSearchInSource(sourceName, tag.title) }
+                            .clickable { tagDialogFor = null; onTagSearchInSource(sourceName, tag.key, tag.title) }
                             .padding(vertical = 14.dp),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(Res.string.search_everywhere),
                         modifier = Modifier.fillMaxWidth()
-                            .clickable { tagDialogFor = null; onGlobalSearch(tag.title) }
+                            .clickable { tagDialogFor = null; onGlobalSearch(tag.title, org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG) }
                             .padding(vertical = 14.dp),
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -135,14 +151,14 @@ fun DetailsScreen(
                     Text(
                         text = stringResource(Res.string.search_on_s, sourceTitle),
                         modifier = Modifier.fillMaxWidth()
-                            .clickable { authorDialogFor = null; onSearchInSource(sourceName, author) }
+                            .clickable { authorDialogFor = null; onAuthorSearchInSource(sourceName, author) }
                             .padding(vertical = 14.dp),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = stringResource(Res.string.search_everywhere),
                         modifier = Modifier.fillMaxWidth()
-                            .clickable { authorDialogFor = null; onGlobalSearch(author) }
+                            .clickable { authorDialogFor = null; onGlobalSearch(author, org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR) }
                             .padding(vertical = 14.dp),
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -193,6 +209,7 @@ fun DetailsScreen(
         val saveErrMsg = stringResource(Res.string.error_occurred)
         org.nekosukuriputo.nekuva.image.ui.FullScreenImageViewer(
             imageUrl = coverUrl,
+            source = (uiState as? DetailsUiState.Success)?.manga?.source,
             onDismiss = { fullScreenCover = null },
             // Share the actual image bytes (Doki ShareHelper.shareImage), not just the URL.
             onShare = { url -> scope.launch { runCatching { imageSaver.share(url) } } },
@@ -203,6 +220,29 @@ fun DetailsScreen(
                 }
             },
         )
+    }
+
+    // Tracking: selector (link) sheet from the overflow, and the edit/unlink sheet from a tracking card.
+    if (showScrobblingSelector) {
+        org.nekosukuriputo.nekuva.details.ui.scrobbling.ScrobblingSelectorSheet(
+            scrobblers = viewModel.availableScrobblers,
+            mangaTitle = (uiState as? DetailsUiState.Success)?.manga?.title ?: "",
+            onLink = { scrobbler, target -> viewModel.linkScrobbler(scrobbler, target) },
+            onDismiss = { showScrobblingSelector = false },
+        )
+    }
+    editingScrobblingInfo?.let { info ->
+        val scrobbler = viewModel.availableScrobblers.find { it.scrobblerService == info.scrobbler }
+        if (scrobbler == null) {
+            editingScrobblingInfo = null
+        } else {
+            org.nekosukuriputo.nekuva.details.ui.scrobbling.ScrobblingInfoEditSheet(
+                info = info,
+                onUpdate = { rating, status -> viewModel.updateScrobbling(scrobbler, rating, status) },
+                onUnlink = { viewModel.unlinkScrobbler(scrobbler) },
+                onDismiss = { editingScrobblingInfo = null },
+            )
+        }
     }
 
     val successForDialog = uiState as? DetailsUiState.Success
@@ -272,6 +312,17 @@ fun DetailsScreen(
                                     showMangaStats = true
                                 },
                             )
+                            // Tracking / scrobbling (Doki action_scrobbling) — only when a tracker is authorized.
+                            if (viewModel.availableScrobblers.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.tracking)) },
+                                    enabled = (uiState as? DetailsUiState.Success)?.manga?.let { !it.isLocal } == true,
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showScrobblingSelector = true
+                                    },
+                                )
+                            }
                             // Pin manga to launcher (Doki action_shortcut) — Android; Desktop no-op.
                             DropdownMenuItem(
                                 text = { Text(stringResource(Res.string.create_shortcut)) },
@@ -290,6 +341,15 @@ fun DetailsScreen(
                                 onClick = {
                                     showOverflowMenu = false
                                     showEditOverride = true
+                                },
+                            )
+                            // Related/similar manga from the SAME source (Doki action_related → Find similar).
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.find_similar)) },
+                                enabled = (uiState as? DetailsUiState.Success)?.manga?.let { !it.isLocal } == true,
+                                onClick = {
+                                    showOverflowMenu = false
+                                    (uiState as? DetailsUiState.Success)?.manga?.let { onFindSimilar(it.id) }
                                 },
                             )
                             // Find the same manga in other sources (Doki action_alternatives → Alternatives).
@@ -354,6 +414,10 @@ fun DetailsScreen(
                     onViewPageImage = { url -> fullScreenCover = url },
                     downloadedIds = downloadedChapterIds,
                     onDownloadChapter = { chapter -> viewModel.downloadChapter(chapter) },
+                    source = manga.source,
+                    onDownloadChapters = { ids -> viewModel.downloadChapters(ids) },
+                    onMarkChaptersRead = { ids -> viewModel.markChaptersRead(ids) },
+                    onDeleteChapters = { ids -> viewModel.deleteChapters(ids) },
                 )
             } else {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp))
@@ -364,7 +428,12 @@ fun DetailsScreen(
     ) { paddingValues ->
         when (val state = uiState) {
             is DetailsUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
-            is DetailsUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() }, modifier = Modifier.padding(paddingValues))
+            is DetailsUiState.Error -> ErrorState(
+                error = state.exception,
+                onRetry = { viewModel.retry() },
+                modifier = Modifier.padding(paddingValues),
+                onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+            )
             is DetailsUiState.Success -> {
                 val favoriteText = if (!isFavorite) {
                     stringResource(Res.string.add_to_favourites)
@@ -403,6 +472,8 @@ fun DetailsScreen(
                         (uiState as? DetailsUiState.Success)?.manga?.chapters
                             ?.indexOfFirst { it.id == h.chapterId }?.takeIf { it >= 0 }?.plus(1)
                     },
+                    scrobblingInfo = scrobblingInfo,
+                    onScrobblingClick = { editingScrobblingInfo = it },
                     paddingValues = paddingValues
                 )
             }
@@ -425,6 +496,8 @@ fun MangaDetailsContent(
     onAuthorClick: (String) -> Unit = {},
     progressPercent: Float? = null,
     currentChapterNumber: Int? = null,
+    scrobblingInfo: List<org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingInfo> = emptyList(),
+    onScrobblingClick: (org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingInfo) -> Unit = {},
     paddingValues: PaddingValues
 ) {
     val scrollState = androidx.compose.foundation.rememberScrollState()
@@ -451,8 +524,15 @@ fun MangaDetailsContent(
                     // Tap cover -> fullscreen zoomable viewer (Doki ImageActivity).
                     .clickable { onCoverClick(manga.largeCoverUrl ?: manga.coverUrl) }
             ) {
+                val coverCtx = coil3.compose.LocalPlatformContext.current
+                val coverModel = androidx.compose.runtime.remember(manga.largeCoverUrl, manga.coverUrl, manga.source) {
+                    coil3.request.ImageRequest.Builder(coverCtx)
+                        .data(manga.largeCoverUrl ?: manga.coverUrl)
+                        .apply { mangaSourceExtra(manga.source) }
+                        .build()
+                }
                 AsyncImage(
-                    model = manga.largeCoverUrl ?: manga.coverUrl,
+                    model = coverModel,
                     contentDescription = "Cover",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -573,6 +653,13 @@ fun MangaDetailsContent(
                 }
             }
         }
+
+        // Tracking cards (Doki recyclerViewScrobbling): per-service status; tap to edit/unlink.
+        org.nekosukuriputo.nekuva.details.ui.scrobbling.ScrobblingInfoCards(
+            infos = scrobblingInfo,
+            onClick = onScrobblingClick,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
 
         // Description
         val description = manga.description?.replace("<br>".toRegex(RegexOption.IGNORE_CASE), "\n")?.replace("<[^>]*>".toRegex(), "")?.trim()
@@ -733,8 +820,15 @@ private fun RelatedMangaItem(manga: Manga, onClick: () -> Unit) {
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
+            val relCtx = coil3.compose.LocalPlatformContext.current
+            val relModel = androidx.compose.runtime.remember(manga.coverUrl, manga.source) {
+                coil3.request.ImageRequest.Builder(relCtx)
+                    .data(manga.coverUrl)
+                    .apply { mangaSourceExtra(manga.source) }
+                    .build()
+            }
             AsyncImage(
-                model = manga.coverUrl,
+                model = relModel,
                 contentDescription = manga.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
@@ -775,6 +869,11 @@ fun ChaptersSheetContent(
     onViewPageImage: (String) -> Unit = {},
     downloadedIds: Set<Long> = emptySet(),
     onDownloadChapter: (MangaChapter) -> Unit = {},
+    source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null,
+    // Chapter multi-select batch actions (Doki ChaptersFragment ActionMode).
+    onDownloadChapters: (Set<Long>) -> Unit = {},
+    onMarkChaptersRead: (Set<Long>) -> Unit = {},
+    onDeleteChapters: (Set<Long>) -> Unit = {},
 ) {
     val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val pagesEnabled = tabSettings.isPagesTabEnabled
@@ -900,26 +999,16 @@ fun ChaptersSheetContent(
 
         when (view) {
             SheetView.CHAPTERS -> {
-                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                Box(modifier = Modifier.fillMaxSize()) {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(chapters) { chapter ->
-                            ChapterItem(
-                                chapter = chapter,
-                                onClick = { onChapterClick(chapter) },
-                                isDownloaded = chapter.id in downloadedIds,
-                                onDownload = { onDownloadChapter(chapter) },
-                            )
-                        }
-                    }
-                    org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
-                        state = listState,
-                        modifier = Modifier.align(Alignment.CenterEnd)
-                    )
-                }
+                ChaptersTab(
+                    chapters = chapters,
+                    downloadedIds = downloadedIds,
+                    historyChapterId = history?.chapterId,
+                    onChapterClick = onChapterClick,
+                    onDownloadChapter = onDownloadChapter,
+                    onDownloadChapters = onDownloadChapters,
+                    onMarkChaptersRead = onMarkChaptersRead,
+                    onDeleteChapters = onDeleteChapters,
+                )
             }
             SheetView.PAGES -> {
                 when (val ps = pagesState) {
@@ -938,6 +1027,7 @@ fun ChaptersSheetContent(
                                     onClick = { onPageClick(ps.chapterId, index) },
                                     // Long-press a page -> fullscreen image viewer (zoom + save + share).
                                     onLongClick = { onViewPageImage(page.url) },
+                                    source = source,
                                 )
                             }
                         }
@@ -971,7 +1061,7 @@ fun ChaptersSheetContent(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         gridItems(bookmarks, key = { it.pageId }) { bm ->
-                            DetailsBookmarkThumb(bookmark = bm, onClick = { onBookmarkClick(bm) })
+                            DetailsBookmarkThumb(bookmark = bm, onClick = { onBookmarkClick(bm) }, source = source)
                         }
                     }
                 }
@@ -980,9 +1070,237 @@ fun ChaptersSheetContent(
     }
 }
 
+/**
+ * Chapters list with Doki's `opt_chapters` toolbar (search, reverse, downloaded-only filter, grid view) and
+ * an ActionMode-style multi-select (long-press → select → batch download / mark read / delete). The current
+ * (last-read) chapter is highlighted. All view state is local to the sheet, matching Doki.
+ */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
+private fun ChaptersTab(
+    chapters: List<MangaChapter>,
+    downloadedIds: Set<Long>,
+    historyChapterId: Long?,
+    onChapterClick: (MangaChapter) -> Unit,
+    onDownloadChapter: (MangaChapter) -> Unit,
+    onDownloadChapters: (Set<Long>) -> Unit,
+    onMarkChaptersRead: (Set<Long>) -> Unit,
+    onDeleteChapters: (Set<Long>) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    var searchOpen by remember { mutableStateOf(false) }
+    var reversed by remember { mutableStateOf(false) }
+    var downloadedOnly by remember { mutableStateOf(false) }
+    var gridView by remember { mutableStateOf(false) }
+    var selection by remember { mutableStateOf(emptySet<Long>()) }
+
+    val displayed = remember(chapters, query, reversed, downloadedOnly, downloadedIds) {
+        chapters
+            .let { list -> if (downloadedOnly) list.filter { it.id in downloadedIds } else list }
+            .let { list ->
+                if (query.isBlank()) list
+                else list.filter { (it.title?.takeIf { t -> t.isNotEmpty() } ?: it.name ?: "").contains(query, ignoreCase = true) }
+            }
+            .let { list -> if (reversed) list.asReversed() else list }
+    }
+
+    fun toggle(id: Long) {
+        selection = if (id in selection) selection - id else selection + id
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (selection.isEmpty()) {
+            // Normal toolbar (Doki opt_chapters): search, reverse, downloaded-only, grid view.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (searchOpen) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        placeholder = { Text(stringResource(Res.string.search_chapters)) },
+                        trailingIcon = {
+                            IconButton(onClick = { query = ""; searchOpen = false }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.close))
+                            }
+                        },
+                    )
+                } else {
+                    IconButton(onClick = { searchOpen = true }) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search_chapters))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = { reversed = !reversed }) {
+                        Icon(
+                            Icons.Default.SwapVert,
+                            contentDescription = stringResource(Res.string.reverse),
+                            tint = if (reversed) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
+                    IconButton(onClick = { downloadedOnly = !downloadedOnly }) {
+                        Icon(
+                            Icons.Filled.SdCard,
+                            contentDescription = stringResource(Res.string.on_device),
+                            tint = if (downloadedOnly) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                        )
+                    }
+                    IconButton(onClick = { gridView = !gridView }) {
+                        Icon(
+                            if (gridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
+                            contentDescription = stringResource(Res.string.chapters_grid_view),
+                        )
+                    }
+                }
+            }
+        } else {
+            // Selection action bar (Doki ActionMode): count + select-all, download, mark read, delete.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { selection = emptySet() }) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.close))
+                }
+                Text(
+                    text = selection.size.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                // Select range (Doki action_select_range): fill in every chapter between the first and last selected.
+                IconButton(
+                    enabled = selection.size >= 2 || (selection.size == 1),
+                    onClick = {
+                        val indices = displayed.withIndex().filter { it.value.id in selection }.map { it.index }
+                        val lo = indices.minOrNull()
+                        val hi = indices.maxOrNull()
+                        if (lo != null && hi != null && hi > lo) {
+                            selection = displayed.subList(lo, hi + 1).mapTo(HashSet()) { it.id }
+                        }
+                    },
+                ) {
+                    Icon(Icons.Default.UnfoldMore, contentDescription = stringResource(Res.string.select_range))
+                }
+                IconButton(onClick = { selection = displayed.mapTo(HashSet()) { it.id } }) {
+                    Icon(Icons.Default.SelectAll, contentDescription = stringResource(Res.string.select_all))
+                }
+                IconButton(onClick = { onDownloadChapters(selection); selection = emptySet() }) {
+                    Icon(Icons.Outlined.FileDownload, contentDescription = stringResource(Res.string.download))
+                }
+                IconButton(onClick = { onMarkChaptersRead(selection); selection = emptySet() }) {
+                    Icon(Icons.Default.DoneAll, contentDescription = stringResource(Res.string.mark_as_current))
+                }
+                // Delete only the downloaded chapters in the selection.
+                val deletable = selection.intersect(downloadedIds)
+                if (deletable.isNotEmpty()) {
+                    IconButton(onClick = { onDeleteChapters(deletable); selection = emptySet() }) {
+                        Icon(Icons.Outlined.Delete, contentDescription = stringResource(Res.string.delete))
+                    }
+                }
+            }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (gridView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 88.dp),
+                    contentPadding = PaddingValues(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    gridItems(displayed, key = { it.id }) { chapter ->
+                        ChapterGridCell(
+                            chapter = chapter,
+                            isDownloaded = chapter.id in downloadedIds,
+                            isCurrent = chapter.id == historyChapterId,
+                            selected = chapter.id in selection,
+                            onClick = { if (selection.isNotEmpty()) toggle(chapter.id) else onChapterClick(chapter) },
+                            onLongClick = { toggle(chapter.id) },
+                        )
+                    }
+                }
+            } else {
+                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
+                    items(displayed, key = { it.id }) { chapter ->
+                        ChapterItem(
+                            chapter = chapter,
+                            onClick = { if (selection.isNotEmpty()) toggle(chapter.id) else onChapterClick(chapter) },
+                            isDownloaded = chapter.id in downloadedIds,
+                            onDownload = { onDownloadChapter(chapter) },
+                            onLongClick = { toggle(chapter.id) },
+                            selected = chapter.id in selection,
+                            selectionMode = selection.isNotEmpty(),
+                            isCurrent = chapter.id == historyChapterId,
+                        )
+                    }
+                }
+                org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
+                    state = listState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+            }
+        }
+    }
+}
+
+/** Compact chapter cell for the chapters grid view (Doki chapters_grid_view). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun ChapterGridCell(
+    chapter: MangaChapter,
+    isDownloaded: Boolean,
+    isCurrent: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val container = when {
+        selected -> MaterialTheme.colorScheme.primary
+        isCurrent -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .aspectRatio(1.4f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(container)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Chapter number if present, else the (trimmed) title.
+        val label = chapter.number.takeIf { it > 0f }?.let { if (it % 1f == 0f) it.toInt().toString() else it.toString() }
+            ?: (chapter.title?.takeIf { it.isNotEmpty() } ?: chapter.name ?: "?")
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else LocalContentColor.current,
+        )
+        if (isDownloaded) {
+            Icon(
+                Icons.Filled.SdCard,
+                contentDescription = stringResource(Res.string.on_device),
+                tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.TopEnd).size(14.dp),
+            )
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun DetailsPageThumb(
+    url: String?,
+    number: Int,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
+    source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -991,8 +1309,15 @@ private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit, onL
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
+        val thumbCtx = coil3.compose.LocalPlatformContext.current
+        val thumbModel = androidx.compose.runtime.remember(url, source) {
+            coil3.request.ImageRequest.Builder(thumbCtx)
+                .data(url)
+                .apply { if (source != null) mangaSourceExtra(source) }
+                .build()
+        }
         AsyncImage(
-            model = url,
+            model = thumbModel,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
@@ -1008,7 +1333,11 @@ private fun DetailsPageThumb(url: String?, number: Int, onClick: () -> Unit, onL
 }
 
 @Composable
-private fun DetailsBookmarkThumb(bookmark: Bookmark, onClick: () -> Unit) {
+private fun DetailsBookmarkThumb(
+    bookmark: Bookmark,
+    onClick: () -> Unit,
+    source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1018,8 +1347,15 @@ private fun DetailsBookmarkThumb(bookmark: Bookmark, onClick: () -> Unit) {
             .clickable(onClick = onClick),
     ) {
         // Thumbnail = the actual bookmarked page image (like Doki).
+        val bmCtx = coil3.compose.LocalPlatformContext.current
+        val bmModel = androidx.compose.runtime.remember(bookmark.imageUrl, source) {
+            coil3.request.ImageRequest.Builder(bmCtx)
+                .data(bookmark.imageUrl)
+                .apply { if (source != null) mangaSourceExtra(source) }
+                .build()
+        }
         AsyncImage(
-            model = bookmark.imageUrl,
+            model = bmModel,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
@@ -1033,30 +1369,51 @@ private fun DetailsBookmarkThumb(bookmark: Bookmark, onClick: () -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ChapterItem(
     chapter: MangaChapter,
     onClick: () -> Unit,
     isDownloaded: Boolean = false,
     onDownload: () -> Unit = {},
+    onLongClick: () -> Unit = {},
+    selected: Boolean = false,
+    selectionMode: Boolean = false,
+    isCurrent: Boolean = false,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (selectionMode) {
+            androidx.compose.material3.Checkbox(checked = selected, onCheckedChange = null, modifier = Modifier.padding(end = 12.dp))
+        }
         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
             val chapterTitle = chapter.title?.takeIf { it.isNotEmpty() } ?: chapter.name
-            Text(text = chapterTitle, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                text = chapterTitle,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                // Doki highlights the current (last-read) chapter in the accent colour.
+                color = if (isCurrent) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+            )
             if (chapter.uploadDate > 0L) {
                 Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        if (isDownloaded) {
+        if (selectionMode) {
+            // In selection mode the per-row download/badge is replaced by the checkbox above.
+            if (isDownloaded) {
+                Icon(Icons.Filled.SdCard, contentDescription = stringResource(Res.string.on_device), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
+            }
+        } else if (isDownloaded) {
             // Doki: a downloaded chapter shows an SD-card badge instead of the download button.
             Icon(
                 Icons.Filled.SdCard,

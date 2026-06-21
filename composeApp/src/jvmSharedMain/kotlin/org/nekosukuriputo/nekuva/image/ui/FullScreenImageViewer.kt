@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
 import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.cancel
@@ -46,6 +48,7 @@ fun FullScreenImageViewer(
     onDismiss: () -> Unit,
     onShare: (String) -> Unit = {},
     onSave: (String) -> Unit = {},
+    source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -81,8 +84,15 @@ fun FullScreenImageViewer(
                 },
             contentAlignment = Alignment.Center,
         ) {
+            val imgCtx = coil3.compose.LocalPlatformContext.current
+            val imgModel = remember(imageUrl, source) {
+                coil3.request.ImageRequest.Builder(imgCtx)
+                    .data(imageUrl)
+                    .apply { if (source != null) mangaSourceExtra(source) }
+                    .build()
+            }
             AsyncImage(
-                model = imageUrl,
+                model = imgModel,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier

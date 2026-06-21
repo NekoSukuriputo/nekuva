@@ -40,7 +40,22 @@ fun InstallNekuvaImageLoader() {
         // Use the app OkHttp client for image network calls: it carries the DoH resolver, CloudFlare
         // clearance cookies (shared with the WebView) and rate-limiting, so covers/pages/thumbnails from
         // CloudFlare/DoH-protected sources load just like the parser's requests do (Doki parity).
-        val okHttpClient = org.koin.core.context.GlobalContext.get().get<okhttp3.OkHttpClient>()
+        // Add CommonHeadersInterceptor so the X-Manga-Source header (set per request from the source extra)
+        // resolves to the source's Referer/User-Agent + per-source interceptor (CloudFlare).
+        val koin = org.koin.core.context.GlobalContext.get()
+        val okHttpClient = koin.get<okhttp3.OkHttpClient>().newBuilder()
+            .apply {
+                // Prepend (index 0 = outermost, Doki order) so the per-source Referer/User-Agent are set
+                // BEFORE the CloudFlare interceptor inspects the request — matching the parser's own chain.
+                interceptors().add(
+                    0,
+                    org.nekosukuriputo.nekuva.core.network.CommonHeadersInterceptor(
+                        lazy { koin.get<org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory>() },
+                        lazy { koin.get<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext>() },
+                    ),
+                )
+            }
+            .build()
         ImageLoader.Builder(context).components {
             // Per-source HTTP headers (Referer, UA) on image requests (Doki MangaSourceHeaderInterceptor).
             add(org.nekosukuriputo.nekuva.core.image.MangaSourceHeaderInterceptor())

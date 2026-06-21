@@ -113,6 +113,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit = {},
+    onResolveCloudFlare: (url: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isBookmarked by viewModel.isBookmarked.collectAsState()
@@ -304,10 +305,18 @@ fun ReaderScreen(
     ) { paddingValues ->
         when (val state = uiState) {
             is ReaderUiState.Loading -> LoadingState(modifier = Modifier.padding(paddingValues))
-            is ReaderUiState.Error -> ErrorState(error = state.exception, onRetry = { viewModel.retry() }, modifier = Modifier.padding(paddingValues))
+            is ReaderUiState.Error -> ErrorState(
+                error = state.exception,
+                onRetry = { viewModel.retry() },
+                modifier = Modifier.padding(paddingValues),
+                onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+            )
             is ReaderUiState.Success -> {
                 Box(modifier = Modifier.fillMaxSize().background(readerBackgroundColor(readerBackground))) {
-                  CompositionLocalProvider(LocalReaderImageOptions provides readerImageOptions) {
+                  CompositionLocalProvider(
+                      LocalReaderImageOptions provides readerImageOptions,
+                      LocalReaderMangaSource provides state.manga.source,
+                  ) {
                     ReaderContent(
                         pages = state.pages,
                         mode = readerMode,
@@ -1215,13 +1224,14 @@ private fun ReaderPagePreloader(pages: List<LoadedPage>, currentIndex: Int, enab
     if (!enabled) return
     val context = coil3.compose.LocalPlatformContext.current
     val options = LocalReaderImageOptions.current
+    val source = LocalReaderMangaSource.current
     val loader = remember(context) { coil3.SingletonImageLoader.get(context) }
-    LaunchedEffect(currentIndex, pages.size, options) {
+    LaunchedEffect(currentIndex, pages.size, options, source) {
         val start = (currentIndex + 1).coerceAtLeast(0)
         val end = (start + PRELOAD_AHEAD).coerceAtMost(pages.size)
         for (i in start until end) {
             val url = pages.getOrNull(i)?.page?.url ?: continue
-            loader.enqueue(buildReaderPageRequest(context, url, options, foreground = false))
+            loader.enqueue(buildReaderPageRequest(context, url, options, foreground = false, source = source))
         }
     }
 }

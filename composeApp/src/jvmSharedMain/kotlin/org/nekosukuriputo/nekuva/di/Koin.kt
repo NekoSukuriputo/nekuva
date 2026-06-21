@@ -30,7 +30,9 @@ val localModule = module {
 
 val exploreModule = module {
     single { org.nekosukuriputo.nekuva.explore.data.MangaSourcesRepository(get(), get()) }
-    factory { org.nekosukuriputo.nekuva.explore.ui.ExploreViewModel(get(), get()) }
+    // Doki "Open random": random enabled source → random manga details (popular-tag biased).
+    single { org.nekosukuriputo.nekuva.explore.domain.ExploreRepository(get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.explore.ui.ExploreViewModel(get(), get(), get(), get()) }
 }
 
 val remoteListModule = module {
@@ -73,9 +75,14 @@ val detailsModule = module {
 			get(),
 				get(),
 				get(),
+				get(),
 				get()
 		)
 	}
+		// "Find similar" (Doki RelatedListViewModel): savedStateHandle + data repo + repository factory.
+		factory { parameters ->
+			org.nekosukuriputo.nekuva.details.ui.related.RelatedViewModel(parameters.get(), get(), get())
+		}
 }
 
 // Reading statistics (Doki stats): recording (StatsCollector) + queries (StatsRepository) + screen VM.
@@ -187,7 +194,9 @@ val settingsModule = module {
 val trackerModule = module {
     single { org.nekosukuriputo.nekuva.tracker.domain.TrackingRepository(get(), get()) }
     single { org.nekosukuriputo.nekuva.tracker.domain.CheckNewChaptersUseCase(get(), get(), get(), get()) }
-    factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get(), get(), get(), get()) }
+    // Shared by the Feed screen + the shell "Update" overflow (single check at a time).
+    single { org.nekosukuriputo.nekuva.tracker.domain.TrackerUpdateUseCase(get(), get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get(), get(), get()) }
 }
 
 val scrobblingModule = module {

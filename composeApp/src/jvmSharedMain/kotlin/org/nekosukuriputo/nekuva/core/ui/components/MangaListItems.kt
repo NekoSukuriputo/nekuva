@@ -41,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
 import org.nekosukuriputo.nekuva.core.prefs.ListMode
 import org.nekosukuriputo.nekuva.parsers.model.Manga
@@ -135,7 +136,7 @@ fun MangaGridItem(
             .padding(4.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth().aspectRatio(COVER_RATIO).clip(RoundedCornerShape(6.dp))) {
-            CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize())
+            CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize(), manga.source)
             if (badges.any) BadgeRow(badges, Modifier.align(Alignment.TopEnd).padding(4.dp))
             progress?.let {
                 LinearProgressIndicator(
@@ -188,7 +189,7 @@ fun MangaListRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(modifier = Modifier.width(coverWidth).aspectRatio(COVER_RATIO).clip(RoundedCornerShape(6.dp))) {
-            CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize())
+            CoverImage(manga.coverUrl, manga.title, Modifier.fillMaxSize(), manga.source)
             if (detailed) progress?.let {
                 LinearProgressIndicator(
                     progress = { it.coerceIn(0f, 1f) },
@@ -239,11 +240,18 @@ fun MangaListRow(
 }
 
 @Composable
-private fun CoverImage(url: String?, title: String, modifier: Modifier) {
+private fun CoverImage(url: String?, title: String, modifier: Modifier, source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null) {
     // AsyncImage (not SubcomposeAsyncImage): subcomposition per item makes long lists/grids scroll laggy.
-    // The surfaceVariant background acts as placeholder during load and on error.
+    // The surfaceVariant background acts as placeholder during load and on error. The source extra lets the
+    // network layer add the source's Referer/UA (+ CloudFlare) so protected covers load.
+    val context = coil3.compose.LocalPlatformContext.current
+    val model = androidx.compose.runtime.remember(url, source) {
+        coil3.request.ImageRequest.Builder(context).data(url)
+            .apply { if (source != null) mangaSourceExtra(source) }
+            .build()
+    }
     AsyncImage(
-        model = url,
+        model = model,
         contentDescription = title,
         contentScale = ContentScale.Crop,
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),

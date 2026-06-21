@@ -19,17 +19,34 @@ data object SettingsRoute
 data object ExploreRoute
 
 @Serializable
-data class RemoteListRoute(val sourceId: String, val query: String? = null)
+data class RemoteListRoute(
+    val sourceId: String,
+    val query: String? = null,
+    // Pre-applied genre filter (Doki openList(tag)) — carried as primitives so the route stays in commonMain.
+    val tagKey: String? = null,
+    val tagTitle: String? = null,
+    // Pre-applied author filter (Doki openList(source, MangaListFilter(author=…))).
+    val author: String? = null,
+)
 
 @Serializable
 data object HistoryRoute
 
 @Serializable
-data class GlobalSearchRoute(val query: String)
+data class GlobalSearchRoute(
+    val query: String,
+    // Doki SearchKind (SIMPLE/AUTHOR/TAG) stored as its name — kept a primitive so the nav arg needs no
+    // custom enum NavType. Parsed back via SearchKind.valueOf in the ViewModel.
+    val kind: String = org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE.name,
+)
 
 // "Find similar in other sources" (Doki AlternativesActivity): same manga title searched across sources.
 @Serializable
 data class AlternativesRoute(val mangaId: Long)
+
+/** Doki "Find similar" (action_related): related-manga list for a seed manga. */
+@Serializable
+data class RelatedRoute(val mangaId: Long)
 
 @Serializable
 data class BrowserRoute(val url: String, val title: String? = null)

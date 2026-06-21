@@ -23,14 +23,36 @@ fun LoadingState(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Generic error state. When the error is a [CloudFlareException] and [onResolveCloudFlare] is provided,
+ * shows Doki's "solve captcha" affordance (message + button → embedded browser to clear the challenge)
+ * instead of plain Retry — mirrors Doki's `ExceptionResolver.canResolve`/`getResolveStringId`.
+ */
 @Composable
-fun ErrorState(error: Throwable?, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+fun ErrorState(
+    error: Throwable?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    onResolveCloudFlare: ((org.nekosukuriputo.nekuva.core.exceptions.CloudFlareException) -> Unit)? = null,
+) {
+    val cloudFlare = error as? org.nekosukuriputo.nekuva.core.exceptions.CloudFlareException
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "${stringResource(Res.string.error)}: ${error?.message ?: stringResource(Res.string.unknown)}", color = MaterialTheme.colorScheme.error)
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = onRetry) {
-                Text(stringResource(Res.string.retry))
+            if (cloudFlare != null && onResolveCloudFlare != null) {
+                Text(
+                    text = stringResource(Res.string.captcha_required),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(onClick = { onResolveCloudFlare(cloudFlare) }) {
+                    Text(stringResource(Res.string.captcha_solve))
+                }
+            } else {
+                Text(text = "${stringResource(Res.string.error)}: ${error?.message ?: stringResource(Res.string.unknown)}", color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onRetry) {
+                    Text(stringResource(Res.string.retry))
+                }
             }
         }
     }

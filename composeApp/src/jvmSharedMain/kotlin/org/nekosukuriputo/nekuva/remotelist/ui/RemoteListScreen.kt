@@ -219,27 +219,12 @@ fun RemoteListScreen(
                         }
                     }
                     is RemoteListUiState.Error -> {
-                        val ex = state.exception
-                        if (ex is org.nekosukuriputo.nekuva.core.exceptions.CloudFlareException) {
-                            // CloudFlare wall: offer to solve it in the embedded browser, then retry.
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(Res.string.captcha_required),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                Button(onClick = { onResolveCloudFlare(ex.url) }) {
-                                    Text(stringResource(Res.string.captcha_solve))
-                                }
-                            }
-                        } else {
-                            ErrorState(error = ex, onRetry = { viewModel.retry() })
-                        }
+                        // CloudFlare wall → "solve captcha" button (embedded browser) then retry; else plain retry.
+                        ErrorState(
+                            error = state.exception,
+                            onRetry = { viewModel.retry() },
+                            onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+                        )
                     }
                     is RemoteListUiState.Success -> {
                         if (listMode == ListMode.GRID) {

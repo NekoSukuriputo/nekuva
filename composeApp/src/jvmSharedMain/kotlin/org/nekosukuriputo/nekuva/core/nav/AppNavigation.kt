@@ -35,6 +35,14 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             DeepLinkBus.consume()
         }
     }
+    // Deep link (launcher source shortcut tap -> open that source's list), then consume it.
+    val deepLinkSourceName by DeepLinkBus.openSourceName.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(deepLinkSourceName) {
+        deepLinkSourceName?.let { name ->
+            navController.navigate(RemoteListRoute(name))
+            DeepLinkBus.consumeSource()
+        }
+    }
 
     // Top-level destinations that show the bottom bar / navigation rail
     val topLevelRoutes = listOf(
@@ -108,9 +116,16 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onDownloadsClick = {
                             navController.navigate(DownloadsRoute)
                         },
-                        onSettingsClick = {
-                            navController.navigate(SettingsRoute)
-                        }
+                        onLocalClick = {
+                            navController.navigate(HomeRoute) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onManageSources = { navController.navigate(SourcesCatalogRoute) },
+                        onOpenManga = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onSourceSettings = { name -> navController.navigate(SourceSettingsRoute(name)) },
                     )
                 }
                 composable<BookmarksRoute> {
@@ -155,7 +170,21 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 }
                 composable<MangaDetailsRoute> { backStackEntry ->
                     val args = backStackEntry.toRoute<MangaDetailsRoute>()
+                    val detailsVm: org.nekosukuriputo.nekuva.details.ui.DetailsViewModel =
+                        org.koin.compose.viewmodel.koinViewModel()
+                    // Retry details after a CloudFlare challenge was solved (result set on pop).
+                    val cfResolved by backStackEntry.savedStateHandle
+                        .getStateFlow("cf_resolved", false)
+                        .collectAsState()
+                    androidx.compose.runtime.LaunchedEffect(cfResolved) {
+                        if (cfResolved) {
+                            detailsVm.retry()
+                            backStackEntry.savedStateHandle["cf_resolved"] = false
+                        }
+                    }
                     org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
+                        viewModel = detailsVm,
+                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
                         onChapterClick = { mangaId, chapterId ->
                             openReader(mangaId, chapterId, -1, false)
                         },
@@ -174,9 +203,15 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         },
                         onRelatedClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
                         onAlternativesClick = { id -> navController.navigate(AlternativesRoute(id)) },
+                        onFindSimilar = { id -> navController.navigate(RelatedRoute(id)) },
                         onOpenManga = { id -> navController.navigate(MangaDetailsRoute(id)) },
-                        onSearchInSource = { sourceName, query -> navController.navigate(RemoteListRoute(sourceName, query)) },
-                        onGlobalSearch = { query -> navController.navigate(GlobalSearchRoute(query)) },
+                        onTagSearchInSource = { sourceName, tagKey, tagTitle ->
+                            navController.navigate(RemoteListRoute(sourceName, tagKey = tagKey, tagTitle = tagTitle))
+                        },
+                        onAuthorSearchInSource = { sourceName, author ->
+                            navController.navigate(RemoteListRoute(sourceName, author = author))
+                        },
+                        onGlobalSearch = { query, kind -> navController.navigate(GlobalSearchRoute(query, kind.name)) },
                         onOpenBrowser = { url -> navController.navigate(BrowserRoute(url)) },
                     )
                 }
@@ -186,12 +221,32 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onBackClick = { navController.popBackStack() },
                     )
                 }
-                composable<ReaderRoute> {
+                composable<RelatedRoute> {
+                    org.nekosukuriputo.nekuva.details.ui.related.RelatedScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onBackClick = { navController.popBackStack() },
+                    )
+                }
+                composable<ReaderRoute> { backStackEntry ->
+                    val readerVm: org.nekosukuriputo.nekuva.reader.ui.ReaderViewModel =
+                        org.koin.compose.viewmodel.koinViewModel()
+                    // Retry page load after a CloudFlare challenge was solved (result set on pop).
+                    val cfResolved by backStackEntry.savedStateHandle
+                        .getStateFlow("cf_resolved", false)
+                        .collectAsState()
+                    androidx.compose.runtime.LaunchedEffect(cfResolved) {
+                        if (cfResolved) {
+                            readerVm.retry()
+                            backStackEntry.savedStateHandle["cf_resolved"] = false
+                        }
+                    }
                     org.nekosukuriputo.nekuva.reader.ui.ReaderScreen(
+                        viewModel = readerVm,
                         onBackClick = {
                             navController.popBackStack()
                         },
                         onOpenSettings = { navController.navigate(ReaderSettingsRoute) },
+                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
                     )
                 }
                 composable<SettingsRoute> {

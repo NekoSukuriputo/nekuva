@@ -6,7 +6,6 @@ import okhttp3.Interceptor.Chain
 import okhttp3.Request
 import okhttp3.Response
 import okio.IOException
-import org.nekosukuriputo.nekuva.core.model.MangaSource
 import org.nekosukuriputo.nekuva.parsers.MangaLoaderContext
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.core.parser.ParserMangaRepository
@@ -23,14 +22,13 @@ class CommonHeadersInterceptor (
 
 	override fun intercept(chain: Chain): Response {
 		val request = chain.request()
+		// Image requests carry the source via the X-Manga-Source header (set by the Coil
+		// MangaSourceHeaderInterceptor from the request's source extra); parser requests use the okhttp tag.
 		val source = request.tag(MangaSource::class.java)
-			?: request.headers[CommonHeaders.MANGA_SOURCE]?.let { MangaSource(it) }
+			?: request.headers[CommonHeaders.MANGA_SOURCE]?.let { org.nekosukuriputo.nekuva.core.model.MangaSource(it) }
 		val repository = if (source is MangaParserSource) {
 			mangaRepositoryFactoryLazy.value.create(source) as? ParserMangaRepository
 		} else {
-			if (false && source == null) {
-				println("Request without source tag: $($request.url)")
-			}
 			null
 		}
 		val headersBuilder = request.headers.newBuilder()

@@ -66,6 +66,10 @@ class FavouritesRepository(
 		}
 	}
 
+	/** Favourite categories with the most updated manga — the Feed quick-filter chips (Doki UpdatesListQuickFilter). */
+	suspend fun getMostUpdatedCategories(limit: Int): List<FavouriteCategory> =
+		db.getFavouriteCategoriesDao().getMostUpdatedCategories(limit).map { it.toFavouriteCategory() }
+
 	fun observeCategory(id: Long): Flow<FavouriteCategory?> {
 		return db.getFavouriteCategoriesDao().observe(id)
 			.map { it?.toFavouriteCategory() }
@@ -96,8 +100,18 @@ class FavouritesRepository(
 		db.getFavouritesDao().observeFavouriteIds().map { it.toSet() }
 
 	/** Read-only title search over favourites (for global search). */
-	suspend fun search(query: String, limit: Int): List<Manga> {
-		return db.getFavouritesDao().searchByTitle("%$query%", limit).toMangaListWithTags()
+	suspend fun search(
+		query: String,
+		limit: Int,
+		kind: org.nekosukuriputo.nekuva.search.domain.SearchKind = org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE,
+	): List<Manga> {
+		val q = "%$query%"
+		val dao = db.getFavouritesDao()
+		return when (kind) {
+			org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR -> dao.searchByAuthor(q, limit)
+			org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG -> dao.searchByTag(q, limit)
+			else -> dao.searchByTitle(q, limit)
+		}.toMangaListWithTags()
 	}
 
 	suspend fun getCategoriesIds(mangaId: Long): Set<Long> {

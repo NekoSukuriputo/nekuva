@@ -14,3 +14,9 @@ expect fun updateDynamicShortcuts(shortcuts: List<MangaShortcut>)
  * (API 26+, if supported); Desktop has no concept (no-op).
  */
 expect fun pinMangaShortcut(id: Long, title: String)
+
+/**
+ * Pin a manga SOURCE to the home screen / launcher (Doki `action_shortcut` on a source) — opens that
+ * source's list. Android = `requestPinShortcut` (API 26+, if supported); Desktop has no concept (no-op).
+ */
+expect fun pinSourceShortcut(name: String, title: String)

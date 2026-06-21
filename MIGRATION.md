@@ -164,7 +164,7 @@ Fokus: Membangun ulang seluruh UI/fitur dari XML Views ke Compose Multiplatform 
 - [x] `bookmarks` (page bookmarks, run-verified Android+Desktop: Doki-style reader overlay (tahan layar → app bar + tombol mengambang → bottom sheet "Opsi") dengan **bookmark fungsional**; layar Bookmarks grouped + selection multi-remove + undo; **markah tampil di bottom sheet Detail manga** (thumbnail halaman → tap buka reader di halaman persis). Fungsi sheet lain (mode baca, save page, dll) deferred ke reader-polish — lihat ledger)
 - [x] `download` (run-verified Android+Desktop: engine coroutine KMP (BUKAN WorkManager) dengan **output desain `index.json` Doki** — `MangaIndex`(org.json, `compileOnly(libs.json)`) + `ZipOutput` asli; `LocalMangaZipOutput`=SINGLE_CBZ (satu `.cbz` flat + index.json), `LocalMangaDirOutput`=MULTIPLE_CBZ (per-bab `.cbz` + index.json), `canWriteTo` (cocok manga.id, kalau tidak sufiks `_1`), id bab = id remote asli. Dialog "Save manga" (4 makro + format + tujuan + folder picker Desktop), trigger Detail, layar Downloads manager card-based ala Doki. **Fitur run-verified:** unduh→muncul di Local dgn **cover asli** (`addCover`), buka & **baca offline** manga unduhan, **resume** (bab sudah-unduh otomatis ✓ tak diulang), **retry** (tombol kartu = semua bab gagal + ikon ↻ per-bab), **pause** (ikon pause, bukan spinner), **cancel** (tak ada spinner nyangkut), pembersihan temp (`page*.tmp`/`*.cbz.tmp`), folder kustom persist, lanjut-saat-gagal. Hapus manga lokal (long-press di Local). Notifikasi foreground (Android), metered-network, save-page dll deferred — lihat ledger)
 - [x] `tracker` (T1 — run-verified Android+Desktop: tracker internal bab-baru + tab **Feed/Updates**; `TrackingRepository` + `CheckNewChaptersUseCase` + `FeedScreen`; kategori favorit default tracking ON + toggle lonceng di Kelola kategori)
-- [~] `scrobbling` (T2 — **fondasi + 1 layanan referensi (Shikimori) + UI login, compile + DI-verified; OAuth BELUM run-verify (butuh client ID dari user)**. DONE: `ScrobblerConfig` (placeholder client ID/secret + `REDIRECT_URI=nekuva://oauth`), model umum, `ScrobblerStorage` (token di ObservableSettings), `ScrobblerRepository`+`Scrobbler` base (adaptasi KMP), **ShikimoriRepository+ShikimoriScrobbler+ScrobblerManager** (referensi penuh OAuth+API), **OAuthScreen** (browser in-app menangkap redirect `code` → authorize) + **Settings→Services** menampilkan scrobbler ter-konfigurasi dgn login/logout. CARA AKTIFKAN: isi `SHIKIMORI_CLIENT_ID/SECRET` di `ScrobblerConfig` + daftarkan app dgn redirect `nekuva://oauth`. **UPDATE FASE 7: AniList/MAL/Kitsu + Discord RPC SUDAH DONE** (semua scrobbler + interceptor + Koin + Services UI + Kitsu password-dialog + Discord KizzyRPC/login webview + auto-scrobble + OAuth redirect intercept Android). **SISA:** selector "ikat manga ke tracker" di layar Detail + tampilkan ScrobblingInfo (action_scrobbling opt_details) — BELUM)
+- [~] `scrobbling` (T2 — **fondasi + 1 layanan referensi (Shikimori) + UI login, compile + DI-verified; OAuth BELUM run-verify (butuh client ID dari user)**. DONE: `ScrobblerConfig` (placeholder client ID/secret + `REDIRECT_URI=nekuva://oauth`), model umum, `ScrobblerStorage` (token di ObservableSettings), `ScrobblerRepository`+`Scrobbler` base (adaptasi KMP), **ShikimoriRepository+ShikimoriScrobbler+ScrobblerManager** (referensi penuh OAuth+API), **OAuthScreen** (browser in-app menangkap redirect `code` → authorize) + **Settings→Services** menampilkan scrobbler ter-konfigurasi dgn login/logout. CARA AKTIFKAN: isi `SHIKIMORI_CLIENT_ID/SECRET` di `ScrobblerConfig` + daftarkan app dgn redirect `nekuva://oauth`. **UPDATE FASE 7: AniList/MAL/Kitsu + Discord RPC SUDAH DONE** (semua scrobbler + interceptor + Koin + Services UI + Kitsu password-dialog + Discord KizzyRPC/login webview + auto-scrobble + OAuth redirect intercept Android). **UPDATE: selector + ScrobblingInfo di Detail SUDAH DONE** (action_scrobbling: kartu per-layanan + selector sheet cari/ikat + edit sheet status/rating/unlink — lihat bagian LAYAR: Details). OAuth tetap perlu client ID dari user utk run-verify.)
 - [~] `sync` (T3 — server sync Kotatsu; favorit/history lintas perangkat. **Compile-verified Android+Desktop; BELUM run-verify (butuh akun + server sync untuk uji aktual)**. ARSITEKTUR: framework Android SyncAdapter/AccountManager/ContentProvider Doki di-re-arsitektur untuk KMP — `SyncSettings` (kredensial/flag di ObservableSettings), DAO Room langsung (ganti ContentProvider), `SyncManager.syncNow()` manual + sync setelah login (ganti requestSync periodik). DONE: protokol 1:1 (`POST {host}/resource/{favourites,history}` payload `SyncDto`, merge balasan → DB, soft-delete GC 4 hari), `SyncAuthApi` (`POST /auth` {email,password}→token, akun dibuat bila belum ada), `SyncInterceptor` (Bearer + X-App/Db-Version) + `SyncAuthenticator` (refresh token saat 401), DTO 1:1 + mapping entity↔DTO, `SyncHelper` (push/merge via DAO; `HistoryDao.upsertForSync` verbatim agar tombstone tak ter-resurrect; `findAllForSync` baca semua baris termasuk soft-deleted), **SyncSettingsScreen** (login email/password/host ala Doki SyncAuthActivity + toggle favorit/history + "Sync sekarang" + waktu sync terakhir), wired ke Settings→Services→"Synchronization". CARA UJI: Settings→Services→Synchronization→isi server (default `https://sync.kotatsu.app`)+email+password→Login→Sync sekarang. **SISA/DEFERRED:** auto periodic background sync (dulu SyncAdapter periodik) → area background-jobs (WorkManager actual/Desktop scheduler); change-triggered auto-sync (observe InvalidationTracker); **CAVEAT** `X-Db-Version` mengirim versi Room lokal Nekuva (=1, "Fresh V1") sedang skema kanonik Kotatsu jauh lebih tinggi — bentuk JSON tetap cocok, server self-hosted aman, tapi server resmi mungkin berperilaku beda berdasar header ini)
 - [~] `settings` (pending run-verify — **SEMUA preference Doki kini ditampilkan & harus sama**, sesuai
       permintaan full-parity: Appearance/Reader/Storage&Network/Downloads/Tracker/Services/Backup/About lengkap.
@@ -346,7 +346,9 @@ Item parity history yang DITUNDA (dari legacy `HistoryListViewModel`/menu, §6.1
 - [ ] Menu "Clear history" dengan opsi (2 jam terakhir / hari ini / bukan favorit / semua) —
       saat ini hanya "clear all".
 - [ ] Multi-select (long-press) + Mark as read (MarkAsReadUseCase) + Share.
-- [ ] Banner InfoModel "Incognito mode" saat incognito aktif.
+- [x] Banner InfoModel "Incognito mode" saat incognito aktif — `IncognitoBanner` bersama (icon VisibilityOff +
+      incognito_mode + hint) di History **dan** Explore; **reaktif** via `observeBoolean(KEY_INCOGNITO_MODE)`
+      `.collectAsState` (dulu baca `isIncognitoModeEnabled` sekali → baru muncul setelah pindah tab; gambar 1 user).
 - [ ] Empty state ikon + teks primer/sekunder (sesuai Doki) — saat ini teks polos.
 - [ ] Indikator progress baca (ReadingProgressView) per item.
 - [ ] Hardcoded strings di HistoryScreen ("Riwayat Baca", "Tidak ada riwayat baca", "Lanjut bab",
@@ -1242,34 +1244,126 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   tulis ke `LocalFilterHolder` (Koin single, jembatan shell↔VM). `LocalListViewModel` observasi holder → re-query
   `getList(filter = MangaListFilter(tags=...))`. Item **Filter** di overflow shell Local (Doki opt_local action_filter).
 
-### LAYAR: Feed / Updates (Doki `tracker/ui/feed` + `opt_feed`)
-- 🟡 Overflow: Update (refresh manual — verifikasi), **Show updated** (toggle), **Clear feed**.
-- 🔴 Badge counter jumlah update di tab Feed (CORE Main-shell). 🔴 Empty/loading state parity.
+### LAYAR: Feed / Updates (Doki `tracker/ui/feed` + `opt_feed`) — SELESAI (tanpa defer; pending run-verify GUI)
+- **Refactor UI ke struktur Doki ✅**: Feed sekarang menampilkan **LOG update ber-grup tanggal** (Doki FeedItem /
+  TrackingLogItem — "Today/Yesterday/tanggal" via `relativeDateKey`+`calculateTimeAgo`) sbg list utama, BUKAN lagi
+  sekadar daftar manga ter-update. Tiap baris: cover (+`mangaSourceExtra` utk CloudFlare) + judul + nama bab-bab baru +
+  **titik "unread"**; tap → `markLogAsRead` + buka detail. Data sudah ada (`TrackLogsDao.observeAll`/`markAsRead`) tapi
+  dulu tak dipakai — kini di-expose lewat `TrackingRepository.observeTrackingLog`/`markLogAsRead` + model `FeedLogItem`.
+- **Header "Updated manga" ✅** (Doki UpdatedMangaHeader, toggle `show_updated`/`KEY_FEED_HEADER`): baris horizontal
+  cover manga ter-update di atas log; tampil hanya bila toggle aktif (live via `observeBoolean`).
+- **Single-toolbar ✅**: `FeedScreen` tak lagi punya `Scaffold`/`TopAppBar` sendiri (dulu dobel toolbar dgn shell);
+  toolbar = shell `MainTopBar`. **Overflow shell (opt_feed)** di-wire penuh: **Update** (cek manual sekarang),
+  **Show updated** (checkable → toggle header), **Clear feed** (dialog + checkbox "hapus juga counter bab baru" →
+  `clearLogs`(+`clearCounters`)). Doki `FeedMenuProvider` parity.
+- **Refresh terintegrasi ✅ (impact ke tempat lain)**: loop cek dipindah dari VM ke **`TrackerUpdateUseCase`
+  (Koin single)** dgn `isRunning` bersama, supaya tombol **Update di shell** dan layar Feed memakai state yang sama
+  (Doki: worker tunggal, `startNow`/`observeIsRunning`). Layar Feed tampilkan `LinearProgressIndicator` saat berjalan.
+- **Badge counter ✅** (CORE Main-shell): tab Feed pakai `BadgedBox` dgn jumlah **unread updates**
+  (`TrackingRepository.observeUnreadUpdatesCount`), 99+ cap. Berkurang saat entri di-tap (markAsRead) / Clear feed.
+- **Empty/loading state parity ✅**: loading (`LoadingState`) sampai emisi DB pertama; empty = ikon RssFeed +
+  `text_empty_holder_primary` + `text_feed_holder` (Doki ic_empty_feed). Pagination Doki (`requestMoreItems`, PAGE_SIZE 20).
+- **Quick-filter chip ✅** (Doki UpdatesListQuickFilter — tuntas): baris `FilterChip` di atas feed = kategori favorit
+  dgn update terbanyak (`FavouritesRepository.getMostUpdatedCategories(4)` → `ListFilterOption.Favorite`), gated
+  `isQuickFilterEnabled`. Tap chip → `toggleFilter` → `appliedFilter` dialirkan ke `observeTrackingLog` +
+  `observeUpdatedManga`; filter SFW otomatis saat NSFW dimatikan (Doki combineWithSettings). Chip tetap tampil saat
+  hasil kosong (bisa di-clear). VM dapat dep `FavouritesRepository`.
 
-### LAYAR: Explore (Doki `explore/ui` + `opt_explore`)
+### LAYAR: Explore (Doki `explore/ui` + `opt_explore`) — SELESAI (tanpa defer; pending run-verify GUI)
 - ✅ Manage sources / Catalog (FASE 2). Bookmarks/Downloads shortcut ✅.
 - **Incognito banner ✅**: saat `isIncognitoModeEnabled` tampil `IncognitoBanner` (komponen bersama, juga di History).
-- 🔴 **Open random** (buka manga acak) shortcut. 🔴 Verifikasi grouping bahasa + long-press pin sama Doki.
+- **Pintasan = 4 (tiru Doki ExploreButtons) ✅**: dulu 5 chip (termasuk Settings + dua no-op). Kini PERSIS Doki:
+  **Local / Bookmarks / Random / Downloads** dalam grid 2×2 (`ExploreButton` tonal, equal-width). Hapus chip Settings.
+- **Open random ✅** (Doki action_random / ExploreRepository.findRandomManga): `ExploreRepository` baru (sumber acak →
+  list bias popular-tag dari history → manga acak → `getDetails`, exclude NSFW bila diset). VM `openRandom` simpan manga
+  + navigasi ke detail; tombol Random tampilkan spinner + disabled saat `isRandomLoading`. (Tags-blacklist disederhanakan
+  — itu area suggestions.)
+- **"Manga sources" header ✅** (Doki ListHeader + tombol Catalog) di atas grid sumber → `SourcesCatalogRoute`.
+- **Long-press = multi-select (tiru Doki SourceSelectionDecoration + mode_source) ✅**: dulu long-press langsung pin.
+  Kini long-press → mode seleksi (highlight + `PlatformBackHandler` clear), bar kontekstual penuh: **Pin/Unpin**,
+  **Disable** (`setSourcesEnabled false`), **Create shortcut** + **Settings** (saat 1 terpilih). VM:
+  `toggleSelection`/`clearSelection`/`pinSelected`/`disableSelected`.
+- **Create shortcut sumber ✅** (Doki action_shortcut on source): `expect/actual pinSourceShortcut` (Android
+  `requestPinShortcut` dgn `EXTRA_SOURCE_NAME` → MainActivity → `DeepLinkBus.requestOpenSource` → AppNavigation buka
+  `RemoteListRoute`; Desktop no-op). Impact: DeepLinkBus + MainActivity + AppNavigation diperluas utk deep-link sumber.
+- **Grouping bahasa: terverifikasi** — Doki Explore TIDAK meng-group enabled-source per bahasa (flat, pinned dulu);
+  grouping bahasa hanya di layar Catalog (sudah ada). Nekuva sudah cocok (urut pinned-first dari repo).
 
-### PERF/NETWORK: Coil image loader pakai OkHttp app-client (CloudFlare/DoH) ✅
+### PERF/NETWORK: Coil image loader pakai OkHttp app-client (CloudFlare/DoH) — fix LENGKAP (pending run-verify)
 - **Masalah:** cover/thumbnail (Details Pages) + halaman reader TIDAK load untuk source yang butuh CloudFlare/DoH,
-  walau proxy DoH aktif. **Sebab:** `InstallNekuvaImageLoader` pakai **Ktor** fetcher (`createHttpClient`) yang tak
-  punya cookie CloudFlare / DoH / rate-limit. **Fix:** ganti ke `OkHttpNetworkFetcherFactory(callFactory={ koin OkHttpClient })`
-  (client yang sama dgn parser: DoHManager + cookieJar CloudFlare + CloudFlareInterceptor) + tambah
-  `MangaSourceHeaderInterceptor` (Referer/UA per-source). Tambah dep `coil-network-okhttp` di jvmSharedMain.
-  Memperbaiki gambar di Details thumbnail + reader sekaligus.
+  walau proxy DoH aktif (gambar 3 user).
+- **Percobaan 1 (commit f683d62, TIDAK cukup):** ganti Ktor→`OkHttpNetworkFetcherFactory(callFactory={ koin OkHttpClient })`
+  + daftarkan `MangaSourceHeaderInterceptor` (Coil). Masih gagal.
+- **Sebab sebenarnya (ditemukan sesi ini):** (a) **`CommonHeadersInterceptor` = DEAD CODE** — tak pernah di-wire ke
+  client mana pun (dan tak pernah ter-compile: ada import `MangaSource` ganda + sintaks `println` rusak), padahal
+  ITU yang menerjemahkan header `X-Manga-Source` → Referer/User-Agent per-source + menjalankan **interceptor CloudFlare
+  per-source** (`repository.interceptSafe`). (b) **Request gambar tak membawa source** — `mangaSourceExtra` tak pernah
+  di-set, jadi `MangaSourceHeaderInterceptor` tak punya apa-apa untuk disalin ke header.
+- **Fix LENGKAP sesi ini:**
+  1. Perbaiki + hidupkan `CommonHeadersInterceptor` (hapus import ganda, qualify factory `core.model.MangaSource(name)`,
+     buang `println` rusak). Di `InstallNekuvaImageLoader` (App.kt) Coil dapat client khusus =
+     `koin OkHttpClient.newBuilder()` lalu **prepend** `CommonHeadersInterceptor` di index 0 (urutan Doki: outermost,
+     supaya Referer/UA ter-set SEBELUM `CloudFlareInterceptor` memeriksa request).
+  2. Set `mangaSourceExtra(source)` di SEMUA request gambar: `CoverImage` (grid/list), cover + related + page-thumb +
+     bookmark-thumb di Details, `FullScreenImageViewer`, dan **reader pages** (`buildReaderPageRequest` + preloader via
+     `LocalReaderMangaSource` yang disuplai `ReaderScreen` dari `state.manga.source`).
+  3. Rantai: Coil `mangaSourceExtra` → `MangaSourceHeaderInterceptor` tulis `X-Manga-Source` → `CommonHeadersInterceptor`
+     resolve repository → Referer/UA + `parser.intercept` (CloudFlare per-source). Cookie/DoH ikut dari base client.
+  - Compile ✅ Desktop + Android + assembleDebug. **Belum run-verified GUI** — minta user buka source ber-CloudFlare,
+    cek cover Explore + thumbnail sheet + halaman reader ter-load.
 
-### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`) — sebagian besar SELESAI
+### NETWORK: CloudFlare captcha-solve flow di SEMUA layar (Doki ExceptionResolver) — pending run-verify
+- **Doki:** error apa pun yang bisa di-resolve menampilkan tombol resolve (CF → "Selesaikan captcha") di layar mana pun;
+  klik → buka browser in-app (CloudFlareActivity) → solve → tutup → operasi diulang otomatis.
+- **Sebelumnya di Nekuva:** flow ini HANYA ada di RemoteList (daftar sumber). Saat user kena CF di **Detail** atau
+  **Reader** (mis. baca sumber ber-CF), hanya muncul error/spinner tanpa tombol solve.
+- **Fix (samakan dgn Doki):** `ErrorState` bersama kini deteksi `CloudFlareException` → tampil pesan `captcha_required`
+  + tombol `captcha_solve` (mirror `ExceptionResolver.canResolve`/`getResolveStringId`). Dipasang di **RemoteList**
+  (disatukan), **Details**, **Reader**. Tombol → `CloudFlareRoute(url)` → `CloudFlareScreen` (browser in-app via
+  `PlatformWebView`: Android WebView / Desktop KCEF) yang polling `cf_clearance` (bandingkan dgn klirens awal) → set
+  `cf_resolved=true` di entry pemanggil → pop → layar **auto-retry** (`vm.retry()`). VM Details/Reader di-lift ke
+  AppNavigation utk observasi `cf_resolved`. Cookie `cf_clearance` berbagi jar dgn client Coil → cover/halaman ikut
+  ter-load setelah solve. **Belum run-verified GUI** — minta user buka sumber ber-CF: tombol "Selesaikan captcha" →
+  browser → solve → tutup → daftar/detail/halaman muncul.
+
+### LAYAR: Details (Doki `details/ui` + `opt_details` + `opt_chapters`) — SELESAI (tanpa defer; pending run-verify GUI)
 - **Genre/tag chips ✅**: `SuggestionChip` kompak + spasi rapat (Doki chipsTags). **Klik → tag dialog** (Doki
-  showTagDialog): "Search on <source>" (→ RemoteList) / "Search everywhere" (→ global).
+  showTagDialog) — dialog dibetulkan: baris `Text` clickable (bukan `DropdownMenuItem` dalam `AlertDialog` yg ngebug)
+  + string positional `%1$s` (bukan `%s` literal). **"Search on <source>" sekarang menerapkan FILTER tag** (Doki
+  `openList(tag)` = `MangaListFilter(tags=setOf(tag))`), bukan query teks: `RemoteListRoute` membawa `tagKey`/`tagTitle`,
+  `RemoteListViewModel.init` pre-select `selectedTags`. **"Search everywhere"** → global search (teks judul tag).
+- **Author dialog ✅** (Doki showAuthorDialog): nama pengarang **biru, clickable** → dialog. "Search on <source>"
+  menerapkan **filter author** (`RemoteListRoute.author` → `RemoteListViewModel` pre-set `author`); "Search everywhere" → global.
+- **SearchKind global search ✅** (Doki SearchKind TAG/AUTHOR/SIMPLE — tuntas, tanpa defer): enum `SearchKind`
+  (commonMain) + `GlobalSearchRoute.kind` (disimpan sbg String `name` → tak butuh enum NavType). `GlobalSearchViewModel`
+  membangun filter per-sumber sesuai kind (mirror Doki `SearchV2Helper.getFilter`): TITLE/SIMPLE→`query`,
+  AUTHOR→`author` (gated `isAuthorSearchSupported`, fallback query), TAG→resolve tag by-title dari
+  `findTags(source)`+`getFilterOptions().availableTags` → `tags=setOf(tag)`. Seksi DB ikut: History/Favourites pakai
+  DAO `searchByAuthor`/`searchByTag` (repo `search(query,limit,kind)`), Local pakai filter (TAG match by tag-title).
+  **Terintegrasi ke yang terdampak:** dialog tag/author Detail "Cari dimana saja" kirim TAG/AUTHOR; panel
+  **saran pencarian** (tap tag → TAG, tap pengarang → AUTHOR) di MainScreen juga kind-aware.
 - **Overflow ✅**: Share, Download, **Edit override**, **Alternatives**, **Online variant** (lokal), **Open in browser**
   (remote), **Delete** (lokal), Statistics, Create shortcut. (Doki opt_details).
 - **Chapter list download ✅** (Doki): tombol download per-bab fungsional (`DownloadManager.schedule` 1 bab); bab yang
   sudah tersimpan tampil **ikon SD-card** (`downloadedChapterIds` dari `findSavedManga`, live saat download selesai).
 - **Thumbnail (Pages) tab ✅** + cover/page **CloudFlare/DoH** load ✅ (lihat entri image loader di atas).
 - ✅ Related manga row, reading-time, per-manga stats dialog.
-- 🔴 **Scrobbling/Tracking di Details** (`action_scrobbling`): UI selector + kartu `ScrobblingInfo` belum (engine ✅).
-  **Find similar** menu item (related-row inline sudah ada). Chapter multi-select (`opt_chapters`) belum.
+- **Scrobbling/Tracking di Details ✅** (Doki `action_scrobbling`): kartu `ScrobblingInfo` per-layanan (judul di
+  tracker + status + bab + rating; di bawah info card) + **selector sheet** (pilih layanan ter-otorisasi → cari
+  manga di tracker (seed judul) → tap utk ikat = `linkManga` + seed status dari history + scrobble) + **edit sheet**
+  (ubah status `ScrobblingStatus` via chip + rating slider 0..1 → `updateScrobblingInfo`, atau **Unlink**). Item overflow
+  "Tracking" muncul hanya jika ada scrobbler ter-otorisasi. File: `details/ui/scrobbling/DetailsScrobblingSheets.kt`;
+  VM: `scrobblingInfo`/`availableScrobblers`/`linkScrobbler`/`updateScrobbling`/`unlinkScrobbler`.
+- **Find similar ✅** (Doki `action_related` → RelatedListFragment): item overflow "Temukan serupa" → layar
+  `RelatedScreen` (`details/ui/related/`) yang fetch `repository.getRelated(seed)` + tampil grid (reuse `MangaListContent`,
+  loading/empty/error). Route baru `RelatedRoute(mangaId)`. Nonaktif utk manga lokal.
+- **Chapter multi-select + opt_chapters toolbar ✅** (Doki `opt_chapters` + `mode_chapters`): toolbar tab Bab kini punya
+  **cari bab** (search), **balik urutan** (reverse), **filter hanya terunduh** (downloaded-only), **tampilan grid**.
+  **Multi-select**: long-press bab → mode seleksi (checkbox + highlight) → **select range / select all / unduh /
+  tandai-sebagai-saat-ini / hapus (yg terunduh)**. **`select_range` ✅** (Doki action_select_range): isi semua bab
+  antara seleksi terendah & tertinggi di list tampil. Bab saat ini (last-read) di-highlight warna aksen.
+  VM: `downloadChapters`/`markChaptersRead`/`deleteChapters`.
+  **Status: Details TUNTAS tanpa defer** (semua di atas compile ✅ Desktop+Android+assembleDebug; **belum run-verified GUI**).
 
 ### LAYAR: Main shell (Doki `main/ui` + `opt_main`)
 - 🟡 Global search entry (kotak cari ✅ + suggestions ✅) — 🔴 tambah **toggle Incognito** di menu utama (`action_incognito`).

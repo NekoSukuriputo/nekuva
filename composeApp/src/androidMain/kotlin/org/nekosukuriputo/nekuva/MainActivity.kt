@@ -51,10 +51,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Launcher dynamic shortcut tap (Doki dynamic_shortcuts) -> open that manga via the deep-link bus.
+    // Launcher dynamic shortcut tap (Doki dynamic_shortcuts) -> open that manga / source via the deep-link bus.
     private fun handleShortcutIntent(intent: Intent?) {
         val id = intent?.getLongExtra(EXTRA_MANGA_ID, -1L) ?: -1L
         if (id > 0L) DeepLinkBus.requestOpenManga(id)
+        intent?.getStringExtra(org.nekosukuriputo.nekuva.core.shortcuts.EXTRA_SOURCE_NAME)
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { DeepLinkBus.requestOpenSource(it) }
     }
 
     // Route hardware volume keys to the reader when it has installed a handler (Doki's volume-button

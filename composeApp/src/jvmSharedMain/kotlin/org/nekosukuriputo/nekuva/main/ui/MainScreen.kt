@@ -1,13 +1,17 @@
 package org.nekosukuriputo.nekuva.main.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -71,6 +75,14 @@ fun MainScreen(
     var showClearHistory by remember { mutableStateOf(false) }
     var showImportChoice by remember { mutableStateOf(false) }
     var showLocalFilter by remember { mutableStateOf(false) }
+    var showClearFeed by remember { mutableStateOf(false) }
+    // Feed/Updates (Doki opt_feed): the tab toolbar lives in the shell, so Update/Show-updated/Clear-feed +
+    // the tab badge are driven here. The update check is shared with the Feed screen (single run at a time).
+    val trackingRepo = koinInject<org.nekosukuriputo.nekuva.tracker.domain.TrackingRepository>()
+    val trackerUpdate = koinInject<org.nekosukuriputo.nekuva.tracker.domain.TrackerUpdateUseCase>()
+    val feedUnread by trackingRepo.observeUnreadUpdatesCount().collectAsState(initial = 0)
+    val feedHeaderOn by settings.observeBoolean(AppSettings.KEY_FEED_HEADER, true)
+        .collectAsState(initial = settings.isFeedHeaderVisible)
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -82,6 +94,10 @@ fun MainScreen(
         onLocalFilter = { showLocalFilter = true },
         incognitoOn = incognitoOn,
         onToggleIncognito = { settings.isIncognitoModeEnabled = !incognitoOn },
+        feedHeaderOn = feedHeaderOn,
+        onFeedUpdate = { trackerUpdate.updateNow() },
+        onShowUpdated = { settings.isFeedHeaderVisible = !feedHeaderOn },
+        onClearFeed = { showClearFeed = true },
     )
     // Local import (Doki opt_local action_import → ImportDialog): pick a .cbz or a folder, copy + parse.
     val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
@@ -161,7 +177,11 @@ fun MainScreen(
             },
             onTagClick = { tag ->
                 dismissSearch()
-                navController.navigate(GlobalSearchRoute(tag))
+                navController.navigate(GlobalSearchRoute(tag, org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG.name))
+            },
+            onAuthorClick = { author ->
+                dismissSearch()
+                navController.navigate(GlobalSearchRoute(author, org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR.name))
             },
             onMangaClick = { id ->
                 dismissSearch()
@@ -202,7 +222,7 @@ fun MainScreen(
                                         }
                                     }
                                 },
-                                icon = { Icon(tab.icon, contentDescription = stringResource(tab.titleRes)) },
+                                icon = { TabIcon(tab, feedUnread) },
                                 alwaysShowLabel = navLabelsVisible,
                                 label = if (navLabelsVisible) { { Text(stringResource(tab.titleRes)) } } else null
                             )
@@ -268,7 +288,7 @@ fun MainScreen(
                                             }
                                         }
                                     },
-                                    icon = { Icon(tab.icon, contentDescription = stringResource(tab.titleRes)) },
+                                    icon = { TabIcon(tab, feedUnread) },
                                     alwaysShowLabel = navLabelsVisible,
                                     label = if (navLabelsVisible) { { Text(stringResource(tab.titleRes)) } } else null
                                 )
@@ -355,6 +375,65 @@ fun MainScreen(
     if (showLocalFilter) {
         org.nekosukuriputo.nekuva.local.ui.LocalFilterSheet(onDismiss = { showLocalFilter = false })
     }
+
+    // Clear updates feed (Doki opt_feed action_clear_feed): prompt + optional "clear new-chapter counters".
+    if (showClearFeed) {
+        var clearCounters by remember { mutableStateOf(true) }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showClearFeed = false },
+            title = { Text(stringResource(Res.string.clear_updates_feed)) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    Text(stringResource(Res.string.text_clear_updates_feed_prompt))
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { clearCounters = !clearCounters },
+                    ) {
+                        androidx.compose.material3.Checkbox(checked = clearCounters, onCheckedChange = { clearCounters = it })
+                        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.clear_new_chapters_counters))
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showClearFeed = false
+                    val clearAlsoCounters = clearCounters
+                    fabScope.launch {
+                        runCatching {
+                            trackingRepo.clearLogs()
+                            if (clearAlsoCounters) trackingRepo.clearCounters()
+                        }
+                    }
+                }) { Text(stringResource(Res.string.clear)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showClearFeed = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+/** Tab icon, badged with the unread-updates count on the Feed tab (Doki feed badge). */
+@Composable
+private fun TabIcon(tab: TabItem, feedUnread: Int) {
+    val isFeed = tab.route === FeedTabRoute
+    if (isFeed && feedUnread > 0) {
+        androidx.compose.material3.BadgedBox(
+            badge = {
+                androidx.compose.material3.Badge {
+                    Text(if (feedUnread > 99) "99+" else feedUnread.toString())
+                }
+            },
+        ) {
+            Icon(tab.icon, contentDescription = stringResource(tab.titleRes))
+        }
+    } else {
+        Icon(tab.icon, contentDescription = stringResource(tab.titleRes))
+    }
 }
 
 /** Doki's main-screen "resume reading" FAB. */
@@ -382,6 +461,10 @@ private fun rememberOverflowItems(
     onLocalFilter: () -> Unit,
     incognitoOn: Boolean,
     onToggleIncognito: () -> Unit,
+    feedHeaderOn: Boolean,
+    onFeedUpdate: () -> Unit,
+    onShowUpdated: () -> Unit,
+    onClearFeed: () -> Unit,
 ): List<OverflowItem> {
     val route = currentDestination?.route ?: ""
     // Read all labels unconditionally (stringResource must not be called inside a changing branch).
@@ -416,7 +499,12 @@ private fun rememberOverflowItems(
             OverflowItem(manageSources, enabled = true, onClick = { navController.navigate(SourcesSettingsRoute) }),
             OverflowItem(sourcesCatalog, enabled = true, onClick = { navController.navigate(SourcesCatalogRoute) }),
         )
-        has(FeedTabRoute) -> listOf(disabled(update), disabled(showUpdated), disabled(clearFeed))
+        // Feed/Updates (Doki opt_feed): Update (manual check), Show updated (checkable header toggle), Clear feed.
+        has(FeedTabRoute) -> listOf(
+            OverflowItem(update, enabled = true, onClick = onFeedUpdate),
+            OverflowItem(showUpdated, enabled = true, onClick = onShowUpdated, checked = feedHeaderOn),
+            OverflowItem(clearFeed, enabled = true, onClick = onClearFeed),
+        )
         // Local (Doki opt_local): Filter + Import + List options + Directories.
         has(HomeRoute) -> listOf(
             OverflowItem(filter, enabled = true, onClick = onLocalFilter),

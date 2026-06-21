@@ -7,6 +7,8 @@ import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import coil3.request.transformations
+import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
+import org.nekosukuriputo.nekuva.parsers.model.MangaSource
 import org.nekosukuriputo.nekuva.reader.domain.CropBordersTransformation
 
 /**
@@ -22,6 +24,10 @@ data class ReaderImageOptions(
 
 val LocalReaderImageOptions = staticCompositionLocalOf { ReaderImageOptions() }
 
+/** The current manga's source — page requests carry it so the network layer adds the source's
+ *  Referer/UA + CloudFlare handling (protected sources load). Provided by the reader screen. */
+val LocalReaderMangaSource = staticCompositionLocalOf<MangaSource?> { null }
+
 /**
  * Build the Coil model for a reader page, applying the active [ReaderImageOptions]. Returns null for a
  * null url (placeholder); otherwise an [ImageRequest] carrying the crop transformation + color config.
@@ -34,9 +40,10 @@ val LocalReaderImageOptions = staticCompositionLocalOf { ReaderImageOptions() }
 fun rememberReaderPageModel(url: String?, foreground: Boolean = true): ImageRequest? {
 	val options = LocalReaderImageOptions.current
 	val context = LocalPlatformContext.current
-	return remember(url, options, foreground) {
+	val source = LocalReaderMangaSource.current
+	return remember(url, options, foreground, source) {
 		if (url == null) return@remember null
-		buildReaderPageRequest(context, url, options, foreground)
+		buildReaderPageRequest(context, url, options, foreground, source)
 	}
 }
 
@@ -49,11 +56,13 @@ fun buildReaderPageRequest(
 	url: String,
 	options: ReaderImageOptions,
 	foreground: Boolean,
+	source: MangaSource? = null,
 ): ImageRequest = ImageRequest.Builder(context)
 	.data(url)
 	.apply {
 		if (options.crop) transformations(CropBordersTransformation)
 		if (options.optimize && !foreground) size(OPTIMIZED_OFFSCREEN_SIZE)
+		if (source != null) mangaSourceExtra(source)
 	}
 	.applyEnhancedColors(options.enhancedColors)
 	.build()

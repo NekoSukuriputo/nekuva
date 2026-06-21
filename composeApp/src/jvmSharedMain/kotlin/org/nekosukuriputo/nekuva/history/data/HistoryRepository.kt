@@ -52,8 +52,18 @@ class HistoryRepository(
 	}
 
 	/** Read-only title search over read history (for global search). */
-	suspend fun search(query: String, limit: Int): List<Manga> {
-		return db.getHistoryDao().searchByTitle("%$query%", limit).toMangaList()
+	suspend fun search(
+		query: String,
+		limit: Int,
+		kind: org.nekosukuriputo.nekuva.search.domain.SearchKind = org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE,
+	): List<Manga> {
+		val q = "%$query%"
+		val dao = db.getHistoryDao()
+		return when (kind) {
+			org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR -> dao.searchByAuthor(q, limit)
+			org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG -> dao.searchByTag(q, limit)
+			else -> dao.searchByTitle(q, limit)
+		}.toMangaList()
 	}
 
 	suspend fun getLastOrNull(): Manga? {

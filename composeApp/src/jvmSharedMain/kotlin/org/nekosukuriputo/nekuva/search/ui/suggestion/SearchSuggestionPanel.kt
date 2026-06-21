@@ -62,6 +62,7 @@ fun SearchSuggestionPanel(
     onTagClick: (String) -> Unit,
     onMangaClick: (Long) -> Unit,
     onSourceClick: (String) -> Unit,
+    onAuthorClick: (String) -> Unit = onQueryClick,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.suggestion.collectAsState()
@@ -158,7 +159,7 @@ fun SearchSuggestionPanel(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onQueryClick(author) }
+                    .clickable { onAuthorClick(author) }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

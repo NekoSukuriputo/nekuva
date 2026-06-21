@@ -94,6 +94,13 @@ class RemoteListViewModel(
             query = it
             _searchQuery.value = it
         }
+        // Pre-applied genre filter (Doki openList(tag)): a tag chip in Details → this source filtered by tag.
+        val routeSource = repository?.source
+        if (routeSource != null && !route.tagKey.isNullOrBlank() && !route.tagTitle.isNullOrBlank()) {
+            selectedTags = setOf(MangaTag(title = route.tagTitle!!, key = route.tagKey!!, source = routeSource))
+        }
+        // Pre-applied author filter (Doki openList(source, MangaListFilter(author=…))).
+        route.author?.trim()?.takeIf { it.isNotBlank() }?.let { author = it }
         availableSortOrders = repository?.sortOrders?.toList().orEmpty()
         emitFilterState(optionsLoading = true)
         loadFilterOptions()

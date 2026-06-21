@@ -40,6 +40,7 @@ class DetailsViewModel(
     private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
     private val statsRepository: org.nekosukuriputo.nekuva.stats.data.StatsRepository,
     private val downloadManager: org.nekosukuriputo.nekuva.download.domain.DownloadManager,
+    private val scrobblerManager: org.nekosukuriputo.nekuva.scrobbling.common.domain.ScrobblerManager,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MangaDetailsRoute>()
@@ -80,6 +81,51 @@ class DetailsViewModel(
         }
     }
 
+    /** Batch-download the selected chapters (Doki chapters ActionMode → save). */
+    fun downloadChapters(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return
+        viewModelScope.launch {
+            runCatching {
+                downloadManager.schedule(
+                    listOf(
+                        org.nekosukuriputo.nekuva.download.domain.DownloadTask(
+                            manga = m, chaptersIds = ids, destination = null, format = null, startPaused = false,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+
+    /**
+     * Mark the selected chapters as read (Doki action_mark_current): set history to the furthest-along
+     * selected chapter with full progress, so everything up to it counts as read.
+     */
+    fun markChaptersRead(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return
+        val chapters = m.chapters ?: return
+        val target = chapters.lastOrNull { it.id in ids } ?: return
+        viewModelScope.launch {
+            runCatching {
+                historyRepository.addOrUpdate(manga = m, chapterId = target.id, page = 0, scroll = 0, percent = 1f, force = true)
+            }
+        }
+    }
+
+    /** Delete the selected downloaded chapters from storage (Doki chapters ActionMode → delete). */
+    fun deleteChapters(ids: Set<Long>) {
+        if (ids.isEmpty()) return
+        val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return
+        viewModelScope.launch {
+            runCatching {
+                val saved = localMangaRepository.findSavedManga(m, withDetails = true)?.manga ?: m
+                localMangaRepository.deleteChapters(saved, ids)
+            }
+        }
+    }
+
     /** Current user override (custom title/cover) for this manga, for prefilling the edit dialog (CORE-7). */
     private val _override = MutableStateFlow<org.nekosukuriputo.nekuva.core.model.MangaOverride?>(null)
     val override: StateFlow<org.nekosukuriputo.nekuva.core.model.MangaOverride?> = _override.asStateFlow()
@@ -101,6 +147,69 @@ class DetailsViewModel(
 
     val history: StateFlow<org.nekosukuriputo.nekuva.core.model.MangaHistory?> = historyRepository.observeOne(mangaId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    // --- Scrobbling / tracking (Doki action_scrobbling + ScrobblingInfo cards) ---
+
+    /** Authorized scrobblers the user can link this manga to (Doki availableScrobblers). */
+    val availableScrobblers: List<org.nekosukuriputo.nekuva.scrobbling.common.domain.Scrobbler>
+        get() = scrobblerManager.scrobblers.filter { it.isEnabled }
+
+    /** Live tracking info for this manga across all authorized services (Doki scrobblingInfo). */
+    val scrobblingInfo: StateFlow<List<org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingInfo>> =
+        scrobblerManager.scrobblers
+            .map { it.observeScrobblingInfo(mangaId) }
+            .let { flows ->
+                if (flows.isEmpty()) kotlinx.coroutines.flow.flowOf(emptyList())
+                else kotlinx.coroutines.flow.combine(flows) { arr -> arr.filterNotNull() }
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Link this manga to a tracker entry, then seed its status from reading history (Doki onDoneClick). */
+    fun linkScrobbler(
+        scrobbler: org.nekosukuriputo.nekuva.scrobbling.common.domain.Scrobbler,
+        target: org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblerManga,
+        onDone: () -> Unit = {},
+    ) {
+        val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return
+        viewModelScope.launch {
+            runCatching {
+                val prev = scrobbler.getScrobblingInfoOrNull(mangaId)
+                scrobbler.linkManga(mangaId, target.id)
+                val h = historyRepository.getOne(m)
+                scrobbler.updateScrobblingInfo(
+                    mangaId = mangaId,
+                    rating = prev?.rating ?: 0f,
+                    status = prev?.status ?: when {
+                        h == null -> org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingStatus.PLANNED
+                        h.percent >= 0.99f -> org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingStatus.COMPLETED
+                        else -> org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingStatus.READING
+                    },
+                    comment = prev?.comment,
+                )
+                if (h != null) scrobbler.scrobble(m, h.chapterId)
+            }
+            onDone()
+        }
+    }
+
+    /** Update tracking status/rating for a linked manga (Doki ScrobblingInfoSheet). */
+    fun updateScrobbling(
+        scrobbler: org.nekosukuriputo.nekuva.scrobbling.common.domain.Scrobbler,
+        rating: Float,
+        status: org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingStatus,
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                val prev = scrobbler.getScrobblingInfoOrNull(mangaId)
+                scrobbler.updateScrobblingInfo(mangaId, rating, status, prev?.comment)
+            }
+        }
+    }
+
+    /** Unlink this manga from a tracker (Doki unregisterScrobbling). */
+    fun unlinkScrobbler(scrobbler: org.nekosukuriputo.nekuva.scrobbling.common.domain.Scrobbler) {
+        viewModelScope.launch { runCatching { scrobbler.unregisterScrobbling(mangaId) } }
+    }
 
     /** Related manga (Doki RelatedMangaUseCase): fetched from the parser when related_manga is on. */
     private val _relatedManga = MutableStateFlow<List<Manga>>(emptyList())

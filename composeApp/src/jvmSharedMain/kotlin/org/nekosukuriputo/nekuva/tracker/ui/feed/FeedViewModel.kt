@@ -6,98 +6,113 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
-import org.nekosukuriputo.nekuva.core.prefs.TrackerDownloadStrategy
-import org.nekosukuriputo.nekuva.download.domain.DownloadManager
-import org.nekosukuriputo.nekuva.download.domain.DownloadTask
-import org.nekosukuriputo.nekuva.local.data.LocalMangaRepository
+import org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository
+import org.nekosukuriputo.nekuva.list.domain.ListFilterOption
 import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
-import org.nekosukuriputo.nekuva.tracker.domain.CheckNewChaptersUseCase
+import org.nekosukuriputo.nekuva.tracker.domain.TrackerUpdateUseCase
 import org.nekosukuriputo.nekuva.tracker.domain.TrackingRepository
+import org.nekosukuriputo.nekuva.tracker.domain.model.FeedLogItem
 import org.nekosukuriputo.nekuva.tracker.domain.model.MangaTracking
-import org.nekosukuriputo.nekuva.tracker.domain.model.MangaUpdates
 
-private const val MAX_PARALLELISM = 4
+private const val PAGE_SIZE = 20
 
+/**
+ * Feed/Updates tab (Doki FeedViewModel parity): the main list is the date-ordered tracking LOG (one entry
+ * per "new chapters found" event), with an optional "Updated manga" header row (Doki show_updated toggle)
+ * and a **quick-filter chip row** (Doki UpdatesListQuickFilter — favourite categories with the most updates).
+ * Refresh + isRunning are shared with the shell "Update" overflow via [TrackerUpdateUseCase].
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class FeedViewModel(
     private val trackingRepository: TrackingRepository,
-    private val checkNewChaptersUseCase: CheckNewChaptersUseCase,
+    private val trackerUpdate: TrackerUpdateUseCase,
+    private val favouritesRepository: FavouritesRepository,
     private val settings: AppSettings,
-    private val downloadManager: DownloadManager,
-    private val localMangaRepository: LocalMangaRepository,
 ) : ViewModel() {
 
+    private val limit = MutableStateFlow(PAGE_SIZE)
+    private val firstEmission = MutableStateFlow(false)
+
+    /** Applied quick-filter chips (Doki appliedOptions): favourite categories the user tapped. */
+    private val _appliedFilter = MutableStateFlow<Set<ListFilterOption>>(emptySet())
+    val appliedFilter: StateFlow<Set<ListFilterOption>> = _appliedFilter.asStateFlow()
+
+    /** Available quick-filter chips (Doki UpdatesListQuickFilter): top favourite categories by updates. */
+    val quickFilterOptions: StateFlow<List<ListFilterOption>> = flow {
+        emit(
+            if (settings.isQuickFilterEnabled) {
+                runCatchingCancellable {
+                    favouritesRepository.getMostUpdatedCategories(limit = 4).map { ListFilterOption.Favorite(it) }
+                }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            },
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** The applied chips + an implicit SFW filter when NSFW content is disabled (Doki combineWithSettings). */
+    private val effectiveFilter: StateFlow<Set<ListFilterOption>> =
+        _appliedFilter.map { applied ->
+            if (settings.isNsfwContentDisabled) applied + ListFilterOption.SFW else applied
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    /** Whether the "Updated manga" header row is shown (Doki show_updated / KEY_FEED_HEADER), live. */
+    val isHeaderEnabled: StateFlow<Boolean> =
+        settings.observeBoolean(AppSettings.KEY_FEED_HEADER, true)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, settings.isFeedHeaderVisible)
+
+    /** Shared with the shell "Update" overflow: a single check at a time (Doki single worker). */
+    val isRefreshing: StateFlow<Boolean> = trackerUpdate.isRunning
+
+    /** Header row content: recently-updated manga (respecting the quick filter), only when the header is on. */
     val updatedManga: StateFlow<List<MangaTracking>> =
-        trackingRepository.observeUpdatedManga(limit = 200, filterOptions = emptySet())
+        combine(isHeaderEnabled, effectiveFilter) { enabled, filter -> enabled to filter }
+            .flatMapLatest { (enabled, filter) ->
+                if (enabled) trackingRepository.observeUpdatedManga(limit = 10, filterOptions = filter) else flowOf(emptyList())
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** The feed log itself (date-ordered, quick-filtered), paginated via [requestMoreItems]. */
+    val logItems: StateFlow<List<FeedLogItem>> =
+        combine(limit, effectiveFilter) { lim, filter -> lim to filter }
+            .flatMapLatest { (lim, filter) -> trackingRepository.observeTrackingLog(lim, filter) }
+            .onEach { firstEmission.value = true }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    /** True until the first DB emission so the screen can show a loading state (Doki LoadingState). */
+    val isLoading: StateFlow<Boolean> =
+        firstEmission.map { !it }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     init {
-        // Keep the tracked set in sync with favourites/history whenever the Feed is opened.
+        // Keep the tracked set in sync with favourites/history + trim old logs whenever the Feed opens.
         viewModelScope.launch { runCatchingCancellable { trackingRepository.updateTracks() } }
+        viewModelScope.launch { runCatchingCancellable { trackingRepository.gc() } }
     }
 
-    /** Check every tracked manga for new chapters (bounded parallelism), saving updates as they finish. */
-    fun refresh() {
-        if (_isRefreshing.value) return
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            try {
-                runCatchingCancellable { trackingRepository.updateTracks() }
-                val tracks = runCatchingCancellable { trackingRepository.getTracks() }.getOrNull().orEmpty()
-                val semaphore = Semaphore(MAX_PARALLELISM)
-                tracks.map { track ->
-                    launch {
-                        semaphore.withPermit {
-                            runCatchingCancellable {
-                                val updates = checkNewChaptersUseCase.check(track.manga)
-                                trackingRepository.saveUpdates(updates)
-                                maybeAutoDownload(updates)
-                            }
-                        }
-                    }
-                }.forEach { it.join() }
-            } finally {
-                _isRefreshing.value = false
-            }
+    /** Manual refresh (Doki action_update): check every tracked manga now. */
+    fun refresh() = trackerUpdate.updateNow()
+
+    /** Toggle a quick-filter chip (Doki toggleFilterOption). */
+    fun toggleFilter(option: ListFilterOption) {
+        _appliedFilter.value = _appliedFilter.value.toMutableSet().also {
+            if (!it.remove(option)) it.add(option)
         }
     }
 
-    /**
-     * Auto-download newly-found chapters (Doki tracker_download). DOWNLOADED strategy = only for manga that
-     * already have downloaded chapters locally; DISABLED = off. Runs during the Feed check (Nekuva has no
-     * background worker, so this is the equivalent trigger).
-     */
-    private suspend fun maybeAutoDownload(updates: MangaUpdates) {
-        if (settings.trackerDownloadStrategy == TrackerDownloadStrategy.DISABLED) return
-        if (updates !is MangaUpdates.Success || !updates.isValid || updates.newChapters.isEmpty()) return
-        if (updates.manga.id !in localMangaRepository.observeSavedIds().value) return
-        runCatchingCancellable {
-            downloadManager.schedule(
-                listOf(
-                    DownloadTask(
-                        manga = updates.manga,
-                        chaptersIds = updates.newChapters.mapTo(HashSet()) { it.id },
-                        destination = null,
-                        format = null,
-                        startPaused = false,
-                    ),
-                ),
-            )
-        }
+    fun requestMoreItems() {
+        if (firstEmission.value) limit.value += PAGE_SIZE
     }
 
-    fun markRead(mangaId: Long) {
-        viewModelScope.launch { runCatchingCancellable { trackingRepository.clearUpdates(listOf(mangaId)) } }
-    }
-
-    fun clearAll() {
-        viewModelScope.launch { runCatchingCancellable { trackingRepository.clearCounters() } }
+    /** Tapping a feed entry marks it read (clears its "new" highlight + the tab badge). */
+    fun onItemClick(logId: Long) {
+        viewModelScope.launch { runCatchingCancellable { trackingRepository.markLogAsRead(logId) } }
     }
 }

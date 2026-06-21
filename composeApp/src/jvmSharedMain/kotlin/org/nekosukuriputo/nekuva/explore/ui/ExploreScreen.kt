@@ -1,8 +1,11 @@
 package org.nekosukuriputo.nekuva.explore.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Download
@@ -65,10 +69,14 @@ fun ExploreScreen(
 	onSearchSubmit: (String) -> Unit,
 	onBookmarksClick: () -> Unit,
 	onDownloadsClick: () -> Unit,
-	onSettingsClick: () -> Unit,
+	onLocalClick: () -> Unit,
+	onManageSources: () -> Unit,
+	onOpenManga: (Long) -> Unit,
+	onSourceSettings: (String) -> Unit,
 ) {
 	val uiState by viewModel.uiState.collectAsState()
-	var searchQuery by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+	val isRandomLoading by viewModel.isRandomLoading.collectAsState()
+	val selected by viewModel.selected.collectAsState()
 	// Incognito banner (Doki): shown while incognito mode is on — reading progress isn't recorded.
 	val settings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
 	val incognitoOn by settings.observeBoolean(org.nekosukuriputo.nekuva.core.prefs.AppSettings.KEY_INCOGNITO_MODE, false)
@@ -87,6 +95,32 @@ fun ExploreScreen(
 		}
         is ExploreUiState.Success -> {
             val gridState = rememberLazyGridState()
+            val selectionActive = selected.isNotEmpty()
+            // Back clears the selection first (Doki ActionMode behaviour).
+            org.nekosukuriputo.nekuva.core.ui.PlatformBackHandler(enabled = selectionActive) { viewModel.clearSelection() }
+          Column(modifier = Modifier.fillMaxSize()) {
+            if (selectionActive) {
+                val selectedSources = state.sources.filter { it.mangaSource.name in selected }
+                SourceSelectionBar(
+                    count = selected.size,
+                    allPinned = selectedSources.all { it.isPinned },
+                    singleSelection = selected.size == 1,
+                    onClose = { viewModel.clearSelection() },
+                    onPin = { viewModel.pinSelected(selectedSources.any { !it.isPinned }) },
+                    onDisable = { viewModel.disableSelected() },
+                    onShortcut = {
+                        selectedSources.singleOrNull()?.let { s ->
+                            val title = (s.mangaSource as? MangaParserSource)?.title ?: s.mangaSource.name
+                            org.nekosukuriputo.nekuva.core.shortcuts.pinSourceShortcut(s.mangaSource.name, title)
+                        }
+                        viewModel.clearSelection()
+                    },
+                    onSettings = {
+                        selectedSources.singleOrNull()?.let { onSourceSettings(it.mangaSource.name) }
+                        viewModel.clearSelection()
+                    },
+                )
+            }
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(100.dp),
@@ -100,36 +134,41 @@ fun ExploreScreen(
                             org.nekosukuriputo.nekuva.core.ui.components.IncognitoBanner()
                         }
                     }
+                    // Doki ExploreButtons: exactly four shortcuts (Local, Bookmarks, Random, Downloads) in a 2×2 grid.
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Button(onClick = { /* DITUNDA - Local Storage Action */ }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                                Icon(Icons.Default.SdStorage, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(Res.string.local_storage))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ExploreButton(Icons.Default.SdStorage, stringResource(Res.string.local_storage), Modifier.weight(1f), onClick = onLocalClick)
+                                ExploreButton(Icons.Default.Bookmark, stringResource(Res.string.bookmarks), Modifier.weight(1f), onClick = onBookmarksClick)
                             }
-                            Button(onClick = onBookmarksClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                                Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(Res.string.bookmarks))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ExploreButton(
+                                    Icons.Default.Casino, stringResource(Res.string.random), Modifier.weight(1f),
+                                    loading = isRandomLoading,
+                                    onClick = { viewModel.openRandom(onOpenManga) },
+                                )
+                                ExploreButton(Icons.Default.Download, stringResource(Res.string.downloads), Modifier.weight(1f), onClick = onDownloadsClick)
                             }
-                            Button(onClick = { /* DITUNDA */ }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                                Icon(Icons.Default.Casino, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(Res.string.random))
-                            }
-                            Button(onClick = onDownloadsClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(Res.string.downloads))
-                            }
-                            Button(onClick = onSettingsClick, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                                Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.size(8.dp))
-                                Text(stringResource(Res.string.settings))
+                        }
+                    }
+
+                    // Doki "Remote sources" header (ListHeader + Catalog button).
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.remote_sources),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            androidx.compose.material3.TextButton(onClick = onManageSources) {
+                                Text(stringResource(Res.string.catalog))
                             }
                         }
                     }
@@ -137,11 +176,15 @@ fun ExploreScreen(
                     items(state.sources) { source ->
                         SourceGridItem(
                             source = source,
+                            selected = source.mangaSource.name in selected,
                             onClick = {
-                                val id = (source.mangaSource as? MangaParserSource)?.name ?: ""
-                                onSourceClick(id)
+                                if (selectionActive) {
+                                    viewModel.toggleSelection(source)
+                                } else {
+                                    onSourceClick((source.mangaSource as? MangaParserSource)?.name ?: "")
+                                }
                             },
-                            onLongClick = { viewModel.togglePin(source) },
+                            onLongClick = { viewModel.toggleSelection(source) },
                         )
                     }
                 }
@@ -150,7 +193,79 @@ fun ExploreScreen(
                     modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
                 )
             }
+          }
         }
+	}
+}
+
+/** Doki ExploreButton: an equal-width tonal shortcut (icon + label); shows a spinner while [loading]. */
+@Composable
+private fun ExploreButton(
+	icon: androidx.compose.ui.graphics.vector.ImageVector,
+	label: String,
+	modifier: Modifier = Modifier,
+	loading: Boolean = false,
+	onClick: () -> Unit,
+) {
+	Button(
+		onClick = onClick,
+		modifier = modifier,
+		enabled = !loading,
+		colors = ButtonDefaults.buttonColors(
+			containerColor = MaterialTheme.colorScheme.surfaceVariant,
+			contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+		),
+	) {
+		if (loading) {
+			CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+		} else {
+			Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+		}
+		Spacer(modifier = Modifier.size(8.dp))
+		Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+	}
+}
+
+/** Contextual selection bar (Doki mode_source ActionMode): pin/unpin, disable, settings (single). */
+@Composable
+private fun SourceSelectionBar(
+	count: Int,
+	allPinned: Boolean,
+	singleSelection: Boolean,
+	onClose: () -> Unit,
+	onPin: () -> Unit,
+	onDisable: () -> Unit,
+	onShortcut: () -> Unit,
+	onSettings: () -> Unit,
+) {
+	androidx.compose.material3.Surface(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+		Row(
+			modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			androidx.compose.material3.IconButton(onClick = onClose) {
+				Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.cancel))
+			}
+			Text(count.toString(), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+			androidx.compose.material3.IconButton(onClick = onPin) {
+				Icon(
+					Icons.Default.PushPin,
+					contentDescription = stringResource(if (allPinned) Res.string.unpin else Res.string.pin),
+					tint = if (allPinned) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+				)
+			}
+			androidx.compose.material3.IconButton(onClick = onDisable) {
+				Icon(Icons.Default.VisibilityOff, contentDescription = stringResource(Res.string.disable))
+			}
+			if (singleSelection) {
+				androidx.compose.material3.IconButton(onClick = onShortcut) {
+					Icon(Icons.Default.AddToHomeScreen, contentDescription = stringResource(Res.string.create_shortcut))
+				}
+				androidx.compose.material3.IconButton(onClick = onSettings) {
+					Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
+				}
+			}
+		}
 	}
 }
 
@@ -160,6 +275,7 @@ private fun SourceGridItem(
 	source: MangaSourceInfo,
 	onClick: () -> Unit,
 	onLongClick: () -> Unit = {},
+	selected: Boolean = false,
 ) {
     val displayTitle = (source.mangaSource as? MangaParserSource)?.title ?: source.mangaSource.name
 
@@ -167,6 +283,7 @@ private fun SourceGridItem(
 		modifier = Modifier
 			.fillMaxWidth()
 			.clip(RoundedCornerShape(8.dp))
+			.background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
 			.combinedClickable(onClick = onClick, onLongClick = onLongClick)
 			.padding(8.dp),
 		horizontalAlignment = Alignment.CenterHorizontally

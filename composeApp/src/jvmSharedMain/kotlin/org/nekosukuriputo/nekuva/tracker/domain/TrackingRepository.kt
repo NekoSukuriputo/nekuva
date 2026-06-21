@@ -39,6 +39,18 @@ class TrackingRepository(
             .map { list -> list.map { it.toTracking() } }
             .distinctUntilChanged()
 
+    /** The date-ordered updates log shown in the Feed (Doki observeTrackingLog), newest first. */
+    fun observeTrackingLog(
+        limit: Int,
+        filterOptions: Set<ListFilterOption> = emptySet(),
+    ): Flow<List<org.nekosukuriputo.nekuva.tracker.domain.model.FeedLogItem>> =
+        logsDao.observeAll(limit, filterOptions)
+            .map { list -> list.map { it.toFeedLogItem() } }
+            .distinctUntilChanged()
+
+    /** Mark a single feed log entry as read (Doki markAsRead) — clears its "new" highlight + the badge. */
+    suspend fun markLogAsRead(id: Long) = logsDao.markAsRead(id)
+
     suspend fun getTracks(): List<MangaTracking> =
         tracksDao.findAll(offset = 0, limit = Int.MAX_VALUE).map {
             MangaTracking(
@@ -103,6 +115,15 @@ class TrackingRepository(
         // ids left over are no longer in any tracked source → drop them
         for (mangaId in ids) tracksDao.delete(mangaId)
     }
+
+    private fun org.nekosukuriputo.nekuva.tracker.data.TrackLogWithManga.toFeedLogItem() =
+        org.nekosukuriputo.nekuva.tracker.domain.model.FeedLogItem(
+            id = trackLog.id,
+            manga = manga.toManga(tags.toMangaTags(), null),
+            chapters = trackLog.chapters.split('\n').filter { it.isNotBlank() },
+            createdAt = trackLog.createdAt,
+            isUnread = trackLog.isUnread,
+        )
 
     private fun MangaWithTrack.toTracking() = MangaTracking(
         manga = manga.toManga(tags.toMangaTags(), null),
