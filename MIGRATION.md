@@ -1391,8 +1391,17 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - **Hapus riwayat pencarian** sudah ada (per-query X + "Clear history" di `SearchSuggestionPanel`) — terverifikasi.
 
 ### LAYAR: Reader (sisa kecil — refinement, prioritas rendah)
-- 🔴 Double-page **wide-page→solo** + sensitivity. 🔴 Double-foldable (perangkat foldable). 🔴 RegionDecoder/SSIV subsampling.
-  (Mayoritas reader sudah ✅ — lihat bagian `[~] reader`.)
+- **Chapters bottom-sheet: badge SD-card untuk bab terunduh ✅** (gambar 5 user / Doki reader chapter list):
+  `ReaderChapterItem.isDownloaded` (dari `localMangaRepository.findSavedManga` saat load) → ikon `SdCard` di baris bab
+  pada sheet reader (tab daftar), selain highlight bab saat ini. (Tab daftar/grid/bookmark + branch selector sudah ada.)
+- 🔴 **Double-page wide-page→solo + sensitivity / double-foldable / RegionDecoder(SSIV) subsampling** — TERTUNDA dgn
+  alasan arsitektur (bukan drop diam): ketiganya di Doki berbasis **RecyclerView** (custom `DoublePageLayoutManager`
+  ukur lebar bitmap → span wide solo; `DoublePageSnapHelper` pakai `readerDoublePagesSensitivity` utk jarak fling;
+  `SubsamplingScaleImageView` utk tiling) yang **tak memetakan** ke Compose `Pager` + Coil `AsyncImage` Nekuva.
+  Wide-detect butuh decode-bounds async → re-pair unit Pager (janky), foldable butuh `androidx.window` + perangkat
+  lipat, SSIV butuh **dependensi baru** (mis. telephoto SubSamplingImage) + ganti core render. Semua **tak bisa
+  run-verify** tanpa GUI/hardware → menunggu keputusan (tambah dependensi? perangkat foldable?). Setting sudah ada
+  (`readerDoublePagesSensitivity`, `readerDoubleFoldable`).
 
 ### LAYAR: Bookmarks / Downloads / Settings (sisa)
 - 🔴 Bookmarks: **Save pages** dari selection (butuh AREA image/save). Fungsi lain reader-sheet (sebagian).

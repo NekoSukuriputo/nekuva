@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.PlayArrow
 import coil3.compose.AsyncImage
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
@@ -1077,6 +1078,15 @@ private fun ReaderChaptersSheet(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     Text("#${ch.number}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                // Downloaded chapter → SD-card badge (Doki reader chapters list parity).
+                                if (ch.isDownloaded) {
+                                    Icon(
+                                        Icons.Filled.SdCard,
+                                        contentDescription = stringResource(Res.string.on_device),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                    )
                                 }
                             }
                         }

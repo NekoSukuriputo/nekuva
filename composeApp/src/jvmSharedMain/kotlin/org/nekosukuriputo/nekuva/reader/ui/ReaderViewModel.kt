@@ -58,6 +58,7 @@ data class ReaderChapterItem(
     val number: Int,
     val name: String,
     val isCurrent: Boolean,
+    val isDownloaded: Boolean = false,
 )
 
 /** A translation/scanlation branch for the reader's branch selector (Doki's MangaBranch). */
@@ -136,6 +137,7 @@ class ReaderViewModel(
     private var manga: Manga? = null
     private val mangaFlow = MutableStateFlow<Manga?>(null)
     private var allChapters: List<MangaChapter> = emptyList()    // every branch (parser order)
+    private var downloadedChapterIds: Set<Long> = emptySet()    // chapters saved on disk (SD-card badge)
     private var selectedBranch: String? = null                  // branch currently shown/navigated
     private var chapters: List<MangaChapter> = emptyList()      // allChapters filtered to selectedBranch
 
@@ -382,6 +384,10 @@ class ReaderViewModel(
                 }
                 refreshImageServerState()
                 allChapters = m.chapters ?: emptyList()
+                // Which chapters are downloaded → SD-card badge in the chapters sheet (Doki reader parity).
+                downloadedChapterIds = runCatching {
+                    localMangaRepository.findSavedManga(m, withDetails = true)?.manga?.chapters?.mapTo(HashSet()) { it.id }
+                }.getOrNull() ?: emptySet()
                 val chapter = allChapters.find { it.id == initialChapterId }
                     ?: throw IllegalArgumentException("Chapter with ID $initialChapterId not found.")
                 // Default the branch SELECTOR to the opened chapter's branch. Navigation (append +
@@ -685,6 +691,7 @@ class ReaderViewModel(
                     number = i + 1,
                     name = c.title?.takeIf { it.isNotEmpty() } ?: c.name ?: "",
                     isCurrent = c.id == currentChapterId,
+                    isDownloaded = c.id in downloadedChapterIds,
                 )
             },
             hasPrev = idx > 0,
