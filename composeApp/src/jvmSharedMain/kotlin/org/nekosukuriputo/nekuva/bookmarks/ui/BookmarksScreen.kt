@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +50,7 @@ import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.core.ui.components.EmptyState
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
+import org.nekosukuriputo.nekuva.core.image.mangaSourceExtra
 import nekuva.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,6 +74,14 @@ fun BookmarksScreen(
         }
     }
 
+    val pageSavedMsg = stringResource(Res.string.page_saved)
+    val pagesSavedMsg = stringResource(Res.string.pages_saved)
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.onPagesSaved.collect { count ->
+            if (count > 0) snackbarHostState.showSnackbar(if (count == 1) pageSavedMsg else pagesSavedMsg)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -90,6 +100,10 @@ fun BookmarksScreen(
                 },
                 actions = {
                     if (selection.isNotEmpty()) {
+                        // Save selected page images to storage (Doki bookmarks "save" selection action).
+                        IconButton(onClick = { viewModel.saveSelected() }) {
+                            Icon(Icons.Default.Save, contentDescription = stringResource(Res.string.save))
+                        }
                         IconButton(onClick = { viewModel.removeSelected() }) {
                             Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.remove))
                         }
@@ -167,9 +181,17 @@ private fun BookmarkThumb(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        // Thumbnail = the actual bookmarked page image (loaded from its URL, like Doki).
+        // Thumbnail = the actual bookmarked page image (loaded from its URL, like Doki). Carry the source
+        // so the network layer adds its Referer/UA + CloudFlare handling (else protected thumbs are blank).
+        val thumbCtx = coil3.compose.LocalPlatformContext.current
+        val thumbModel = remember(bookmark.imageUrl, bookmark.manga.source) {
+            coil3.request.ImageRequest.Builder(thumbCtx)
+                .data(bookmark.imageUrl)
+                .apply { mangaSourceExtra(bookmark.manga.source) }
+                .build()
+        }
         AsyncImage(
-            model = bookmark.imageUrl,
+            model = thumbModel,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),

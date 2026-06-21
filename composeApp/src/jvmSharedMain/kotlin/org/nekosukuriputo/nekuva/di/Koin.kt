@@ -136,7 +136,7 @@ val readerModule = module {
 
 val bookmarksModule = module {
     single { org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository(get()) }
-    factory { org.nekosukuriputo.nekuva.bookmarks.ui.BookmarksViewModel(get()) }
+    factory { org.nekosukuriputo.nekuva.bookmarks.ui.BookmarksViewModel(get(), get()) }
 }
 
 val favouritesModule = module {

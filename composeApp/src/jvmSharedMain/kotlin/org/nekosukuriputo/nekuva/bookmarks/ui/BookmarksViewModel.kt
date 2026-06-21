@@ -16,9 +16,12 @@ import org.nekosukuriputo.nekuva.bookmarks.data.BookmarkEntity
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
 import org.nekosukuriputo.nekuva.parsers.model.Manga
+import org.nekosukuriputo.nekuva.parsers.model.MangaPage
+import org.nekosukuriputo.nekuva.reader.domain.PageSaveHelper
 
 class BookmarksViewModel(
     private val repository: BookmarksRepository,
+    private val pageSaveHelper: PageSaveHelper,
 ) : ViewModel() {
 
     val content: StateFlow<BookmarksUiState> = repository.observeBookmarks()
@@ -33,6 +36,9 @@ class BookmarksViewModel(
 
     /** Emits the number of bookmarks just removed, so the UI can offer an undo. */
     val onRemoved = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+
+    /** Emits the number of selected pages just saved to storage (Doki bookmarks "save"), for a snackbar. */
+    val onPagesSaved = MutableSharedFlow<Int>(extraBufferCapacity = 1)
 
     private var lastRemoved: List<BookmarkEntity> = emptyList()
 
@@ -53,6 +59,24 @@ class BookmarksViewModel(
             lastRemoved = repository.removeBookmarks(ids)
             _selection.value = emptySet()
             onRemoved.tryEmit(lastRemoved.size)
+        }
+    }
+
+    /** Save the selected bookmarked pages to platform storage (Doki bookmarks "save" selection action). */
+    fun saveSelected() {
+        val ids = _selection.value
+        if (ids.isEmpty()) return
+        val state = content.value as? BookmarksUiState.Success ?: return
+        val bookmarks = state.groups.flatMap { it.second }.filter { it.pageId in ids }
+        if (bookmarks.isEmpty()) return
+        viewModelScope.launch {
+            var saved = 0
+            for (b in bookmarks) {
+                val page = MangaPage(b.pageId, b.imageUrl, null, b.manga.source)
+                runCatching { pageSaveHelper.save(page) }.getOrNull()?.let { saved++ }
+            }
+            _selection.value = emptySet()
+            onPagesSaved.tryEmit(saved)
         }
     }
 
