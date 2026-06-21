@@ -1,5 +1,48 @@
 # Nekuva KMP Migration Plan
 
+## RANGKUMAN STATUS (per 2026-06-21) — apa yang masih pending / belum migrasi
+
+> **Catatan penting:** banyak tanda `[ ]` di "LEDGER Item Tertunda" di bawah sudah **STALE** (fitur
+> sebenarnya SUDAH ada). Rangkuman ini adalah status nyata hasil verifikasi terhadap kode.
+
+**Hampir SEMUA area Doki sudah dimigrasi & ada di kode** (Android + Desktop), termasuk yang dulu ditandai
+belum: `alternatives` (AlternativesScreen + AutoFix worker), `image`-save (`ImageSaveUseCase` + fullscreen
+viewer), `picker` import lokal (`MangaFilePicker`), `widget` (Recent + Shelf, Android), **app-lock/biometric**
+(`core/security/AppLock` + LockScreen), **dynamic color/Material You** (`ColorSchemes`), reader double-page
+**wide→solo + sensitivity**, pintasan Explore (bookmarks/random/downloads). Sesi 2026-06-21 juga menutup:
+DoujinDesu blank (manga-client headers), cache+prefetch reader, tombol Refresh gambar gagal, **deep settings
+search**, Bookmarks save-pages, **Download FGS notification + aksi pause/cancel**, fix crash WebView fast-scroll.
+
+**Yang BENAR-BENAR masih terbuka, dikelompokkan per penyebab:**
+
+1. **Ter-blok kredensial/eksternal (kode siap, butuh aksi pemilik app — BUKAN gap kode):**
+   - **Scrobbler OAuth** (AniList / MAL / Kitsu / Shikimori) + **Discord RPC** — butuh *client id/secret* terdaftar
+     per layanan (redirect `nekuva://oauth`); sampai diisi, baris login tampil "Segera hadir".
+   - **Sync** (server Kotatsu) — kode lengkap, **belum run-verify** (butuh akun + server).
+   - **Telegram backup** — butuh bot token build-time.
+   - **Translate this app** — belum ada proyek Weblate/Crowdin Nekuva (Doki pun disabled).
+
+2. **Ter-blok platform / butuh perangkat khusus:**
+   - **Desktop AVIF decoder** — favicon/ikon AVIF gagal didekode di Desktop (kosmetik; Android pakai libavif).
+   - **Double-foldable reader** (`reader_double_foldable`) — perlu perangkat foldable utk uji.
+   - **Shinigami TLS di Linux Desktop** — mitigasi Conscrypt sudah ada, perlu run-verify di Linux.
+
+3. **Deferral kecil yang disadari:**
+   - **Download:** persist antrean lintas process-death (dulu gratis dari WorkManager) + constraint metered-network/prompt data seluler.
+   - **SSIV/RegionDecoder subsampling** — tak dipakai (telephoto incompatible AVIF; Coil sudah downsample).
+   - **Crash reporter global (ACRA/Crashlytics)** — belum dimigrasi (layar "Kirim masukan" di screenshot = dialog crash sistem Android, bukan Nekuva).
+   - Auto periodic background sync (change-triggered) — area background-jobs.
+
+4. **Isu di repo lain `nekuva-exts` (BUKAN repo UI ini, §8):** MagusManga `getString("author")` NPE; Shinigami cipher TLS Linux.
+
+5. **PENDING RUN-VERIFY (compiled, belum dikonfirmasi via GUI oleh manusia):** scrobbling OAuth, sync, banyak toggle
+   reader-advanced, beberapa preference settings, **Download FGS notification + aksi (baru sesi ini)**. Perlu uji di perangkat.
+
+**Audit parity akhir Doki (§6.2 CLAUDE.md)** — walkthrough layar-demi-layar/menu-demi-menu belum dilakukan formal;
+itu gate terakhir sebelum Phase 1 dinyatakan selesai.
+
+---
+
 ## Phase 0: Skeleton (Kerangka Multiplatform)
 Fokus: Bangun kerangka KMP/CMP tanpa memigrasikan fitur, memastikan aplikasi Android saat ini tetap bisa di-build.
 - Konversi Gradle ke Kotlin DSL (`settings.gradle.kts`, `build.gradle.kts`).
