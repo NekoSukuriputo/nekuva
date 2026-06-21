@@ -1,7 +1,9 @@
 package org.nekosukuriputo.nekuva.favourites.ui.container
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,8 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.favourites.ui.list.FavouritesListScreen
@@ -77,13 +81,19 @@ fun FavouritesScreen(
                 Box {
                     Tab(
                         selected = pagerState.currentPage == index,
-                        // Click selects; long-press opens Edit/Delete/Hide (Doki FavouriteTabPopupMenuProvider).
-                        // Tab.onClick is a no-op — combinedClickable on the modifier handles both gestures.
-                        onClick = {},
-                        modifier = Modifier.combinedClickable(
-                            onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                            onLongClick = { menuForTab = tab },
-                        ),
+                        // Click selects the tab (Doki: switch by tapping, not only by swiping). Tab's own
+                        // selectable handles the click; long-press (Edit/Delete/Hide) is detected with a
+                        // non-consuming gesture so it doesn't steal the tap.
+                        onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        modifier = Modifier.pointerInput(tab.id) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                                    waitForUpOrCancellation()
+                                }
+                                if (up == null) menuForTab = tab // held past the long-press threshold
+                            }
+                        },
                         text = { Text(tab.title) },
                     )
                     FavTabMenu(
