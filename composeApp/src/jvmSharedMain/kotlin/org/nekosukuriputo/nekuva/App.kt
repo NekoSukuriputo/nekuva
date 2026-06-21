@@ -166,6 +166,16 @@ fun App() {
         runCatching { org.nekosukuriputo.nekuva.backups.work.scheduleBackup() }
     }
 
+    // App-update check on launch (Doki AppUpdateRepository): populates the "App update available" menu item
+    // in the main shell when a newer GitHub release exists. Failures are swallowed (offline / rate-limited).
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        runCatching {
+            org.koin.core.context.GlobalContext.get()
+                .get<org.nekosukuriputo.nekuva.core.github.AppUpdateRepository>()
+                .fetchUpdate(org.nekosukuriputo.nekuva.core.AppInfo.VERSION_NAME)
+        }
+    }
+
     // Screenshots policy (Doki screenshots_policy): block at the window for BLOCK_ALL, or for
     // BLOCK_INCOGNITO while global incognito is on. NSFW/per-reader cases are handled in those screens.
     val screenshotsPolicy by settings.observeScreenshotsPolicy()

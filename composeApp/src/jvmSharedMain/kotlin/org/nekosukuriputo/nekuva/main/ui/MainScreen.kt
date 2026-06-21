@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +36,8 @@ import org.nekosukuriputo.nekuva.list.ui.ListConfigSheet
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
@@ -83,6 +86,9 @@ fun MainScreen(
     val feedUnread by trackingRepo.observeUnreadUpdatesCount().collectAsState(initial = 0)
     val feedHeaderOn by settings.observeBoolean(AppSettings.KEY_FEED_HEADER, true)
         .collectAsState(initial = settings.isFeedHeaderVisible)
+    // App-update available (Doki opt_main action_app_update): a prominent overflow entry when a newer release exists.
+    val appUpdateRepo = koinInject<org.nekosukuriputo.nekuva.core.github.AppUpdateRepository>()
+    val appUpdate by appUpdateRepo.observeAvailableUpdate().collectAsState()
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -98,6 +104,8 @@ fun MainScreen(
         onFeedUpdate = { trackerUpdate.updateNow() },
         onShowUpdated = { settings.isFeedHeaderVisible = !feedHeaderOn },
         onClearFeed = { showClearFeed = true },
+        appUpdateAvailable = appUpdate != null,
+        onAppUpdate = { navController.navigate(AboutSettingsRoute) },
     )
     // Local import (Doki opt_local action_import → ImportDialog): pick a .cbz or a folder, copy + parse.
     val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
@@ -203,9 +211,21 @@ fun MainScreen(
         if (useNavigationRail) {
             Row(modifier = Modifier.fillMaxSize()) {
                 if (isTopLevel) {
-                    NavigationRail {
+                    // Expandable rail (Doki Desktop): a header toggle expands the rail to show tab labels.
+                    var railExpanded by rememberSaveable { mutableStateOf(false) }
+                    val showLabels = railExpanded || navLabelsVisible
+                    NavigationRail(
+                        header = {
+                            androidx.compose.material3.IconButton(onClick = { railExpanded = !railExpanded }) {
+                                Icon(
+                                    if (railExpanded) Icons.Filled.MenuOpen else Icons.Filled.Menu,
+                                    contentDescription = stringResource(if (railExpanded) Res.string.collapse else Res.string.expand),
+                                )
+                            }
+                        },
+                    ) {
                         tabs.forEach { tab ->
-                            val selected = currentDestination?.hierarchy?.any { 
+                            val selected = currentDestination?.hierarchy?.any {
                                 it.route?.contains(tab.route::class.qualifiedName ?: "") == true
                             } == true
 
@@ -223,8 +243,8 @@ fun MainScreen(
                                     }
                                 },
                                 icon = { TabIcon(tab, feedUnread) },
-                                alwaysShowLabel = navLabelsVisible,
-                                label = if (navLabelsVisible) { { Text(stringResource(tab.titleRes)) } } else null
+                                alwaysShowLabel = showLabels,
+                                label = if (showLabels) { { Text(stringResource(tab.titleRes)) } } else null
                             )
                         }
                     }
@@ -465,6 +485,8 @@ private fun rememberOverflowItems(
     onFeedUpdate: () -> Unit,
     onShowUpdated: () -> Unit,
     onClearFeed: () -> Unit,
+    appUpdateAvailable: Boolean,
+    onAppUpdate: () -> Unit,
 ): List<OverflowItem> {
     val route = currentDestination?.route ?: ""
     // Read all labels unconditionally (stringResource must not be called inside a changing branch).
@@ -483,6 +505,7 @@ private fun rememberOverflowItems(
     val sourcesCatalog = stringResource(Res.string.sources_catalog)
     val incognito = stringResource(Res.string.incognito_mode)
     val settingsLabel = stringResource(Res.string.settings)
+    val appUpdateLabel = stringResource(Res.string.app_update_available)
 
     fun has(route2: Any) = route.contains(route2::class.qualifiedName ?: " ")
     // "List options" is functional (opens the list-config sheet for that section's key); the other
@@ -515,7 +538,9 @@ private fun rememberOverflowItems(
         else -> emptyList()
     }
 
-    return tabItems +
+    // Doki opt_main order: App-update (prominent, only when available) → tab items → Incognito → Settings.
+    val appUpdateItem = if (appUpdateAvailable) listOf(OverflowItem(appUpdateLabel, enabled = true, onClick = onAppUpdate)) else emptyList()
+    return appUpdateItem + tabItems +
         OverflowItem(incognito, enabled = true, checked = incognitoOn, onClick = onToggleIncognito) +
         OverflowItem(settingsLabel, enabled = true, onClick = { navController.navigate(SettingsRoute) })
 }

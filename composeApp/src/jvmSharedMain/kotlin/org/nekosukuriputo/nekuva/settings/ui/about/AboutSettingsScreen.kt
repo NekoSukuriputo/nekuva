@@ -38,7 +38,7 @@ import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 private const val GITHUB_REPO = "https://github.com/NekoSukuriputo/nekuva"
 // Doki points the user manual at the Kotatsu guide (url_user_manual); reused here per the migration note.
 private const val USER_MANUAL_URL = "https://kotatsu.app/manuals/guides/getting-started/"
-private const val APP_VERSION = "1.0"
+private const val APP_VERSION = org.nekosukuriputo.nekuva.core.AppInfo.VERSION_NAME
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

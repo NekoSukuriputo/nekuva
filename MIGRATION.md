@@ -1365,11 +1365,21 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
   VM: `downloadChapters`/`markChaptersRead`/`deleteChapters`.
   **Status: Details TUNTAS tanpa defer** (semua di atas compile ✅ Desktop+Android+assembleDebug; **belum run-verified GUI**).
 
-### LAYAR: Main shell (Doki `main/ui` + `opt_main`)
-- 🟡 Global search entry (kotak cari ✅ + suggestions ✅) — 🔴 tambah **toggle Incognito** di menu utama (`action_incognito`).
-- 🔴 Menu **"App update available"** muncul saat ada update (pakai `AppUpdateRepository` — auto-check saat launch).
-- 🔴 **FAB "Resume reading"** di atas bottom nav. 🔴 **Expandable navigation rail** (drawer buka-tutup, Desktop).
-- 🔴 **Dynamic tab visibility** (sembunyikan tab Feed/Suggestions per setting). 🔴 **Badge counter** tab Feed/Updates.
+### LAYAR: Main shell (Doki `main/ui` + `opt_main`) — SELESAI (tanpa defer; pending run-verify GUI)
+- **Global search entry ✅** (kotak cari + suggestions kind-aware).
+- **Toggle Incognito ✅** (Doki action_incognito): item **checkable** di overflow shell (`OverflowItem.checked`),
+  live via `observeBoolean(KEY_INCOGNITO_MODE)`. (Sudah ada; terverifikasi.)
+- **"App update available" ✅** (Doki action_app_update): auto-check saat launch (`App.kt` →
+  `AppUpdateRepository.fetchUpdate(AppInfo.VERSION_NAME)`), lalu item overflow **paling atas** muncul HANYA saat ada
+  rilis baru (`observeAvailableUpdate()`), tap → layar About (cek ulang + buka rilis). Versi dipusatkan ke
+  `core/AppInfo.VERSION_NAME` (dipakai About + update-check).
+- **FAB "Resume reading" ✅** (Doki main_fab): `ResumeFab` di atas bottom nav, lanjut ke manga terakhir (gated
+  `isMainFabEnabled`). (Sudah ada; terverifikasi.)
+- **Expandable navigation rail ✅** (Doki Desktop): `NavigationRail.header` tombol Menu/MenuOpen → toggle
+  `railExpanded` (rememberSaveable) → label tab tampil/sembunyi. (≥600dp = rail.)
+- **Dynamic tab visibility ✅**: bottom-nav/rail dibangun dari `settings.observeNavItems()` (Doki `nav_main`
+  preference) — live; user atur tab mana yang tampil. Doki tak auto-hide di luar preference ini → cocok.
+- **Badge counter tab Feed ✅**: `TabIcon` `BadgedBox` + `observeUnreadUpdatesCount` (99+ cap) di rail & bar.
 
 ### LAYAR: Reader (sisa kecil — refinement, prioritas rendah)
 - 🔴 Double-page **wide-page→solo** + sensitivity. 🔴 Double-foldable (perangkat foldable). 🔴 RegionDecoder/SSIV subsampling.
