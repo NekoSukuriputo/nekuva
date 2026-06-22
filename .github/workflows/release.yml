@@ -66,12 +66,21 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      # Write the keystore from the secret (if set) and expose NEKUVA_STORE_FILE for the build. The
+      # `secrets` context isn't allowed in `if:`, so we gate in the shell using a step-level env var.
       - name: Decode signing keystore
-        if: ${{ secrets.NEKUVA_KEYSTORE_BASE64 != '' }}
-        run: echo "${{ secrets.NEKUVA_KEYSTORE_BASE64 }}" | base64 -d > nekuva.jks
+        env:
+          KEYSTORE_B64: ${{ secrets.NEKUVA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > nekuva.jks
+            echo "NEKUVA_STORE_FILE=nekuva.jks" >> "$GITHUB_ENV"
+            echo "Release keystore configured."
+          else
+            echo "No keystore secret — release will be debug-signed."
+          fi
       - name: Build release APKs
         env:
-          NEKUVA_STORE_FILE: ${{ secrets.NEKUVA_KEYSTORE_BASE64 != '' && 'nekuva.jks' || '' }}
           NEKUVA_STORE_PASSWORD: ${{ secrets.NEKUVA_STORE_PASSWORD }}
           NEKUVA_KEY_ALIAS: ${{ secrets.NEKUVA_KEY_ALIAS }}
           NEKUVA_KEY_PASSWORD: ${{ secrets.NEKUVA_KEY_PASSWORD }}
