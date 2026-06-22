@@ -34,6 +34,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Nekuva ${{ github.ref_name }}
           prerelease: true
+          # Auto-append GitHub's "What's Changed" (merged PRs/commits since the previous tag) + a
+          # "Full Changelog" link below the curated intro body.
+          generate_release_notes: true
           body: |
             This is **Nekuva ${{ github.ref_name }}** — a beta for user testing.
 
