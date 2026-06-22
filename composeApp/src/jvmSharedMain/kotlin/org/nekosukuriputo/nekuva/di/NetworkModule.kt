@@ -42,7 +42,10 @@ val networkModule = module {
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
             .cookieJar(get<MutableCookieJar>())
-            .cache(cache)
+            // HTTP response cache: ON for Android (app-private), OFF for Desktop — source sites serve
+            // ad/redirect JS that Defender flags once OkHttp caches it to ~/.nekuva/http_cache. Images
+            // are cached separately by Coil, so this only drops parser-response caching on Desktop.
+            .apply { if (org.nekosukuriputo.nekuva.core.network.httpDiskCacheEnabled) cache(cache) }
             // Proxy (Doki proxy_type_2/address/port + auth) — live via ProxyProvider.
             .proxySelector(get<ProxyProvider>().selector)
             .proxyAuthenticator(get<ProxyProvider>().authenticator)
