@@ -123,9 +123,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      # jpackage needs WiX Toolset 3.x to build an .msi.
-      - name: Install WiX Toolset 3
-        run: choco install wixtoolset --version=3.11.2 -y --no-progress
+      # jpackage needs WiX Toolset 3.x for the .msi. windows-latest already ships WiX 3.14, so only
+      # install if missing — and never fail the step (choco exits non-zero when a newer version exists).
+      - name: Ensure WiX Toolset 3
+        shell: bash
+        run: choco install wixtoolset -y --no-progress || echo "WiX already present — continuing."
       - name: Build MSI
         shell: bash
         run: |
