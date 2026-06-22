@@ -29,32 +29,61 @@ jobs:
     name: Create release
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history + tags so we can diff against the previous tag
+      # Build the release body ourselves: curated intro + a COMMIT list (subject + short SHA + @author)
+      # for every commit since the previous tag, a Contributors list, and the compare link. GitHub's
+      # generate_release_notes is PR-based; this repo commits straight to main, so we list commits via
+      # the compare API (which also resolves each commit's GitHub @login) instead.
+      - name: Build release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          NEW="${GITHUB_REF_NAME}"
+          PREV="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          cat > release_notes.md <<'INTRO'
+          This is a **beta** build of Nekuva for user testing.
+
+          Nekuva is a Kotlin Multiplatform manga reader (Kotatsu/Doki lineage), rewritten in Compose
+          Multiplatform and now running on **Android, Windows, Linux, and macOS**.
+
+          ## Downloads
+          - **Android** — `…-android-universal.apk` if unsure, or match your CPU (`arm64-v8a` for most phones).
+          - **Windows** — `…-windows-x64.msi`
+          - **Linux** — `…-linux-amd64.deb` or `…-linux-x86_64.AppImage`
+          - **macOS** — `…-macos.dmg`
+
+          ## Notes
+          - **macOS:** the `.dmg` is unsigned / un-notarized → right-click the app and choose **Open** to bypass Gatekeeper.
+          - This is a **beta** — expect rough edges; please report any bugs you find.
+          INTRO
+          {
+            echo
+            if [ -n "$PREV" ]; then
+              gh api "repos/${GITHUB_REPOSITORY}/compare/${PREV}...${NEW}" > compare.json
+              echo "## What's Changed"
+              jq -r '.commits[] | "* " + (.commit.message | split("\n")[0]) + " `" + .sha[0:7] + "` " + (if .author then "@" + .author.login else .commit.author.name end)' compare.json
+              echo
+              echo "## Contributors"
+              jq -r '[.commits[] | if .author then "@" + .author.login else .commit.author.name end] | unique | .[] | "* " + .' compare.json
+              echo
+              echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${NEW}"
+            else
+              echo "## What's Changed"
+              git log --pretty='* %s `%h` %an'
+            fi
+          } >> release_notes.md
+          echo "----- generated release notes -----"
+          cat release_notes.md
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Nekuva ${{ github.ref_name }}
           prerelease: false
           make_latest: true
-          # Auto-append GitHub's "What's Changed" (merged PRs/commits since the previous tag) + a
-          # "Full Changelog" link below the curated intro body.
-          generate_release_notes: true
-          body: |
-            This is **Nekuva ${{ github.ref_name }}** — a beta for user testing.
-
-            Nekuva is a Kotlin Multiplatform manga reader (Kotatsu/Doki lineage), rewritten in Compose
-            Multiplatform and now running on **Android, Windows, Linux, and macOS**.
-
-            ## Downloads
-            - **Android** — `…-android-universal.apk` if unsure, or match your CPU (`arm64-v8a` for most phones).
-            - **Windows** — `…-windows-x64.msi`
-            - **Linux** — `…-linux-amd64.deb` or `…-linux-x86_64.AppImage`
-            - **macOS** — `…-macos.dmg`
-
-            ## Notes
-            - **macOS:** the `.dmg` is unsigned / un-notarized → right-click the app and choose **Open** to bypass Gatekeeper.
-            - This is a **beta** — expect rough edges; please report any bugs you find.
-
-            Thank you for testing Nekuva!
+          body_path: release_notes.md
 
   android:
     name: Android APKs
