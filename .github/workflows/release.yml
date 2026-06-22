@@ -35,18 +35,22 @@ jobs:
           name: Nekuva ${{ github.ref_name }}
           prerelease: true
           body: |
-            ## Nekuva ${{ github.ref_name }} — beta
+            This is **Nekuva ${{ github.ref_name }}** — a beta for user testing.
 
-            Build untuk **user testing**. Pilih file sesuai platform Anda:
+            Nekuva is a Kotlin Multiplatform manga reader (Kotatsu/Doki lineage), rewritten in Compose
+            Multiplatform and now running on **Android, Windows, Linux, and macOS**.
 
-            - **Android** — kalau ragu pilih `…-android-universal.apk` (atau sesuai CPU HP: `arm64-v8a` untuk mayoritas perangkat).
+            ## Downloads
+            - **Android** — `…-android-universal.apk` if unsure, or match your CPU (`arm64-v8a` for most phones).
             - **Windows** — `…-windows-x64.msi`
-            - **Linux** — `…-linux-amd64.deb` atau `…-linux-x86_64.AppImage`
+            - **Linux** — `…-linux-amd64.deb` or `…-linux-x86_64.AppImage`
             - **macOS** — `…-macos.dmg`
 
-            ### Catatan
-            - **macOS `.dmg` belum di-sign / notarize → klik-kanan aplikasinya lalu pilih *Open* untuk melewati Gatekeeper.**
-            - Ini build **beta**, masih mungkin ada bug — mohon laporkan temuan Anda.
+            ## Notes
+            - **macOS:** the `.dmg` is unsigned / un-notarized → right-click the app and choose **Open** to bypass Gatekeeper.
+            - This is a **beta** — expect rough edges; please report any bugs you find.
+
+            Thank you for testing Nekuva!
 
   android:
     name: Android APKs
@@ -73,10 +77,12 @@ jobs:
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
           NUMERIC="${VERSION%%-*}"
+          # jpackage/MSI/DMG installer version needs MAJOR > 0; 0.0.x betas fall back to 1.0.0.
+          if [ "${NUMERIC%%.*}" = "0" ]; then DESKTOP_VER="1.0.0"; else DESKTOP_VER="$NUMERIC"; fi
           ./gradlew :composeApp:assembleRelease \
             -PappVersionName="$VERSION" \
             -PappVersionCode=${{ github.run_number }} \
-            -PdesktopPackageVersion="$NUMERIC"
+            -PdesktopPackageVersion="$DESKTOP_VER"
       - name: Rename APKs
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -113,8 +119,10 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           NUMERIC="${VERSION%%-*}"
+          # jpackage/MSI/DMG installer version needs MAJOR > 0; 0.0.x betas fall back to 1.0.0.
+          if [ "${NUMERIC%%.*}" = "0" ]; then DESKTOP_VER="1.0.0"; else DESKTOP_VER="$NUMERIC"; fi
           ./gradlew :composeApp:packageMsi \
-            -PappVersionName="$VERSION" -PdesktopPackageVersion="$NUMERIC"
+            -PappVersionName="$VERSION" -PdesktopPackageVersion="$DESKTOP_VER"
       - name: Collect MSI
         shell: bash
         run: |
@@ -150,8 +158,10 @@ jobs:
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
           NUMERIC="${VERSION%%-*}"
+          # jpackage/MSI/DMG installer version needs MAJOR > 0; 0.0.x betas fall back to 1.0.0.
+          if [ "${NUMERIC%%.*}" = "0" ]; then DESKTOP_VER="1.0.0"; else DESKTOP_VER="$NUMERIC"; fi
           ./gradlew :composeApp:packageDeb :composeApp:createDistributable \
-            -PappVersionName="$VERSION" -PdesktopPackageVersion="$NUMERIC"
+            -PappVersionName="$VERSION" -PdesktopPackageVersion="$DESKTOP_VER"
       - name: Build .AppImage
         shell: bash
         run: |
@@ -214,8 +224,10 @@ jobs:
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
           NUMERIC="${VERSION%%-*}"
+          # jpackage/MSI/DMG installer version needs MAJOR > 0; 0.0.x betas fall back to 1.0.0.
+          if [ "${NUMERIC%%.*}" = "0" ]; then DESKTOP_VER="1.0.0"; else DESKTOP_VER="$NUMERIC"; fi
           ./gradlew :composeApp:packageDmg \
-            -PappVersionName="$VERSION" -PdesktopPackageVersion="$NUMERIC"
+            -PappVersionName="$VERSION" -PdesktopPackageVersion="$DESKTOP_VER"
       - name: Collect DMG
         shell: bash
         run: |
