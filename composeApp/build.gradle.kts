@@ -58,9 +58,34 @@ val generateTelegramSecrets by tasks.registering {
 // desktopPackageVersion is the INSTALLER version: jpackage/MSI/DMG require MAJOR.MINOR.PATCH with
 // MAJOR > 0 (so "-beta" / leading-zero majors are rejected). It's just for upgrade ordering — the
 // user-facing version is appVersionName (AppInfo / About / release tag).
-val appVersionName: String = (findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "0.0.1-beta"
+val appVersionName: String = (findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "0.0.2-beta"
 val appVersionCodeValue: Int = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
 val desktopPackageVersion: String = (findProperty("desktopPackageVersion") as String?)?.takeIf { it.isNotBlank() } ?: "1.0.0"
+
+// Generate AppInfo.VERSION_NAME from appVersionName so the running version (About / update check) has a
+// SINGLE source: the CI tag (-PappVersionName) for releases, or the appVersionName fallback above for
+// local builds. No hand-edited copy to keep in sync.
+val generateAppInfo by tasks.registering {
+    val outDir = layout.buildDirectory.dir("generated/appInfo/kotlin")
+    val versionName = appVersionName
+    inputs.property("versionName", versionName)
+    outputs.dir(outDir)
+    doLast {
+        val pkgDir = outDir.get().dir("org/nekosukuriputo/nekuva/core").asFile
+        pkgDir.mkdirs()
+        val escaped = versionName.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        File(pkgDir, "AppInfo.kt").writeText(
+            buildString {
+                appendLine("package org.nekosukuriputo.nekuva.core")
+                appendLine()
+                appendLine("/** Generated at build time from gradle `appVersionName` (CI tag / -PappVersionName / build.gradle.kts fallback). */")
+                appendLine("object AppInfo {")
+                appendLine("    const val VERSION_NAME: String = \"$escaped\"")
+                appendLine("}")
+            },
+        )
+    }
+}
 
 kotlin {
     androidTarget {
@@ -79,6 +104,7 @@ kotlin {
         val jvmSharedMain by creating {
             dependsOn(commonMain.get())
             kotlin.srcDir(generateTelegramSecrets)
+            kotlin.srcDir(generateAppInfo)
             dependencies {
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.okhttp.tls)
