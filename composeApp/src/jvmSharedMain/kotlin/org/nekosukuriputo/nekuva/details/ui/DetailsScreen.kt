@@ -636,10 +636,21 @@ fun MangaDetailsContent(
                         )
                     }
                 }
-                // Translation: flag + language name (Doki locale row).
+                // Translation: flag + language name (Doki locale row). The flag is drawn (LocaleFlag),
+                // not an emoji — Windows fonts don't render flag emojis (they'd show as "ID" letters).
                 val locale = parserSource?.locale
                 if (!locale.isNullOrBlank()) {
-                    DetailRow(stringResource(Res.string.translation), translationLabel(locale))
+                    val lang = locale.substringBefore('-').substringBefore('_').lowercase()
+                    DetailRowContent(stringResource(Res.string.translation)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            org.nekosukuriputo.nekuva.core.ui.components.LocaleFlag(lang)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = localeLanguageName(lang),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
                 }
                 if (manga.rating > 0f) {
                     DetailRow(stringResource(Res.string.rating), "${(manga.rating * 10f).toInt() / 10f} / 10")
@@ -761,21 +772,11 @@ fun DetailRowContent(label: String, content: @Composable () -> Unit) {
     }
 }
 
-/** Source locale → flag emoji + native language name (Doki translation indicator). */
-private fun translationLabel(locale: String): String {
-    val lang = locale.substringBefore('-').substringBefore('_').lowercase()
-    val flag = when (lang) {
-        "id", "in" -> "🇮🇩"; "en" -> "🇬🇧"; "ja" -> "🇯🇵"; "ko" -> "🇰🇷"; "zh" -> "🇨🇳"
-        "ru" -> "🇷🇺"; "fr" -> "🇫🇷"; "es" -> "🇪🇸"; "de" -> "🇩🇪"; "pt" -> "🇵🇹"
-        "ar" -> "🇸🇦"; "vi" -> "🇻🇳"; "th" -> "🇹🇭"; "tr" -> "🇹🇷"; "it" -> "🇮🇹"; "pl" -> "🇵🇱"
-        else -> "🏳"
-    }
-    val name = runCatching {
-        java.util.Locale.forLanguageTag(lang).getDisplayLanguage(java.util.Locale.forLanguageTag(lang))
-            .replaceFirstChar { it.uppercase() }
-    }.getOrNull()?.takeIf { it.isNotBlank() } ?: lang.uppercase()
-    return "$flag $name"
-}
+/** Source locale → native language name (the flag itself is drawn by [LocaleFlag]). */
+private fun localeLanguageName(lang: String): String = runCatching {
+    java.util.Locale.forLanguageTag(lang).getDisplayLanguage(java.util.Locale.forLanguageTag(lang))
+        .replaceFirstChar { it.uppercase() }
+}.getOrNull()?.takeIf { it.isNotBlank() } ?: lang.uppercase()
 
 @Composable
 fun DetailRow(label: String, value: String) {
