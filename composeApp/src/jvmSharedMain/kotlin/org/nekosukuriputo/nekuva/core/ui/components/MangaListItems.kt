@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +93,10 @@ fun MangaListContent(
     badgesOf: (Manga) -> MangaBadges = { MangaBadges() },
     selectedIds: Set<Long> = emptySet(),
 ) {
+    // LazyColumn/Grid require unique keys. Local scanning of overlapping directories (or a manga saved
+    // under two configured dirs) can yield the same id twice; de-duplicate so a duplicate id can't crash
+    // the list with "Key … was already used".
+    val items = remember(mangas) { mangas.distinctBy { it.id } }
     if (listMode == ListMode.GRID) {
         LazyVerticalGrid(
             columns = mangaGridCells(gridSize),
@@ -100,14 +105,14 @@ fun MangaListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = modifier.fillMaxSize(),
         ) {
-            gridItems(mangas, key = { it.id }) { m ->
+            gridItems(items, key = { it.id }) { m ->
                 MangaGridItem(m, { onClick(m) }, { onLongClick(m) }, progressOf(m), badgesOf(m), m.id in selectedIds)
             }
         }
     } else {
         val detailed = listMode == ListMode.DETAILED_LIST
         LazyColumn(contentPadding = contentPadding, modifier = modifier.fillMaxSize()) {
-            items(mangas, key = { it.id }) { m ->
+            items(items, key = { it.id }) { m ->
                 MangaListRow(m, { onClick(m) }, { onLongClick(m) }, detailed, progressOf(m), badgesOf(m), m.id in selectedIds)
             }
         }

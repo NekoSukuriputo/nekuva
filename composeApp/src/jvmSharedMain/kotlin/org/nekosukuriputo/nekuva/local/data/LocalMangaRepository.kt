@@ -134,7 +134,10 @@ class LocalMangaRepository constructor(
 
 			else -> Unit
 		}
-		return list.unwrap()
+		// Configured storage dirs can overlap (a manually-added dir nested in/equal to another), so the
+		// same manga can be scanned twice. De-duplicate by id so the list has unique entries (and unique
+		// LazyColumn keys downstream).
+		return list.distinctBy { it.manga.id }.unwrap()
 	}
 
 	override suspend fun getDetails(manga: Manga): Manga = when {
