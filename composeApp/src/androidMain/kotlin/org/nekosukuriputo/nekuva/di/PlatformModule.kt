@@ -6,10 +6,12 @@ import org.nekosukuriputo.nekuva.local.data.AndroidLocalStorageManager
 import org.nekosukuriputo.nekuva.local.data.LocalStorageManager
 
 actual val platformModule: Module = module {
-    single<com.russhwolf.settings.ObservableSettings> { 
+    single<com.russhwolf.settings.ObservableSettings> {
         val context: android.content.Context = get()
         val prefs = context.getSharedPreferences("nekuva_prefs", android.content.Context.MODE_PRIVATE)
-        com.russhwolf.settings.SharedPreferencesSettings(prefs)
+        // CrashSafe: a restored/foreign backup can leave a key with a mismatched type; the wrapper
+        // returns the default instead of throwing ClassCastException (which crashed startup post-restore).
+        org.nekosukuriputo.nekuva.core.prefs.CrashSafeSettings(com.russhwolf.settings.SharedPreferencesSettings(prefs))
     }
     single {
         val context: android.content.Context = get()
