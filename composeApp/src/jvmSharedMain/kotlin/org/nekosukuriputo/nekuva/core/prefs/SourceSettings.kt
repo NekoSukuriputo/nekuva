@@ -21,11 +21,13 @@ class SourceSettings(source: MangaSource, private val prefs: ObservableSettings)
 			if (value != null) prefs.putString(KEY_SORT_ORDER, value.name) else prefs.remove(KEY_SORT_ORDER)
 		}
 
-	val isSlowdownEnabled: Boolean
+	var isSlowdownEnabled: Boolean
 		get() = prefs.getBoolean(KEY_SLOWDOWN, false)
+		set(value) = prefs.putBoolean(KEY_SLOWDOWN, value)
 
-	val isCaptchaNotificationsDisabled: Boolean
+	var isCaptchaNotificationsDisabled: Boolean
 		get() = prefs.getBoolean(KEY_NO_CAPTCHA, false)
+		set(value) = prefs.putBoolean(KEY_NO_CAPTCHA, value)
 
 	@Suppress("UNCHECKED_CAST")
 	override fun <T> get(key: ConfigKey<T>): T {

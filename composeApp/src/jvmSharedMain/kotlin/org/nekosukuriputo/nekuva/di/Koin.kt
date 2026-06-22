@@ -38,7 +38,7 @@ val exploreModule = module {
 
 val remoteListModule = module {
     single { org.nekosukuriputo.nekuva.filter.data.SavedFiltersRepository(get()) }
-    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get(), get(), get()) }
 }
 
 val searchModule = module {
@@ -188,7 +188,7 @@ val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.network.DataCleanupViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogViewModel(get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageViewModel(get(), get()) }
-    factory { params -> org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsViewModel(params.get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsViewModel(params.get(), get(), get(), get(), get()) }
     // About: GitHub release update checker (Doki AppUpdateRepository) + screen VM.
     single { org.nekosukuriputo.nekuva.core.github.AppUpdateRepository(get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.about.AboutSettingsViewModel(get()) }

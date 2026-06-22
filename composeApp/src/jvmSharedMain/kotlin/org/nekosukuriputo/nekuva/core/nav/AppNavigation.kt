@@ -398,6 +398,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.navigate(MangaDetailsRoute(id))
                         },
                         onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
+                        onSourceSettings = { name -> navController.navigate(SourceSettingsRoute(name)) },
                         onBackClick = {
                             navController.popBackStack()
                         }

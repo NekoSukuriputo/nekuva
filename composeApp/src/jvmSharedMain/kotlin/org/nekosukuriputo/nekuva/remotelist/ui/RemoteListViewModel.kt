@@ -5,13 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.core.nav.RemoteListRoute
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
+import org.nekosukuriputo.nekuva.explore.domain.ExploreRepository
 import org.nekosukuriputo.nekuva.filter.data.FilterSnapshot
 import org.nekosukuriputo.nekuva.filter.data.PersistableFilter
 import org.nekosukuriputo.nekuva.filter.data.SavedFiltersRepository
@@ -32,19 +35,30 @@ class RemoteListViewModel(
     private val repositoryFactory: MangaRepository.Factory,
     private val mangaDataRepository: MangaDataRepository,
     private val savedFiltersRepository: SavedFiltersRepository,
+    private val exploreRepository: ExploreRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<RemoteListRoute>()
     val sourceId = route.sourceId
 
-    private val repository: MangaRepository? =
-        MangaParserSource.entries.find { it.name == sourceId }?.let { repositoryFactory.create(it) }
+    private val parserSource: MangaParserSource? = MangaParserSource.entries.find { it.name == sourceId }
+    private val repository: MangaRepository? = parserSource?.let { repositoryFactory.create(it) }
 
     private val _uiState = MutableStateFlow<RemoteListUiState>(RemoteListUiState.Loading)
     val uiState: StateFlow<RemoteListUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // Doki "Open random" (dice icon): disabled while resolving; emits the random manga's id to open.
+    private val _isRandomLoading = MutableStateFlow(false)
+    val isRandomLoading: StateFlow<Boolean> = _isRandomLoading.asStateFlow()
+    private val _openManga = Channel<Long>(Channel.BUFFERED)
+    val openManga = _openManga.receiveAsFlow()
+    private var randomJob: Job? = null
+
+    // Doki gates the search icon on the source supporting text search.
+    val isSearchSupported: Boolean = repository?.filterCapabilities?.isSearchSupported != false
 
     private val _filterState = MutableStateFlow(FilterUiState())
     val filterState: StateFlow<FilterUiState> = _filterState.asStateFlow()
@@ -304,6 +318,25 @@ class RemoteListViewModel(
             query = null
             emitFilterState()
             loadMangaList(append = false)
+        }
+    }
+
+    // --- Random (Doki dice icon) ---
+
+    fun openRandom() {
+        val source = parserSource ?: return
+        if (randomJob?.isActive == true) return
+        randomJob = viewModelScope.launch {
+            _isRandomLoading.value = true
+            try {
+                val manga = exploreRepository.findRandomManga(source, 16)
+                mangaDataRepository.storeManga(manga, replaceExisting = false)
+                _openManga.send(manga.id)
+            } catch (_: Exception) {
+                // No random pick available (empty/broken source) — just stop the spinner.
+            } finally {
+                _isRandomLoading.value = false
+            }
         }
     }
 

@@ -30,8 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
@@ -104,11 +104,13 @@ fun RemoteListScreen(
     viewModel: RemoteListViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit,
     onResolveCloudFlare: (url: String) -> Unit = {},
+    onSourceSettings: (sourceName: String) -> Unit = {},
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val isRandomLoading by viewModel.isRandomLoading.collectAsState()
 
     // Appearance: list mode + grid size (Doki — remote browse uses the global list mode).
     val settings = koinInject<AppSettings>()
@@ -118,6 +120,13 @@ fun RemoteListScreen(
 
     var searchActive by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showListConfig by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    // "Open random" (dice) resolves a manga off-screen → navigate to its details when ready.
+    LaunchedEffect(Unit) {
+        viewModel.openManga.collect { onMangaClick(it) }
+    }
 
     Scaffold(
         topBar = {
@@ -171,18 +180,48 @@ fun RemoteListScreen(
                             }
                         }
                     } else {
-                        IconButton(onClick = { searchActive = true }) {
-                            Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search))
+                        // Doki source app bar: search (if supported) + dice (random) + overflow menu.
+                        if (viewModel.isSearchSupported) {
+                            IconButton(onClick = { searchActive = true }) {
+                                Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search))
+                            }
                         }
-                        IconButton(onClick = { showFilterSheet = true }) {
+                        IconButton(onClick = { viewModel.openRandom() }, enabled = !isRandomLoading) {
+                            Icon(Icons.Default.Casino, contentDescription = stringResource(Res.string.random))
+                        }
+                        IconButton(onClick = { menuExpanded = true }) {
                             Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = stringResource(Res.string.filter),
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(Res.string.settings),
                                 tint = if (filterState.isFilterApplied) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                    MaterialTheme.colorScheme.onSurface
                                 },
+                            )
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            // Saring (filter)
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.filter)) },
+                                onClick = { menuExpanded = false; showFilterSheet = true },
+                            )
+                            // Reset filter — only when a filter is applied (Doki action_filter_reset).
+                            if (filterState.isFilterApplied) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(Res.string.reset_filter)) },
+                                    onClick = { menuExpanded = false; viewModel.resetFilter() },
+                                )
+                            }
+                            // Opsi daftar (list options)
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.list_options)) },
+                                onClick = { menuExpanded = false; showListConfig = true },
+                            )
+                            // Pengaturan (per-source settings)
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.settings)) },
+                                onClick = { menuExpanded = false; onSourceSettings(viewModel.sourceId) },
                             )
                         }
                     }
@@ -307,6 +346,15 @@ fun RemoteListScreen(
             state = filterState,
             viewModel = viewModel,
             onDismiss = { showFilterSheet = false },
+        )
+    }
+
+    if (showListConfig) {
+        // "Opsi daftar" — remote browse uses the global list mode (Doki), like the rest of the app.
+        org.nekosukuriputo.nekuva.list.ui.ListConfigSheet(
+            settings = settings,
+            listModeKey = AppSettings.KEY_LIST_MODE,
+            onDismiss = { showListConfig = false },
         )
     }
 }

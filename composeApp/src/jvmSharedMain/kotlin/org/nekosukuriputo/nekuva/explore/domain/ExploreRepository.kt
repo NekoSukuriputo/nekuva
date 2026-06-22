@@ -23,12 +23,23 @@ class ExploreRepository(
 ) {
 
     suspend fun findRandomManga(tagsLimit: Int): Manga {
-        val tags = runCatchingCancellable { historyRepository.getPopularTags(tagsLimit) }
-            .getOrDefault(emptyList()).map { it.title }
         val sources = sourcesRepository.getEnabledSources()
         check(sources.isNotEmpty()) { "No sources available" }
+        return findRandomManga(tagsLimit) { sources.random() }
+    }
+
+    /**
+     * Doki's source-screen "Open random" (RemoteListViewModel.openRandom): a random manga from THIS
+     * specific source (biased toward your most-read tags), returning its details.
+     */
+    suspend fun findRandomManga(source: MangaSource, tagsLimit: Int): Manga =
+        findRandomManga(tagsLimit) { source }
+
+    private suspend inline fun findRandomManga(tagsLimit: Int, sourcePicker: () -> MangaSource): Manga {
+        val tags = runCatchingCancellable { historyRepository.getPopularTags(tagsLimit) }
+            .getOrDefault(emptyList()).map { it.title }
         repeat(5) {
-            val list = getList(sources.random(), tags)
+            val list = getList(sourcePicker(), tags)
             val manga = list.randomOrNull() ?: return@repeat
             val details = runCatchingCancellable {
                 mangaRepositoryFactory.create(manga.source).getDetails(manga)

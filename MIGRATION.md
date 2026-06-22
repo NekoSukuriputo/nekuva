@@ -294,6 +294,27 @@ mengamati snapshot (sortOrder+filter, debounce 250ms) → re-query + paging.
 - [x] Empty ("Nothing found" + Reset), loading, error; capability-gating (sembunyikan field
       yang tak disediakan source).
 
+**DONE (compile-green Android+Desktop, PENDING run-verify) — App bar source ala Doki (`opt_list_remote`):**
+- [x] **Ikon dadu "Acak"** (`action_random`) di toolbar → `RemoteListViewModel.openRandom()` →
+      `ExploreRepository.findRandomManga(source, 16)` (varian per-source baru) → simpan ke DB → buka detail.
+      Disabled saat loading (`isRandomLoading`). Ikon: `Icons.Default.Casino`.
+- [x] **Ikon search digate** `filterCapabilities.isSearchSupported` (Doki MangaSearchMenuProvider).
+- [x] **Overflow `⋮`** (gambar 2): **Saring** (buka filter sheet), **Reset filter** (hanya bila filter aktif),
+      **Opsi daftar** (`ListConfigSheet` mode global `KEY_LIST_MODE`), **Pengaturan** (→ `SourceSettingsRoute`).
+      Ikon filter toolbar lama dipindah ke overflow (filter tetap terjangkau lewat chip "Genre").
+
+**DONE (compile-green Android+Desktop, PENDING run-verify) — Per-source settings PENUH (gambar 3, `pref_source`+`pref_source_parser`):**
+- [x] **Aktifkan sumber** (header toggle menonjol; `MangaSourcesRepository.observeIsEnabled/setSourcesEnabled`,
+      disembunyikan bila mode "semua sumber aktif").
+- [x] **Ranah web (domain/mirror)** editable + preset mirror + tombol **Reset** (ke `ConfigKey.Domain.defaultValue`).
+- [x] **Tajuk Agen Pengguna** editable + preset `UserAgents` (Firefox/Chrome mobile+desktop) + reset (default).
+- [x] Toggle parser opsional: **ShowSuspiciousContent**, **SplitByTranslations**, **PreferredImageServer**
+      (list; "" = Otomatis) — capability-gated dari `getConfigKeys()`.
+- [x] **Masuk** (auth, bila ada `authUrl`) + username; **Bersihkan kuki** (konfirmasi).
+- [x] **Nonaktifkan notifikasi captcha** + **Perlambat unduhan** (tulis ke `SourceSettings` per-source;
+      `isCaptchaNotificationsDisabled`/`isSlowdownEnabled` dibuat `var`).
+- [x] **Buka di peramban web** (`https://<domain>`).
+
 **DEFERRED (masih ditunda):**
 - [x] **Global Explore search** (multi-source) — DONE & run-verified. Search bar "Cari" Explore →
       `GlobalSearchRoute(query)` → section per source via `getList(MangaListFilter(query))`, paralel
@@ -717,10 +738,11 @@ ThemeOverlay + `colors_themed.xml` 423 warna light + 423 dark), `ThemeChooserPre
   **tambah** (+ → enable, refresh). Empty-state.
 - **2D ✅ DONE (compile-green) — Impact Explore:** overflow ⋮ Explore aktif → **Manage** + **Catalog**;
   **pin/unpin dari Explore** (long-press → `togglePin`, indikator pin); sumber off hilang dari Explore.
-- **2E ✅ DONE (compile-green) — Per-source settings** (`SourceSettingsScreen`/VM): **domain/mirror** picker
-  (ConfigKey.Domain via `getAvailableMirrors`/`domain`+`invalidateCache`), **Sign in** (bila
-  `MangaParserAuthProvider` ada → buka `authUrl` di in-app Browser + tampil username), **Clear cookies**
-  (konfirmasi → `MutableCookieJar.clear`). Dibuka dari Manage (tap nama sumber → `SourceSettingsRoute(name)`).
+- **2E ✅ DONE — Per-source settings** (`SourceSettingsScreen`/VM): awalnya minimal (domain/sign-in/clear-cookies);
+  **diperluas PENUH (gambar 3)** → enable-source header, domain editable+preset+reset, user-agent editable+preset,
+  toggle ShowSuspicious/SplitByTranslations/PreferredImageServer (capability-gated), sign-in, clear-cookies,
+  nonaktifkan-captcha, perlambat-unduhan, buka-di-browser. Dibuka dari **Manage** (tap nama sumber) **dan dari
+  overflow `⋮` → Pengaturan di layar RemoteList** (`SourceSettingsRoute(name)`). Detail di ledger RemoteList.
 - **2F ✅ DONE — Manage app-bar (catatan user):** **search** + aksi **catalog** (+) + overflow ⋮
   **Disable NSFW** (checkable) + **Disable all** (`disableAll`→`disableAllSources`). Ref Doki `opt_sources.xml`.
 - **2G ✅ DONE — Multi-select bulk di Manage** (Doki `mode_source`): **long-press** sumber → masuk mode pilih
