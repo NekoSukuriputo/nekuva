@@ -1,11 +1,16 @@
 package org.nekosukuriputo.nekuva
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import java.lang.ref.WeakReference
 import org.nekosukuriputo.nekuva.core.i18n.LocaleActivityHolder
@@ -16,6 +21,12 @@ import org.nekosukuriputo.nekuva.core.shortcuts.EXTRA_MANGA_ID
 import org.nekosukuriputo.nekuva.reader.ui.ReaderKeyEvents
 
 class MainActivity : ComponentActivity() {
+    // Runtime POST_NOTIFICATIONS request (Android 13+). Without it the manifest permission isn't enough,
+    // so backup/restore (and download/tracker) notifications silently never show. Result is ignored —
+    // notifications are a best-effort progress hint, not required for the operation to run.
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* no-op */ }
+
     // Apply the chosen in-app language (Doki's app_locale) to the Activity config on every API level.
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(localeWrap(newBase, storedLocaleTag(newBase)))
@@ -26,9 +37,19 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         LocaleActivityHolder.current = WeakReference(this)
+        maybeRequestNotificationPermission()
         handleShortcutIntent(intent)
         setContent {
             App()
+        }
+    }
+
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            runCatching { requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
         }
     }
 
