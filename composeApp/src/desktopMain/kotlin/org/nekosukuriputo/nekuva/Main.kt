@@ -28,6 +28,7 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.delay
+import java.io.File
 import java.util.Locale
 import javax.swing.UIManager
 import org.koin.core.context.GlobalContext
@@ -47,6 +48,12 @@ fun main() {
     // user create new folders — the cross-platform Metal L&F fails ("Error creating new folder") there.
     runCatching { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) }
     initKoin()
+    // One-time cleanup: Desktop no longer uses the OkHttp HTTP response cache (it could store source-site
+    // ad/redirect JS that Windows Defender flags as Trojan:JS/Redirector). Remove any stale ~/.nekuva/http_cache
+    // left by older builds so upgrading testers don't keep the flagged files. Best-effort; ignore failures.
+    runCatching {
+        File(File(System.getProperty("user.home"), ".nekuva"), "http_cache").deleteRecursively()
+    }
     // Global crash reporter (Doki ACRA replacement): log uncaught exceptions to ~/.nekuva/crash.
     org.nekosukuriputo.nekuva.core.diagnostics.CrashReporter.install()
     // Kick off the embedded-Chromium (KCEF) download/init in the background so JS-based sources and the

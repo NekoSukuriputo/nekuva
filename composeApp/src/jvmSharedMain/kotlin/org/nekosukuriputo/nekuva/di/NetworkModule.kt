@@ -50,7 +50,8 @@ val networkModule = module {
             .proxySelector(get<ProxyProvider>().selector)
             .proxyAuthenticator(get<ProxyProvider>().authenticator)
             // DNS-over-HTTPS (Doki doh) — DoHManager reads the provider live, falls back to system DNS.
-            .dns(DoHManager(settings, cache))
+            // Pass the disk cache only where it's enabled (Android) so Desktop never writes http_cache at all.
+            .dns(DoHManager(settings, if (org.nekosukuriputo.nekuva.core.network.httpDiskCacheEnabled) cache else null))
             // SSL bypass (Doki ssl_bypass): trust-all when enabled (build-time → applies after restart).
             .apply { if (settings.isSSLBypassEnabled) disableCertificateVerification() }
             .addInterceptor(GZipInterceptor())
