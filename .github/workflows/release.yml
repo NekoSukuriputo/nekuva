@@ -64,7 +64,7 @@ jobs:
             if [ -n "$PREV" ]; then
               gh api "repos/${GITHUB_REPOSITORY}/compare/${PREV}...${NEW}" > compare.json
               echo "## What's Changed"
-              jq -r '.commits[] | "* " + (.commit.message | split("\n")[0]) + " `" + .sha[0:7] + "` " + (if .author then "@" + .author.login else .commit.author.name end)' compare.json
+              jq -r '.commits[] | "* " + (.commit.message | split("\n")[0]) + " [`" + .sha[0:7] + "`](" + .html_url + ") " + (if .author then "@" + .author.login else .commit.author.name end)' compare.json
               echo
               echo "## Contributors"
               jq -r '[.commits[] | if .author then "@" + .author.login else .commit.author.name end] | unique | .[] | "* " + .' compare.json
@@ -72,7 +72,8 @@ jobs:
               echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${NEW}"
             else
               echo "## What's Changed"
-              git log --pretty='* %s `%h` %an'
+              git log --pretty="format:* %s [\`%h\`](https://github.com/${GITHUB_REPOSITORY}/commit/%H) %an"
+              echo
             fi
           } >> release_notes.md
           echo "----- generated release notes -----"
