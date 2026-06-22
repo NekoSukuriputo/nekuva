@@ -58,7 +58,7 @@ val generateTelegramSecrets by tasks.registering {
 // desktopPackageVersion is the INSTALLER version: jpackage/MSI/DMG require MAJOR.MINOR.PATCH with
 // MAJOR > 0 (so "-beta" / leading-zero majors are rejected). It's just for upgrade ordering — the
 // user-facing version is appVersionName (AppInfo / About / release tag).
-val appVersionName: String = (findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "0.0.2-beta"
+val appVersionName: String = (findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "0.0.3-beta"
 val appVersionCodeValue: Int = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
 val desktopPackageVersion: String = (findProperty("desktopPackageVersion") as String?)?.takeIf { it.isNotBlank() } ?: "1.0.0"
 
