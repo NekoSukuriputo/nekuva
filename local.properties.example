@@ -1,0 +1,23 @@
+# Copy this file to `local.properties` (which is git-ignored) and fill in the values.
+# local.properties holds MACHINE-SPECIFIC paths and SECRETS — never commit it.
+
+# --- Android SDK location (REQUIRED for Android builds) ---
+# Not needed if the ANDROID_HOME / ANDROID_SDK_ROOT environment variable is set.
+# Windows example (note the escaped backslashes or use forward slashes):
+#sdk.dir=C\:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
+#sdk.dir=C\:\\AndroidSDK
+
+# --- Release signing (OPTIONAL) ---
+# Used by composeApp/build.gradle.kts for the Android `release` build type. If the keystore file is
+# absent, the release build falls back to the debug key (fine for local testing, not for distribution).
+# storeFile is resolved relative to the repository root. In CI these come from secrets via the
+# NEKUVA_STORE_FILE / NEKUVA_STORE_PASSWORD / NEKUVA_KEY_ALIAS / NEKUVA_KEY_PASSWORD env vars instead.
+#nekuva.storeFile=nekuva.jks
+#nekuva.storePassword=your-store-password
+#nekuva.keyAlias=NekuvaApp
+#nekuva.keyPassword=your-key-password
+
+# --- Telegram backup bot token (OPTIONAL) ---
+# Enables the Telegram backup upload feature. Empty = feature off.
+# Can also be supplied via the TG_BACKUP_BOT_TOKEN env var.
+#tg_backup_bot_token=
