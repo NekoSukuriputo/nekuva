@@ -212,8 +212,10 @@ fun MainScreen(
             Row(modifier = Modifier.fillMaxSize()) {
                 if (isTopLevel) {
                     // Expandable rail (Doki Desktop): a header toggle expands the rail to show tab labels.
-                    var railExpanded by rememberSaveable { mutableStateOf(false) }
-                    val showLabels = railExpanded || navLabelsVisible
+                    // Seed from the "show nav labels" preference, but let the toggle fully own the state
+                    // afterwards (don't OR with the setting, or an ON preference makes Collapse a no-op).
+                    var railExpanded by rememberSaveable { mutableStateOf(navLabelsVisible) }
+                    val showLabels = railExpanded
                     NavigationRail(
                         header = {
                             androidx.compose.material3.IconButton(onClick = { railExpanded = !railExpanded }) {
