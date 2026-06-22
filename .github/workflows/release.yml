@@ -23,8 +23,34 @@ permissions:
   contents: write
 
 jobs:
+  # Create the (pre)release first with the notes, so the platform jobs only attach files and never
+  # overwrite the body.
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Nekuva ${{ github.ref_name }}
+          prerelease: true
+          body: |
+            ## Nekuva ${{ github.ref_name }} — beta
+
+            Build untuk **user testing**. Pilih file sesuai platform Anda:
+
+            - **Android** — kalau ragu pilih `…-android-universal.apk` (atau sesuai CPU HP: `arm64-v8a` untuk mayoritas perangkat).
+            - **Windows** — `…-windows-x64.msi`
+            - **Linux** — `…-linux-amd64.deb` atau `…-linux-x86_64.AppImage`
+            - **macOS** — `…-macos.dmg`
+
+            ### Catatan
+            - **macOS `.dmg` belum di-sign / notarize → klik-kanan aplikasinya lalu pilih *Open* untuk melewati Gatekeeper.**
+            - Ini build **beta**, masih mungkin ada bug — mohon laporkan temuan Anda.
+
   android:
     name: Android APKs
+    needs: create-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +96,7 @@ jobs:
 
   windows:
     name: Windows installer (.msi)
+    needs: create-release
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +133,7 @@ jobs:
 
   linux:
     name: Linux installers (.deb, .AppImage)
+    needs: create-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -171,6 +199,7 @@ jobs:
 
   macos:
     name: macOS installer (.dmg)
+    needs: create-release
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
