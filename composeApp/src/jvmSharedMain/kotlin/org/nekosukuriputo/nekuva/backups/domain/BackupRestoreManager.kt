@@ -100,6 +100,9 @@ class BackupRestoreManager(
             var result: RestoreResult? = null
             try {
                 result = repository.restoreBackup(java.io.ByteArrayInputStream(prompt.bytes), selected)
+                // A restored backup can add external local-manga dirs; make sure they're actually
+                // readable (Android: prompt for All-files access) so the manga show up in Local.
+                runCatching { ensureLocalStorageAccessAfterRestore() }
                 events.emit(BackupEvent.Restored(result))
             } catch (e: Exception) {
                 events.emit(BackupEvent.Error(e.message ?: e.javaClass.simpleName))
