@@ -1728,6 +1728,12 @@ build dex Android + index + signing).
   `index.json` → verifikasi sha256 → install → `loadExtension`; atau **Import .jar** lokal di Desktop) +
   simpan versi terpasang + `ExtState`. Desktop Import bisa dipakai sekarang; jalur HTTP aktif setelah ada
   rilis tag exts. Android import/update nonaktif sampai dex (Step 3).
+- ✅ **host — override sumber (same-name → plugin menang)**: `MangaRepository.Factory` memakai parser dari
+  bundle untuk sumber bernama sama (`OverrideSourceParser` membungkusnya supaya tetap melapor
+  `MangaParserSource` host → hindari bentrok enum lintas-classloader); fallback ke baseline bila tak ada
+  bundle / error (no-plugin = identik dgn sekarang, nol risiko). `generation` bump → factory buang cache
+  (efek tanpa restart); `App` load bundle saat startup. **Compile-verified; perlu GUI run-verify** (import
+  jar → buka sumber itu → baca).
 - ⏭️ Berikutnya (besar/invasif): **registry runtime** (`MangaSourceRegistry`, sumber by string id) supaya
-  source hasil plugin **muncul & bisa dibuka di Explore** (sekarang baru di-load + dihitung, belum dipakai).
-  Lalu: Android dex (exts Step 3) → signing.
+  sumber yang **HANYA ada di bundle** (bukan baseline) **muncul & bisa dibuka di Explore** (override
+  same-name sudah jalan; yang baru belum). Lalu: Android dex (exts Step 3) → signing.
