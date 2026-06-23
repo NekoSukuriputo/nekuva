@@ -964,14 +964,34 @@ fun ChaptersSheetContent(
                     shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 4.dp, bottomEnd = 4.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    val buttonText = if (history != null) {
+                    val resumeTitle = if (history != null) {
                         val chapter = chapters.find { it.id == history.chapterId }
-                        val chapterTitle = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name
-                        if (chapterTitle != null) "${stringResource(Res.string.resume)}: $chapterTitle" else stringResource(Res.string.read)
+                        (chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name)?.trimEnd()
                     } else {
-                        stringResource(Res.string.read)
+                        null
                     }
-                    Text(buttonText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (resumeTitle != null) {
+                        // "Lanjut: <title>" but truncate the MIDDLE so the last word — usually the chapter
+                        // number — always stays visible (instead of the end being cut by a plain ellipsis).
+                        val resume = stringResource(Res.string.resume)
+                        val lastSpace = resumeTitle.lastIndexOf(' ')
+                        if (lastSpace <= 0) {
+                            Text("$resume: $resumeTitle", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "$resume: ${resumeTitle.substring(0, lastSpace)}",
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                // Leading space kept by substring(lastSpace) → "…Chapter" + " 02".
+                                Text(resumeTitle.substring(lastSpace), maxLines = 1, softWrap = false)
+                            }
+                        }
+                    } else {
+                        Text(stringResource(Res.string.read), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 Box {
                     Button(
