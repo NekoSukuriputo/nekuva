@@ -9,7 +9,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.nekosukuriputo.nekuva.core.model.PluginMangaSource
+import org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry
 import org.nekosukuriputo.nekuva.core.prefs.AppSettings
+import org.nekosukuriputo.nekuva.parsers.model.ContentType
 import java.io.File
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
@@ -71,8 +74,24 @@ class ExtensionManager(
         val jar = currentJar() ?: return
         val ext = loadExtension(jar.absolutePath) ?: return
         loaded = ext
+        publish(ext)
         generation++
         _state.value = ExtState.Installed(settings.installedExtensionVersion ?: "imported", ext.sources.size)
+    }
+
+    /** Publish the bundle's sources to the in-memory registry the host reads (name resolution + Explore). */
+    private fun publish(ext: LoadedExtension) {
+        PluginSourceRegistry.set(
+            ext.sources.map { s ->
+                PluginMangaSource(
+                    name = s.name,
+                    title = s.title,
+                    locale = s.locale,
+                    contentType = runCatching { ContentType.valueOf(s.contentType) }.getOrDefault(ContentType.MANGA),
+                    isBroken = s.isBroken,
+                )
+            },
+        )
     }
 
     /** Import a local plugin jar (Desktop file picker). Returns true on success. */
@@ -124,6 +143,7 @@ class ExtensionManager(
             error("Incompatible or invalid extension bundle")
         }
         loaded = ext
+        publish(ext)
         generation++
         settings.installedExtensionFile = jar.name
         settings.installedExtensionVersion = version

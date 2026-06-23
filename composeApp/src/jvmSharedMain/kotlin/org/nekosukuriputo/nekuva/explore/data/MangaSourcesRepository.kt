@@ -29,6 +29,7 @@ class MangaSourcesRepository(
 ) {
 
 	private val isNewSourcesAssimilated = AtomicBoolean(false)
+	@Volatile private var lastPluginSig = -1
 	private val dao: MangaSourcesDao
 		get() = db.getSourcesDao()
 
@@ -157,8 +158,9 @@ class MangaSourcesRepository(
 	fun observeAll(): Flow<List<Pair<MangaSource, Boolean>>> = dao.observeAll().map { entities ->
 		val result = ArrayList<Pair<MangaSource, Boolean>>(entities.size)
 		for (entity in entities) {
-			val source = entity.source.toMangaSourceOrNull() ?: continue
-			if (source in allMangaSources) {
+			val source = (entity.source.toMangaSourceOrNull()
+				?: org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry.byName(entity.source)) ?: continue
+			if ((source is MangaParserSource && source in allMangaSources) || source is org.nekosukuriputo.nekuva.core.model.PluginMangaSource) {
 				result.add(source to entity.isEnabled)
 			}
 		}
@@ -224,7 +226,12 @@ class MangaSourcesRepository(
 	}
 
 	private suspend fun assimilateNewSources(): Boolean {
-		if (isNewSourcesAssimilated.getAndSet(true)) {
+		// Re-run when a runtime extension bundle (de)registers sources, so its sources get DB rows too —
+		// not just on the first call. Baseline-only state is still a one-shot.
+		val pluginSig = org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry.sources.size
+		val unchanged = pluginSig == lastPluginSig
+		lastPluginSig = pluginSig
+		if (isNewSourcesAssimilated.getAndSet(true) && unchanged) {
 			return false
 		}
 		val new = getNewSources()
@@ -272,7 +279,8 @@ class MangaSourcesRepository(
 
 	private suspend fun getNewSources(): MutableSet<out MangaSource> {
 		val entities = dao.findAll()
-		val result = EnumSet.copyOf(allMangaSources)
+		val result: MutableSet<MangaSource> = LinkedHashSet<MangaSource>(allMangaSources)
+			.also { it.addAll(org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry.sources) }
 		for (e in entities) {
 			result.remove(e.source.toMangaSourceOrNull() ?: continue)
 		}
@@ -301,11 +309,12 @@ class MangaSourcesRepository(
 		val isAllEnabled = settings.isAllSourcesEnabled
 		val result = ArrayList<MangaSourceInfo>(size)
 		for (entity in this) {
-			val source = entity.source.toMangaSourceOrNull() ?: continue
+			val source = (entity.source.toMangaSourceOrNull()
+				?: org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry.byName(entity.source)) ?: continue
 			if (skipNsfwSources && source.isNsfw()) {
 				continue
 			}
-			if (source in allMangaSources) {
+			if ((source is MangaParserSource && source in allMangaSources) || source is org.nekosukuriputo.nekuva.core.model.PluginMangaSource) {
 				result.add(
 					MangaSourceInfo(
 						mangaSource = source,

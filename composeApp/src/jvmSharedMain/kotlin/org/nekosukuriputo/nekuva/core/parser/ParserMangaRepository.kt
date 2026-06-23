@@ -20,6 +20,7 @@ import org.nekosukuriputo.nekuva.parsers.model.MangaListFilterCapabilities
 import org.nekosukuriputo.nekuva.parsers.model.MangaListFilterOptions
 import org.nekosukuriputo.nekuva.parsers.model.MangaPage
 import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
+import org.nekosukuriputo.nekuva.parsers.model.MangaSource
 import org.nekosukuriputo.nekuva.parsers.model.SortOrder
 import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
 import org.nekosukuriputo.nekuva.parsers.util.suspendlazy.suspendLazy
@@ -28,6 +29,10 @@ class ParserMangaRepository(
 	private val parser: MangaParser,
 	private val mirrorSwitcher: MirrorSwitcher,
 	cache: MemoryContentCache,
+	// When the parser comes from a runtime extension bundle, its own `source` enum is a different class than
+	// the host's; the factory passes the host-side identity (baseline enum for overrides, PluginMangaSource
+	// for new sources) here so DB/nav see a consistent source.
+	private val sourceOverride: MangaSource? = null,
 ) : CachingMangaRepository(cache), Interceptor {
 
 	private val filterOptionsLazy = suspendLazy(Dispatchers.Default) {
@@ -36,8 +41,8 @@ class ParserMangaRepository(
 		}
 	}
 
-	override val source: MangaParserSource
-		get() = parser.source
+	override val source: MangaSource
+		get() = sourceOverride ?: parser.source
 
 	override val sortOrders: Set<SortOrder>
 		get() = parser.availableSortOrders

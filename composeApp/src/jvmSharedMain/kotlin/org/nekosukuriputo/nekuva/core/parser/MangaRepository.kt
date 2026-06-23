@@ -73,12 +73,19 @@ interface MangaRepository {
 				?: org.nekosukuriputo.nekuva.parsers.model.MangaParserSource.entries.firstOrNull { it.name == name }
 
 			val ext = extensionManager?.loaded
-			if (baseline != null && ext != null && ext.sources.any { it.name == name }) {
+			if (ext != null && ext.sources.any { it.name == name }) {
 				runCatching {
+					// Host-side identity: baseline enum if this overrides a bundled source, otherwise the
+					// PluginMangaSource (a source the app doesn't ship). The bundle parser still parses.
+					val identity: MangaSource = baseline
+						?: (source as? org.nekosukuriputo.nekuva.core.model.PluginMangaSource)
+						?: org.nekosukuriputo.nekuva.core.model.PluginSourceRegistry.byName(name)
+						?: source
 					return ParserMangaRepository(
-						parser = OverrideSourceParser(ext.createParser(name, loaderContext), baseline),
+						parser = ext.createParser(name, loaderContext),
 						cache = contentCache,
 						mirrorSwitcher = mirrorSwitcher,
+						sourceOverride = identity,
 					)
 				}
 			}

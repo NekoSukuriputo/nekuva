@@ -30,6 +30,8 @@ fun MangaSource(name: String?): MangaSource {
     MangaParserSource.entries.forEach {
         if (it.name == name) return it
     }
+    // A source provided only by a loaded runtime extension bundle (no bundled enum constant).
+    PluginSourceRegistry.byName(name)?.let { return it }
     return UnknownMangaSource
 }
 
@@ -38,6 +40,7 @@ fun Collection<String>.toMangaSources() = map(::MangaSource)
 fun MangaSource.isNsfw(): Boolean = when (this) {
     is MangaSourceInfo -> mangaSource.isNsfw()
     is MangaParserSource -> contentType == ContentType.HENTAI
+    is PluginMangaSource -> contentType == ContentType.HENTAI
     else -> false
 }
 
