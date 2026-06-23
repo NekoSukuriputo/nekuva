@@ -314,6 +314,13 @@ compose.desktop {
     }
 }
 
+// Lets the ExtensionLoader integration test point at a locally-built plugin jar:
+//   ./gradlew :composeApp:desktopTest -PextJar="…/nekuva-ext-desktop.jar"
+// Without -PextJar the test self-skips, so normal/CI test runs are unaffected.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    (project.findProperty("extJar") as String?)?.let { systemProperty("nekuva.ext.jar", it) }
+}
+
 
 
 

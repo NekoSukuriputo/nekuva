@@ -1716,5 +1716,14 @@ iOS tetap tidak bisa (tak ada dynamic class-loading). Kerja besar ada di **host*
 classloader expect/actual + lepas dari enum keras + UI import/download) dan **exts** (split contract/parsers +
 build dex Android + index + signing).
 
-**Status:** riset/desain, **belum dimulai**. Lintas-repo (§8: usulkan kontrak di nekuva-exts dulu, baru host).
-Kemungkinan **Phase 2+** (setelah parity Phase 1). iOS = bundled-only sampai ada jalur deklaratif/JS.
+**Status:** **DIMULAI** (lintas-repo, branch terpisah). Kemungkinan **Phase 2+**. iOS = bundled-only.
+- ✅ **exts** (branch `feat/runtime-extensions`): `NekuvaExtensions` ABI entry point + `SourceDescriptor`;
+  task `assemblePluginArtifacts` → jar Desktop tipis + `index.json`; workflow `extensions.yml` (tag `v*`
+  → release assets). Lihat `nekuva-exts/MIGRATION.md`.
+- ✅ **host** (branch `feat/runtime-extensions-host`): `ExtensionLoader` (`core/extensions`) — Desktop
+  `URLClassLoader` dengan delegasi selektif (parser/factory/enum/entry-point dari plugin; contract+lib dari
+  host), Android stub (Step 3), `expect/actual`. **Run-verified Desktop**: memuat jar plugin → `listSources()`
+  = **1246 sumber**, ABI cocok, `ContentType` ter-share dari baseline (test `ExtensionLoaderTest`,
+  `-PextJar=…`). createParser + registry runtime + UI "Update extensions" = langkah berikut.
+- ⏭️ Berikutnya: Android dex (exts Step 3) → registry runtime host (lepas enum keras, sumber by string id)
+  → Settings → About "Update extensions" UI → signing.
