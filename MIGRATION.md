@@ -1637,3 +1637,55 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 
 ### F. Gate akhir Phase 1
 - [ ] **Audit parity formal Doki (§6.2)** — walkthrough layar-demi-layar / menu-demi-menu / long-press / gesture, hasilkan checklist utk review manusia. **Belum dilakukan** — ini syarat resmi "Phase 1 selesai".
+
+### G. RISET/BESAR — Updatable Extensions (muat parser dinamis tanpa rebuild app)  ⟶ BELUM DIMULAI
+
+> **Tujuan user:** tiap `nekuva-exts` rilis tag baru (mis. v1.0.7 → v1.0.8) untuk menambah/memperbaiki
+> sumber, app HARUS di-build ulang karena parser di-*bundle* compile-time. Inginnya: menu **"Update
+> extensions"** di **Settings → About** sehingga user cukup update parser-nya saja, tanpa rebuild app.
+> Ini perubahan arsitektur besar + **lintas-repo** (sentuh kontrak §8 → desain di `nekuva-exts` DULU).
+
+**Kenapa model sekarang memblokir ini:**
+- nekuva-exts dikonsumsi sbg dependency Gradle compile-time; parser dikompilasi KE DALAM app, ditemukan
+  via KSP `@MangaSourceParser` → enum **`MangaParserSource`**. Seluruh app nge-*key* ke enum ini (DB simpan
+  `source.name`, navigasi, repository). Model dinamis butuh sumber diidentifikasi **string id**, bukan enum keras.
+- Kotatsu/Doki memang sengaja bundle semua parser (kotatsu-parsers) — jadi "update sumber = update app".
+  Yang user mau itu model ala **Tachiyomi/Mihon** (extension dimuat saat runtime).
+
+**Realita platform (penting — penentu desain):**
+- **Android**: BISA muat kode eksternal via `DexClassLoader` dari artefak ter-*dex* (extension = APK/.dex terpisah, ala Mihon).
+- **Desktop (JVM)**: BISA muat **JAR** via `URLClassLoader` saat runtime.
+- **iOS**: TIDAK bisa muat kode JVM/dinamis (no JIT, no dynamic class-loading Kotlin/JVM) → iOS tetap **bundled-only**,
+  atau jangka panjang butuh engine **deklaratif/JS** (mis. QuickJS jalankan skrip parser sbg DATA) — di luar lingkup awal.
+
+**Pendekatan disarankan (hybrid, paling realistis):**
+1. Tetap ada **baseline parser ter-bundle** (jalan di semua platform incl. iOS, dan jadi fallback).
+2. Android + Desktop boleh **unduh + muat artefak exts terbaru** yang MENAMBAH/MENGGANTI baseline via reflection;
+   gagal/incompatible → fallback ke baseline.
+3. Sumber jadi **string id + registry runtime** (bukan `MangaParserSource.entries` keras).
+
+**Yang perlu disiapkan di repo `D:\project pribadi\nekuva-kmp\nekuva-exts`:**
+1. **ABI stabil + berversi** untuk `MangaParser`/`MangaLoaderContext`/model + konstanta `EXT_ABI_VERSION`;
+   host menolak artefak yang versi ABI-nya beda (cegah crash `NoSuchMethodError` lintas-versi).
+2. **Discovery runtime**: selain enum KSP, hasilkan **manifest runtime** (mis. `META-INF/services` ServiceLoader
+   ATAU `extensions.json`) berisi daftar kelas parser + metadata (id, judul, locale, contentType, nsfw, versi)
+   yang host bisa enumerasi via reflection SETELAH memuat artefak.
+3. **Artefak build per-platform**:
+   - Desktop: **JAR** biasa (sudah dihasilkan).
+   - Android: artefak **ter-dex** (.dex/.aar/APK) — exts sekarang library JVM murni; perlu langkah dexing /
+     build "extension package" Android (ini kerjaan baru di repo exts).
+4. **Katalog/index ter-publish**: rilis GitHub atau `index.json` di repo berisi: versi terbaru, URL unduh
+   per-platform, min host ABI, metadata per-sumber, **checksum + signature**.
+5. **Signing artefak** → host verifikasi keaslian (HANYA build NekoSukuriputo yang dimuat). Wajib, karena
+   memuat kode dari internet itu sensitif (lihat catatan keamanan harness).
+
+**Sisi host (repo UI ini) yang berubah:**
+- Loader extension (`expect/actual`: Android `DexClassLoader`, Desktop `URLClassLoader`, iOS no-op) → simpan
+  artefak di `~/.nekuva/extensions` (Desktop) / `filesDir/extensions` (Android), muat, isi **registry runtime**.
+- Lepas ketergantungan compile-time ke `MangaParserSource` untuk set dinamis (sumber by string id) — sentuh
+  DB (`manga_sources`), navigasi, repository factory.
+- UI **Settings → About → "Update extensions"**: cek index → bandingkan versi terpasang → unduh artefak (ABI cocok)
+  → muat → refresh daftar sumber. Tampilkan versi terpasang + tombol update + changelog.
+
+**Status:** riset/desain, **belum dimulai**. Lintas-repo (§8: usulkan kontrak di nekuva-exts dulu, baru host).
+Kemungkinan **Phase 2+** (setelah parity Phase 1). iOS = bundled-only sampai ada jalur deklaratif/JS.
