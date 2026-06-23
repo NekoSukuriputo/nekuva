@@ -144,6 +144,10 @@
     <string name="about">About</string>
     <string name="app_version">Version %s</string>
     <string name="check_for_updates">Check for updates</string>
+    <string name="update_extensions">Update extensions</string>
+    <string name="import_extension">Import extension (.jar)…</string>
+    <string name="extensions_sources_d">%1$d sources</string>
+    <string name="extensions_using_builtin">Using built-in sources</string>
     <string name="no_update_available">No updates available</string>
     <string name="right_to_left">Right-to-left</string>
     <string name="create_category">New category</string>

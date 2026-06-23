@@ -221,6 +221,10 @@
     <string name="protect_application_summary">Tanya kata sandi ketika memulai Doki</string>
     <string name="about">Tentang</string>
     <string name="check_for_updates">Periksa pembaruan</string>
+    <string name="update_extensions">Perbarui ekstensi</string>
+    <string name="import_extension">Impor ekstensi (.jar)…</string>
+    <string name="extensions_sources_d">%1$d sumber</string>
+    <string name="extensions_using_builtin">Memakai sumber bawaan</string>
     <string name="passwords_mismatch">Kata sandi tidak sama</string>
     <string name="app_version">Versi %s</string>
     <string name="internal_storage">Penyimpanan internal</string>

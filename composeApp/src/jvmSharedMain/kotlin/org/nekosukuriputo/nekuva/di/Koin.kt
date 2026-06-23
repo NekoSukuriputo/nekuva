@@ -189,6 +189,8 @@ val settingsModule = module {
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesCatalogViewModel(get(), get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.sources.SourcesManageViewModel(get(), get()) }
     factory { params -> org.nekosukuriputo.nekuva.settings.ui.sources.SourceSettingsViewModel(params.get(), get(), get(), get(), get()) }
+    // Runtime extensions (updatable parser bundle): downloads/imports + loads via ExtensionLoader.
+    single { org.nekosukuriputo.nekuva.core.extensions.ExtensionManager(get(), get()) }
     // About: GitHub release update checker (Doki AppUpdateRepository) + screen VM.
     single { org.nekosukuriputo.nekuva.core.github.AppUpdateRepository(get()) }
     factory { org.nekosukuriputo.nekuva.settings.ui.about.AboutSettingsViewModel(get()) }
