@@ -107,7 +107,7 @@ val appModule = module {
     single<org.nekosukuriputo.nekuva.parsers.MangaLoaderContext> { get<AppMangaLoaderContext>() }
     single { org.nekosukuriputo.nekuva.core.cache.MemoryContentCache() }
     single { org.nekosukuriputo.nekuva.core.parser.MirrorSwitcher(get(), get(org.koin.core.qualifier.named("manga"))) }
-    single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get(), get<org.nekosukuriputo.nekuva.core.extensions.ExtensionManager>()) }
+    single { org.nekosukuriputo.nekuva.core.parser.MangaRepository.Factory(get(), get(), get()) }
     single {
         org.nekosukuriputo.nekuva.core.image.FaviconCache(
             org.nekosukuriputo.nekuva.core.image.faviconCacheDir(),

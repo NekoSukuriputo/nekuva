@@ -30,27 +30,13 @@ interface MangaRepository {
 	class Factory(
 		private val loaderContext: org.nekosukuriputo.nekuva.parsers.MangaLoaderContext,
 		private val contentCache: org.nekosukuriputo.nekuva.core.cache.MemoryContentCache,
-		private val mirrorSwitcher: MirrorSwitcher,
-		// Optional: when a runtime extension bundle is loaded, sources it provides override the bundled
-		// ones (same name → use the bundle's parser). Null/absent → behaves exactly as the baseline.
-		private val extensionManager: org.nekosukuriputo.nekuva.core.extensions.ExtensionManager? = null,
+		private val mirrorSwitcher: MirrorSwitcher
 	) {
 		private val cache = androidx.collection.ArrayMap<MangaSource, java.lang.ref.WeakReference<MangaRepository>>()
-
-		@Volatile
-		private var lastExtGeneration = 0
 
 		@androidx.annotation.AnyThread
 		fun create(source: MangaSource): MangaRepository {
 			if (source is org.nekosukuriputo.nekuva.core.model.MangaSourceInfo) return create(source.mangaSource)
-
-			// Drop cached parsers when the loaded extension bundle changed (import/update), so the new
-			// bundle's parsers take effect without an app restart.
-			val gen = extensionManager?.generation ?: 0
-			if (gen != lastExtGeneration) {
-				synchronized(cache) { cache.clear() }
-				lastExtGeneration = gen
-			}
 
 			cache[source]?.get()?.let { return it }
 			return synchronized(cache) {
@@ -67,25 +53,11 @@ interface MangaRepository {
 
 		private fun createRepository(source: MangaSource): MangaRepository? = when (source) {
 			is org.nekosukuriputo.nekuva.parsers.model.MangaParserSource -> ParserMangaRepository(
-				parser = parserFor(source),
+				parser = loaderContext.newParserInstance(source),
 				cache = contentCache,
 				mirrorSwitcher = mirrorSwitcher,
 			)
 			else -> null
-		}
-
-		// Prefer a loaded extension bundle's parser for this source (override-by-name); fall back to the
-		// bundled baseline on any problem so a bad/incompatible bundle can never break source loading.
-		private fun parserFor(
-			source: org.nekosukuriputo.nekuva.parsers.model.MangaParserSource,
-		): org.nekosukuriputo.nekuva.parsers.MangaParser {
-			val ext = extensionManager?.loaded
-			if (ext != null && ext.sources.any { it.name == source.name }) {
-				runCatching {
-					return OverrideSourceParser(ext.createParser(source.name, loaderContext), source)
-				}
-			}
-			return loaderContext.newParserInstance(source)
 		}
 	}
 }
