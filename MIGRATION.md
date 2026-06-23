@@ -1723,7 +1723,11 @@ build dex Android + index + signing).
 - ✅ **host** (branch `feat/runtime-extensions-host`): `ExtensionLoader` (`core/extensions`) — Desktop
   `URLClassLoader` dengan delegasi selektif (parser/factory/enum/entry-point dari plugin; contract+lib dari
   host), Android stub (Step 3), `expect/actual`. **Run-verified Desktop**: memuat jar plugin → `listSources()`
-  = **1246 sumber**, ABI cocok, `ContentType` ter-share dari baseline (test `ExtensionLoaderTest`,
-  `-PextJar=…`). createParser + registry runtime + UI "Update extensions" = langkah berikut.
-- ⏭️ Berikutnya: Android dex (exts Step 3) → registry runtime host (lepas enum keras, sumber by string id)
-  → Settings → About "Update extensions" UI → signing.
+  = **1246 sumber**, ABI cocok, `ContentType` ter-share dari baseline (test `ExtensionLoaderTest`, `-PextJar=…`).
+- ✅ **host — UI "Update extensions"** (Settings → About): `ExtensionManager` (unduh dari rilis exts:
+  `index.json` → verifikasi sha256 → install → `loadExtension`; atau **Import .jar** lokal di Desktop) +
+  simpan versi terpasang + `ExtState`. Desktop Import bisa dipakai sekarang; jalur HTTP aktif setelah ada
+  rilis tag exts. Android import/update nonaktif sampai dex (Step 3).
+- ⏭️ Berikutnya (besar/invasif): **registry runtime** (`MangaSourceRegistry`, sumber by string id) supaya
+  source hasil plugin **muncul & bisa dibuka di Explore** (sekarang baru di-load + dihitung, belum dipakai).
+  Lalu: Android dex (exts Step 3) → signing.
