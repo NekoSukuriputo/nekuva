@@ -1728,12 +1728,13 @@ build dex Android + index + signing).
   `index.json` → verifikasi sha256 → install → `loadExtension`; atau **Import .jar** lokal di Desktop) +
   simpan versi terpasang + `ExtState`. Desktop Import bisa dipakai sekarang; jalur HTTP aktif setelah ada
   rilis tag exts. Android import/update nonaktif sampai dex (Step 3).
-- ⚠️ **host — override sumber: DICOBA lalu DI-REVERT.** Routing parser bundle lewat `MangaRepository.Factory`
-  membuat parsing **hang** (mis. SHINIGAMI loading terus setelah import). Sebab: parser bundle men-*tag*
-  request dengan `MangaParserSource` **versi plugin** (kelas beda, dari classloader ekstensi), sedangkan
-  interceptor host per-source (`CommonHeadersInterceptor`/CloudFlare) mencocokkan dengan `is MangaParserSource`
-  **versi host** → tak match → header per-source tak terpasang → stall. Di-revert; parsing balik ke baseline.
-- ⏭️ Berikutnya (besar/invasif) — **registry runtime** yang menyeluruh: seluruh pipeline (factory + **interceptor
-  header/CloudFlare** + DB + nav) harus resolve sumber **by string id / `MangaSource` interface**, BUKAN
-  `is MangaParserSource` (kelas host). Baru setelah itu override same-name + sumber baru dari bundle bisa
-  benar-benar dipakai di Explore. Lalu: Android dex (exts Step 3) → signing.
+- ✅ **host — override sumber (resolusi by-name)**: hang awal (SHINIGAMI loading terus) disebabkan
+  `CommonHeadersInterceptor` mencocokkan source via `is MangaParserSource` (kelas host) padahal parser bundle
+  men-*tag* request dengan enum versi-plugin. **Fix:** interceptor + `MangaRepository.Factory` kini resolve
+  **by name** (bukan cek kelas). `Factory.createRepository`: nama cocok dgn baseline + bundle ter-load → pakai
+  parser bundle, dibungkus `OverrideSourceParser` (tetap melapor enum host utk identitas DB/nav). No-bundle =
+  identik baseline; error override → fallback baseline; `generation` bump → buang cache. **Compile-verified;
+  perlu GUI run-verify** (import → buka SHINIGAMI → baca; tanpa import semua tetap normal).
+- ⏭️ Berikutnya — **Increment 2 (enumeration/registry)**: sumber yang **HANYA ada di bundle** (belum ada di
+  baseline) belum muncul di Explore (butuh `MangaSourcesRepository`/EnumSet jadi by-name, + `MangaSourceHeaderInterceptor`
+  gambar by-name). Lalu: Android dex (exts Step 3) → signing.
