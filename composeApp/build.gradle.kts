@@ -112,7 +112,7 @@ kotlin {
                 // Coil network fetcher backed by the app OkHttp client (DoH + CloudFlare cookies + source headers)
                 // so protected-source covers/pages/thumbnails load like the parser does.
                 implementation(libs.coil.network)
-                implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.7") {
+                implementation("com.github.NekoSukuriputo:nekuva-exts:v1.0.10") {
                     exclude(group = "org.json", module = "json")
                 }
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
