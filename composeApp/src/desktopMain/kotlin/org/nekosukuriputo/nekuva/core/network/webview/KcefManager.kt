@@ -57,6 +57,14 @@ object KcefManager {
                 KCEF.init(
                     builder = {
                         installDir(installDir)
+                        // Force GPU-accelerated rasterization so the in-app browser scrolls smoothly.
+                        // CEF can fall back to software rendering on some Desktop GPUs, which makes the
+                        // embedded page visibly laggy; these flags push compositing/raster onto the GPU.
+                        addArgs(
+                            "--enable-gpu-rasterization",
+                            "--ignore-gpu-blocklist",
+                            "--enable-zero-copy",
+                        )
                         progress {
                             onDownloading { pct -> _state.value = State.Downloading(pct.coerceIn(0f, 100f)) }
                             onInitialized { _state.value = State.Ready }
