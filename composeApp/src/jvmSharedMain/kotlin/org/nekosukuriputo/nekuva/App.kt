@@ -78,6 +78,13 @@ fun App() {
         dummyData = parserContext.fetchDummyData()
     }
 
+    // Load any installed runtime-extension bundle at startup so its sources override the bundled ones
+    // app-wide (not just after opening About). Best-effort, off the main thread.
+    val extensionManager = koinInject<org.nekosukuriputo.nekuva.core.extensions.ExtensionManager>()
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { extensionManager.loadInstalled() }
+    }
+
     // Localise the seeded "Read Later" category to the device language (new + existing DBs).
     val readLaterTitle = stringResource(Res.string.read_later)
     LaunchedEffect(readLaterTitle) {

@@ -57,6 +57,11 @@ class ExtensionManager(
     var loaded: LoadedExtension? = null
         private set
 
+    /** Bumped whenever the loaded bundle changes, so the repository factory can drop cached parsers. */
+    @Volatile
+    var generation: Int = 0
+        private set
+
     /** Load a previously-installed bundle (once, best-effort) — e.g. when the settings screen opens. */
     fun loadInstalled() {
         if (!loadedOnce.compareAndSet(false, true)) return
@@ -64,6 +69,7 @@ class ExtensionManager(
         if (!jar.isFile) return
         val ext = loadExtension(jar.absolutePath) ?: return
         loaded = ext
+        generation++
         _state.value = ExtState.Installed(
             settings.installedExtensionVersion ?: ext.abiVersion.toString(),
             ext.sources.size,
@@ -80,6 +86,7 @@ class ExtensionManager(
             val ext = loadExtension(src.absolutePath) ?: error("Incompatible or invalid extension bundle")
             src.copyTo(File(extensionsDir(), INSTALLED_JAR), overwrite = true)
             loaded = ext
+            generation++
             settings.installedExtensionVersion = "imported"
             _state.value = ExtState.Installed("imported", ext.sources.size)
             true
@@ -110,6 +117,7 @@ class ExtensionManager(
             target.writeBytes(bytes)
             val ext = loadExtension(target.absolutePath) ?: error("Failed to load downloaded extension")
             loaded = ext
+            generation++
             settings.installedExtensionVersion = index.version
             _state.value = ExtState.Installed(index.version, ext.sources.size)
             true
