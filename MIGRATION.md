@@ -1687,5 +1687,34 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 - UI **Settings → About → "Update extensions"**: cek index → bandingkan versi terpasang → unduh artefak (ABI cocok)
   → muat → refresh daftar sumber. Tampilkan versi terpasang + tombol update + changelog.
 
+**Referensi terbukti — Usagi (`github.com/UsagiApp/Usagi`, Android-only, basis Kotatsu):** sudah
+mengimplementasikan persis ini. Mekanismenya (diverifikasi dari kode):
+- Host hanya depend ke **contract** (`core-exts`), TIDAK mem-bundle parser sama sekali; SEMUA parser = plugin.
+- Plugin = file **`.jar` berisi `classes.dex`** (ter-dex) ditaruh di `pluginsDir`, dimuat via Android
+  **`DexClassLoader`** (`PluginClassLoader`).
+- `PluginClassLoader` **selective delegation**: tipe kontrak (`MangaLoaderContext`, `MangaParser`,
+  `config.*`, `exception.*`, `model.*` KECUALI `MangaParserSource`) → dari **parent/host** (ABI dibagi);
+  impl parser + `MangaParserSource` enum + factory → dari **plugin** (`findClass` dulu).
+- Discovery via refleksi: load `…parsers.MangaParserFactoryKt.newParser(enum, ctx)` + `MangaParserSource`
+  enum dari plugin → iterasi `enumConstants` → bungkus jadi `PluginMangaSource(name, jarName)` → daftarkan
+  ke **`MangaSourceRegistry`** runtime (pengganti `MangaParserSource.entries` keras). `createParser` =
+  `newParser(constant, ctx)` via refleksi, di-cache per jar.
+
+**Status `nekuva-exts` sekarang vs kebutuhan (dicek ke repo):**
+- ✅ SUDAH ADA: factory `newParser` (KSP `MangaParserFactory.kt`), enum `MangaParserSource`, namespace bersih
+  `org.nekosukuriputo.nekuva.parsers.*` (host+exts konsisten — tinggal sesuaikan aturan delegasi classloader).
+- ❌ BELUM: build hanya **JVM jar biasa** (`from(components["java"])`) → bisa di-`URLClassLoader` di **Desktop**,
+  TAPI Android butuh artefak **ter-dex** (jalankan `d8` atas jar) sebelum bisa di-`DexClassLoader`.
+- ❌ BELUM: pemisahan **contract vs parsers**. Saat ini host mem-bundle SELURUH exts (contract + semua parser +
+  enum) compile-time. Model Usagi butuh host depend **contract saja**; parser jadi plugin. (Alternatif hybrid:
+  host bundle baseline + plugin meng-override, tapi harus hati-hati konflik enum `MangaParserSource` → ikuti
+  Usagi: enum diambil dari plugin, host pakai registry runtime.)
+
+**Kesimpulan kelayakan:** Model Usagi **applicable langsung** ke Nekuva (sama-sama Kotatsu API). Desktop bisa
+nyaris langsung (jar JVM exts saat ini sudah bisa di-URLClassLoader). Android perlu langkah **dexing** artefak.
+iOS tetap tidak bisa (tak ada dynamic class-loading). Kerja besar ada di **host** (registry runtime +
+classloader expect/actual + lepas dari enum keras + UI import/download) dan **exts** (split contract/parsers +
+build dex Android + index + signing).
+
 **Status:** riset/desain, **belum dimulai**. Lintas-repo (§8: usulkan kontrak di nekuva-exts dulu, baru host).
 Kemungkinan **Phase 2+** (setelah parity Phase 1). iOS = bundled-only sampai ada jalur deklaratif/JS.
