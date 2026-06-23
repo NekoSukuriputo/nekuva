@@ -16,7 +16,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 // Where the published catalog + per-platform artifacts live (GitHub Release "latest" assets of the exts repo).
 private const val RELEASE_BASE = "https://github.com/NekoSukuriputo/nekuva-exts/releases/latest/download/"
-private const val INSTALLED_JAR = "extension.jar"
 
 @Serializable
 private data class ExtIndex(
@@ -39,8 +38,12 @@ sealed interface ExtState {
 
 /**
  * Downloads / imports a nekuva-exts extension bundle at runtime and loads it via [loadExtension], so new
- * sources can ship without rebuilding the app. The loaded bundle is exposed via [loaded] for the (future)
- * runtime source registry; for now this powers the Settings → About "Update extensions" UI.
+ * sources can ship without rebuilding the app. The loaded bundle is exposed via [loaded] (and [generation])
+ * for the repository factory's source override; it also powers the Settings → About "Update extensions" UI.
+ *
+ * Each install writes a NEW, uniquely-named jar and records it via [AppSettings.installedExtensionFile] —
+ * we never overwrite the file the running class loader still holds open (which fails on Windows). Old jars
+ * are cleaned up best-effort (the one currently mapped by the live class loader is skipped until next launch).
  *
  * Desktop works today (URLClassLoader). Android no-ops until the dexed artifact + DexClassLoader land.
  */
@@ -62,18 +65,14 @@ class ExtensionManager(
     var generation: Int = 0
         private set
 
-    /** Load a previously-installed bundle (once, best-effort) — e.g. when the settings screen opens. */
+    /** Load a previously-installed bundle (once, best-effort) — called at startup. */
     fun loadInstalled() {
         if (!loadedOnce.compareAndSet(false, true)) return
-        val jar = File(extensionsDir(), INSTALLED_JAR)
-        if (!jar.isFile) return
+        val jar = currentJar() ?: return
         val ext = loadExtension(jar.absolutePath) ?: return
         loaded = ext
         generation++
-        _state.value = ExtState.Installed(
-            settings.installedExtensionVersion ?: ext.abiVersion.toString(),
-            ext.sources.size,
-        )
+        _state.value = ExtState.Installed(settings.installedExtensionVersion ?: "imported", ext.sources.size)
     }
 
     /** Import a local plugin jar (Desktop file picker). Returns true on success. */
@@ -82,14 +81,9 @@ class ExtensionManager(
         runCatching {
             val src = File(path)
             require(src.isFile) { "File not found" }
-            // Validate by loading from the picked file first, so we never overwrite a good install with a bad jar.
-            val ext = loadExtension(src.absolutePath) ?: error("Incompatible or invalid extension bundle")
-            src.copyTo(File(extensionsDir(), INSTALLED_JAR), overwrite = true)
-            loaded = ext
-            generation++
-            settings.installedExtensionVersion = "imported"
-            _state.value = ExtState.Installed("imported", ext.sources.size)
-            true
+            val target = newJarFile()
+            src.copyTo(target, overwrite = false)
+            activate(target, version = "imported")
         }.getOrElse {
             _state.value = ExtState.Error(it.message ?: "Import failed")
             false
@@ -113,17 +107,48 @@ class ExtensionManager(
                     .joinToString("") { "%02x".format(it) }
                 require(sha.equals(artifact.sha256, ignoreCase = true)) { "Checksum mismatch" }
             }
-            val target = File(extensionsDir(), INSTALLED_JAR)
+            val target = newJarFile()
             target.writeBytes(bytes)
-            val ext = loadExtension(target.absolutePath) ?: error("Failed to load downloaded extension")
-            loaded = ext
-            generation++
-            settings.installedExtensionVersion = index.version
-            _state.value = ExtState.Installed(index.version, ext.sources.size)
-            true
+            activate(target, version = index.version)
         }.getOrElse {
             _state.value = ExtState.Error(it.message ?: "Update failed")
             false
+        }
+    }
+
+    /** Load [jar], and only if that succeeds make it the active bundle + record it + clean up old jars. */
+    private fun activate(jar: File, version: String): Boolean {
+        val ext = loadExtension(jar.absolutePath)
+        if (ext == null) {
+            runCatching { jar.delete() } // bad/incompatible download — don't keep it
+            error("Incompatible or invalid extension bundle")
+        }
+        loaded = ext
+        generation++
+        settings.installedExtensionFile = jar.name
+        settings.installedExtensionVersion = version
+        _state.value = ExtState.Installed(version, ext.sources.size)
+        cleanupOldJars(keep = jar.name)
+        return true
+    }
+
+    private fun currentJar(): File? {
+        val dir = extensionsDir()
+        settings.installedExtensionFile?.let { name ->
+            File(dir, name).takeIf { it.isFile }?.let { return it }
+        }
+        // Back-compat: a fixed-name jar from an earlier build.
+        return File(dir, "extension.jar").takeIf { it.isFile }
+    }
+
+    private fun newJarFile(): File = File(extensionsDir(), "ext-${System.currentTimeMillis()}.jar")
+
+    private fun cleanupOldJars(keep: String) {
+        runCatching {
+            extensionsDir().listFiles { f ->
+                f.isFile && f.name != keep &&
+                    (f.name.startsWith("ext-") && f.name.endsWith(".jar") || f.name == "extension.jar")
+            }?.forEach { runCatching { it.delete() } } // a jar still open by the live loader just won't delete
         }
     }
 

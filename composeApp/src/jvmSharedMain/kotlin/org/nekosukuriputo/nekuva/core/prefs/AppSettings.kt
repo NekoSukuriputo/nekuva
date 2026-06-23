@@ -688,6 +688,14 @@ class AppSettings(private val prefs: ObservableSettings) {
 			if (value != null) prefs.putString(KEY_INSTALLED_EXT_VERSION, value) else prefs.remove(KEY_INSTALLED_EXT_VERSION)
 		}
 
+	// Filename of the active extension bundle inside extensionsDir(). A new (uniquely-named) file is written
+	// per install so we never overwrite the jar the running class loader still holds open (Windows lock).
+	var installedExtensionFile: String?
+		get() = prefs.getStringOrNull(KEY_INSTALLED_EXT_FILE)
+		set(value) {
+			if (value != null) prefs.putString(KEY_INSTALLED_EXT_FILE, value) else prefs.remove(KEY_INSTALLED_EXT_FILE)
+		}
+
 	fun getPagesSaveDirUri(): String? = prefs.getStringOrNull(KEY_PAGES_SAVE_DIR)
 
 	fun setPagesSaveDir(uri: String?) {
@@ -848,6 +856,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		val NAV_ITEMS_DEFAULT = listOf(NavItem.HISTORY, NavItem.FAVORITES, NavItem.EXPLORE, NavItem.FEED, NavItem.LOCAL)
 		const val KEY_NAV_LABELS = "nav_labels"
 		const val KEY_INSTALLED_EXT_VERSION = "installed_ext_version"
+		const val KEY_INSTALLED_EXT_FILE = "installed_ext_file"
 		const val KEY_NAV_PINNED = "nav_pinned"
 		const val KEY_MAIN_FAB = "main_fab"
 		const val KEY_32BIT_COLOR = "enhanced_colors"
