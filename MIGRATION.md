@@ -1735,6 +1735,11 @@ build dex Android + index + signing).
   parser bundle, dibungkus `OverrideSourceParser` (tetap melapor enum host utk identitas DB/nav). No-bundle =
   identik baseline; error override → fallback baseline; `generation` bump → buang cache. **Compile-verified;
   perlu GUI run-verify** (import → buka SHINIGAMI → baca; tanpa import semua tetap normal).
-- ⏭️ Berikutnya — **Increment 2 (enumeration/registry)**: sumber yang **HANYA ada di bundle** (belum ada di
-  baseline) belum muncul di Explore (butuh `MangaSourcesRepository`/EnumSet jadi by-name, + `MangaSourceHeaderInterceptor`
-  gambar by-name). Lalu: Android dex (exts Step 3) → signing.
+- ✅ **host — Increment 2 (registry runtime)**: sumber yang **HANYA ada di bundle** kini **muncul di Explore +
+  bisa dibuka**. `PluginMangaSource` + `PluginSourceRegistry` (diisi `ExtensionManager`); `MangaSource(name)`
+  + `MangaSourcesRepository` (enumerasi/assimilasi, re-run saat bundle berubah) + `MangaSourceHeaderInterceptor`
+  + `MirrorSwitcher` semua by-name; `ParserMangaRepository.source` → `MangaSource` + `sourceOverride`.
+  Additive (tanpa bundle = identik baseline). **Compile-green; perlu GUI run-verify** (import bundle bersumber
+  baru → muncul di Explore + bisa dibuka; sumber baseline tetap normal). Catatan: paling andal muncul setelah
+  **restart** (assimilasi saat startup); mid-session import mungkin perlu refresh/restart Explore.
+- ⏭️ Berikutnya: **Android dex** (exts Step 3, butuh setup SDK/d8) → **signing** artefak (host hanya muat build resmi).
