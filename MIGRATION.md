@@ -1747,4 +1747,14 @@ build dex Android + index + signing).
   runner) → `nekuva-ext-android.jar` (classes.dex) + `index.json` dua artefak. `--min-api 24`. **Terbukti di
   device**: push tag exts (v1.0.11) → CI build → Android "Update extensions" unduh artefak android →
   DexClassLoader muat → "1246 sumber • 1.0.11" tampil. Import-file tetap Desktop-only; Android pakai jalur unduh.
-- ⏭️ Berikutnya: **signing** artefak (host hanya muat build resmi NekoSukuriputo) + (opsional) source-list di index.
+- ✅ **Signing (Step 4) — MEKANISME SELESAI**: exts CI menandatangani `index.json` (RSA SHA256, secret
+  `EXT_SIGNING_KEY`) → `index.json.sig`; host (`ExtensionSigning`) verifikasi sig vs `EXT_PUBLIC_KEY_B64`
+  yang ditanam sebelum install (lalu sha256 menjaga artefak). Import-file lokal tidak digate (aksi sengaja).
+  **Bootstrap:** `EXT_PUBLIC_KEY_B64` masih kosong → verifikasi dilewati sampai pemilik generate keypair,
+  set secret CI, dan tempel public key. Pakai `kotlin.io.encoding.Base64` (java.util.Base64 butuh API 26).
+- **AKSI PEMILIK (untuk mengaktifkan signing):** generate keypair RSA-2048, set private key sebagai secret
+  `EXT_SIGNING_KEY` di repo exts, tempel public key (base64 DER) ke `EXT_PUBLIC_KEY_B64`. Setelah itu app
+  hanya memuat bundle bertanda-tangan resmi.
+
+**Status fitur Runtime Extensions: LENGKAP** (Desktop + Android run-verified; signing menunggu setup key pemilik).
+Opsional ke depan: source-list di index (preview sebelum unduh), live-refresh Explore mid-session tanpa restart.
