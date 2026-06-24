@@ -1845,3 +1845,16 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
 - **CTA tengah** (`ExploreScreen` state `Empty`): ikon `TravelExplore` + teks `no_manga_sources_text`
   ("Aktifkan sumber manga…") + tombol `sources_catalog` ("Sumber katalog") → `onManageSources` (sudah
   navigate ke `SourcesCatalogRoute`). Dulu cuma teks "It's kind of empty here…".
+
+**Poin 7 — Restore "sumber manga": pulihkan pin + urutan (sort_key) + jumlah sesuai backup** ✅ (committed)
+- **Akar masalah:** `SourceBackup` + `upsert(toEntity())` SUDAH menulis `sort_key`+`pinned` (sama seperti
+  Doki). Tapi restore tak me-reset source yang sudah aktif di perangkat → di install lama (semua source
+  aktif) jumlah tak cocok backup & urutan manual "terkubur" di antara source lain (terlihat seolah urutan
+  tak pulih; pin terlihat pulih karena `ORDER BY pinned DESC` selalu naik ke atas).
+- **Fix** (`BackupRepository` cabang `SOURCES`): atomik — `disableAllSources()` dulu, lalu `upsert` tiap
+  baris backup (enable + sort_key + pinned). Hasil: set source aktif = persis isi backup → **jumlah cocok**,
+  **urutan (sort_key) pulih**, **pin pulih**.
+- **Blanket mode:** set `settings.isAllSourcesEnabled = false` setelah restore source, supaya flag per-source
+  (jumlah + urutan) benar-benar berlaku (kalau masih blanket `true`, `toSources` menandai semua aktif → jumlah
+  meleset). `BackupRepository` kini terima `AppSettings` (Koin `get()` ke-3).
+- Backup tetap `findAll().filter { isEnabled }` (hanya source aktif, = Doki `dumpEnabled`), round-trip cocok.

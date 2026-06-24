@@ -64,6 +64,7 @@ private val EXCLUDED_SETTINGS = setOf(
 class BackupRepository(
     private val database: MangaDatabase,
     private val savedFiltersRepository: SavedFiltersRepository,
+    private val settings: org.nekosukuriputo.nekuva.core.prefs.AppSettings,
 ) {
 
     private val json = Json {
@@ -190,8 +191,26 @@ class BackupRepository(
                     BackupSection.BOOKMARKS -> input.readJsonArray<BookmarkBackup>(serializer()).forEach { bk ->
                         if (restore { upsertManga(bk.manga); getBookmarksDao().upsert(bk.bookmarks.map { it.toEntity() }) }) restored++ else failed++
                     }
-                    BackupSection.SOURCES -> input.readJsonArray<SourceBackup>(serializer()).forEach {
-                        if (restore { getSourcesDao().upsert(it.toEntity()) }) restored++ else failed++
+                    BackupSection.SOURCES -> {
+                        // Mirror the backup exactly: disable every source first, then re-enable + reorder
+                        // (sort_key) + pin ONLY the sources present in the backup, atomically. Without the
+                        // reset, sources enabled on this device (e.g. all of them on an existing install) stay
+                        // enabled, so the Explore count wouldn't match the backup and the restored manual order
+                        // would be buried among the rest. The backup only contains enabled rows (dumpEnabled),
+                        // so after this the enabled set + order + pins equal the backup's.
+                        val rows = input.readJsonArray<SourceBackup>(serializer()).toList()
+                        val ok = restore {
+                            getSourcesDao().disableAllSources()
+                            for (row in rows) getSourcesDao().upsert(row.toEntity())
+                        }
+                        if (ok) {
+                            // Leave the blanket "all sources enabled" mode so the per-source enabled flags
+                            // (and thus the restored count + order) actually take effect on this device.
+                            settings.isAllSourcesEnabled = false
+                            restored += rows.size
+                        } else {
+                            failed += rows.size
+                        }
                     }
                     BackupSection.SCROBBLING -> input.readJsonArray<ScrobblingBackup>(serializer()).forEach {
                         if (restore { getScrobblingDao().upsert(it.toEntity()) }) restored++ else failed++
