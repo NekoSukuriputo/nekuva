@@ -15,7 +15,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ext_signing.pem   (→ CI secret EXT_SIGNING_KEY)
  *   openssl rsa -in ext_signing.pem -pubout -outform DER | base64 -w0                   (→ paste below)
  */
-const val EXT_PUBLIC_KEY_B64: String = ""
+const val EXT_PUBLIC_KEY_B64: String =
+    "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsvw+3iEu7zQNbLF97BODE6Iqyw2AfCLA2LqChDfdBR995UgXP8lkaJlF9p4PzhtMSxx7oojSJAukJUFeit4/dOpln0QXiyqv6wEHn2Ute/QffSxnn4vaauW/1nUzmPgyv91WiWmtI7vFqbrrRHsbDKpfRCZp7tQJ60jlc0jhaFvG1mIMQFBgN6CQNFPz/stp0RZHe2F+KEaI8y7yPXlGrwe7SHp0jxgT0Z4bwxjRVnrn4yj730+xO/mMGoNqs3PUag4ppR9iijL4JbWPIl0dpV3dr7il7U/6u3eNR55egvv/Bc7vLf/7roI/WS8df0CcSPQe3Rjk7wlDeR0nSBHVyQIDAQAB"
 
 /**
  * Verify [data] (the raw `index.json` bytes) against [signatureB64] (base64 SHA256withRSA signature).
