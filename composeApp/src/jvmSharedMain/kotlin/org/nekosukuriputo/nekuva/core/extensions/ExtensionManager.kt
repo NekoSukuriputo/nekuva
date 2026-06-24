@@ -59,6 +59,11 @@ class ExtensionManager(
     val state: StateFlow<ExtState> = _state.asStateFlow()
     private val loadedOnce = AtomicBoolean(false)
 
+    // Whether a newer signed ext bundle is published than the one installed (drives the search-box ext-update
+    // icon + the dot on About → "Update extensions"). Set by [checkForUpdate]; cleared once we're up to date.
+    private val _updateAvailable = MutableStateFlow(false)
+    val updateAvailable: StateFlow<Boolean> = _updateAvailable.asStateFlow()
+
     @Volatile
     var loaded: LoadedExtension? = null
         private set
@@ -109,6 +114,27 @@ class ExtensionManager(
         }
     }
 
+    /**
+     * Lightweight check (no download/install): is a NEWER signed bundle published for this platform than the
+     * one currently installed? Drives the update indicator only — the actual install still goes via
+     * [checkAndUpdate]. Returns false (and leaves the indicator off) when nothing is installed, the bundle was
+     * locally imported, the ABI/platform doesn't match, or the signature is invalid.
+     */
+    suspend fun checkForUpdate(): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val installed = settings.installedExtensionVersion
+            // Only nag when a published (versioned) bundle is installed — not for built-in or locally imported.
+            if (installed.isNullOrBlank() || installed == "imported") return@runCatching false
+            val indexBytes = httpGetBytes(RELEASE_BASE + "index.json")
+            val sig = runCatching { httpGet(RELEASE_BASE + "index.json.sig") }.getOrNull()
+            if (!verifyExtensionSignature(indexBytes, sig)) return@runCatching false
+            val index = json.decodeFromString<ExtIndex>(indexBytes.decodeToString())
+            if (index.abiVersion != HOST_EXT_ABI_VERSION) return@runCatching false
+            if (index.artifacts[extensionPlatformKey] == null) return@runCatching false
+            index.version.isNotBlank() && index.version != installed
+        }.getOrDefault(false).also { _updateAvailable.value = it }
+    }
+
     /** Check the published catalog and download/install if newer (or not yet installed). */
     suspend fun checkAndUpdate(): Boolean = withContext(Dispatchers.IO) {
         _state.value = ExtState.Working
@@ -122,6 +148,7 @@ class ExtensionManager(
             if (index.abiVersion != HOST_EXT_ABI_VERSION) error("This extension needs a newer app version")
             val artifact = index.artifacts[extensionPlatformKey] ?: error("No build for this platform yet")
             if (index.version == settings.installedExtensionVersion && loaded != null) {
+                _updateAvailable.value = false
                 _state.value = ExtState.UpToDate
                 return@withContext true
             }
@@ -152,6 +179,7 @@ class ExtensionManager(
         generation++
         settings.installedExtensionFile = jar.name
         settings.installedExtensionVersion = version
+        _updateAvailable.value = false // just installed the latest → clear the update indicator
         _state.value = ExtState.Installed(version, ext.sources.size)
         cleanupOldJars(keep = jar.name)
         return true

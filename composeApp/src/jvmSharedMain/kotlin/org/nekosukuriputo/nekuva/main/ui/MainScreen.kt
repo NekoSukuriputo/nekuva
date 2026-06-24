@@ -98,6 +98,15 @@ fun MainScreen(
             }
         }
     }
+    // Extension-update indicator (Point 4): a separate search-box icon when a newer ext bundle is published.
+    // Tapping it goes to About, where the "Update extensions" row is dot-marked. Checked once per launch.
+    val extManager = koinInject<org.nekosukuriputo.nekuva.core.extensions.ExtensionManager>()
+    val extUpdateAvailable by extManager.updateAvailable.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            runCatching { extManager.checkForUpdate() }
+        }
+    }
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -272,6 +281,8 @@ fun MainScreen(
                             onCloseSearch = { dismissSearch() },
                             appUpdateAvailable = appUpdate != null,
                             onAppUpdateClick = { showAppUpdateDialog = true },
+                            extUpdateAvailable = extUpdateAvailable,
+                            onExtUpdateClick = { navController.navigate(AboutSettingsRoute) },
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -299,6 +310,8 @@ fun MainScreen(
                             onCloseSearch = { dismissSearch() },
                             appUpdateAvailable = appUpdate != null,
                             onAppUpdateClick = { showAppUpdateDialog = true },
+                            extUpdateAvailable = extUpdateAvailable,
+                            onExtUpdateClick = { navController.navigate(AboutSettingsRoute) },
                         )
                     }
                 },

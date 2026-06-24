@@ -1804,3 +1804,14 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
 - **About:** tap versi → kalau ada update tampilkan `AppUpdateDialog` (dulu cuma toast `new_version_s`).
 - **Fix format string (sekaligus bagian Poin 5):** `new_version_s` + `size_s` diubah `%s` → **positional `%1$s`**
   di **SEMUA** katalog bahasa (Compose Resources tak substitusi `%s` polos → dulu tampil literal "Versi baru: %s").
+
+**Poin 4 — Ikon update ekstensi (terpisah dari update app) + titik indikator di "Perbarui ekstensi"** ✅ (committed)
+- **Cek ringan tanpa install** `ExtensionManager.checkForUpdate()`: ambil `index.json` (verifikasi tanda tangan),
+  bandingkan `index.version` vs `settings.installedExtensionVersion`. `true` hanya bila ada bundle ter-install
+  versi (bukan built-in / "imported"), ABI cocok, ada artifact platform, dan versi beda. Expose
+  `updateAvailable: StateFlow<Boolean>`; di-reset saat `activate()`/UpToDate.
+- **Ikon ekstensi di kotak pencarian** (`MainTopBar` param `extUpdateAvailable`/`onExtUpdateClick`): ikon
+  `Extension` + dot badge, **terpisah** dari ikon update app; klik → `navController.navigate(AboutSettingsRoute)`.
+- **Titik di baris "Perbarui ekstensi"** (`AboutSettingsScreen`): `SettingsItem(trailing = { Badge() })` saat
+  `updateAvailable`. About memicu `checkForUpdate()` juga (selain `loadInstalled()`).
+- **Cek saat app start:** `MainScreen` `LaunchedEffect` panggil `extManager.checkForUpdate()` (background).

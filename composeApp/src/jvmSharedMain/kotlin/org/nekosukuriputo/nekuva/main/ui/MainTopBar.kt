@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.app_update_available
 import nekuva.composeapp.generated.resources.search_manga
+import nekuva.composeapp.generated.resources.update_extensions
 import nekuva.composeapp.generated.resources.voice_search
 import org.jetbrains.compose.resources.stringResource
 
@@ -62,6 +64,10 @@ fun MainTopBar(
     // release is available; tapping it opens the update dialog.
     appUpdateAvailable: Boolean = false,
     onAppUpdateClick: () -> Unit = {},
+    // Extension-update icon (separate from the app-update one) — shown when a newer ext bundle exists;
+    // tapping it opens Settings → About where the "Update extensions" row is dot-marked.
+    extUpdateAvailable: Boolean = false,
+    onExtUpdateClick: () -> Unit = {},
 ) {
     // Voice search (Doki VoiceInputContract): null on Desktop / when no recognizer → no mic button.
     val voiceSearch = org.nekosukuriputo.nekuva.core.os.rememberVoiceSearchLauncher { onQueryChange(it) }
@@ -114,6 +120,17 @@ fun MainTopBar(
                     Icon(
                         Icons.Outlined.SystemUpdate,
                         contentDescription = stringResource(Res.string.app_update_available),
+                    )
+                }
+            }
+        }
+        // Extension-update icon — appears only when a newer ext bundle exists; goes to About (dot on the row).
+        if (extUpdateAvailable) {
+            IconButton(onClick = onExtUpdateClick) {
+                BadgedBox(badge = { Badge() }) {
+                    Icon(
+                        Icons.Outlined.Extension,
+                        contentDescription = stringResource(Res.string.update_extensions),
                     )
                 }
             }

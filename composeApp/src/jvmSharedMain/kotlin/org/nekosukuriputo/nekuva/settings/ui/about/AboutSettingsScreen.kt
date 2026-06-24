@@ -67,8 +67,15 @@ fun AboutSettingsScreen(
     // Runtime extensions (updatable parser bundle): status + check/import actions.
     val extManager = koinInject<ExtensionManager>()
     val extState by extManager.state.collectAsState()
+    // Dot on the "Update extensions" row when a newer ext bundle is published (Point 4).
+    val extUpdateAvailable by extManager.updateAvailable.collectAsState()
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { extManager.loadInstalled() } }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            extManager.loadInstalled()
+            runCatching { extManager.checkForUpdate() }
+        }
+    }
     val extSummary = when (val s = extState) {
         is ExtState.Working -> "${stringResource(Res.string.loading)}…"
         is ExtState.Installed -> {
@@ -127,6 +134,12 @@ fun AboutSettingsScreen(
                 icon = Icons.Outlined.Extension,
                 enabled = extState !is ExtState.Working,
                 onClick = { scope.launch { extManager.checkAndUpdate() } },
+                // Dot indicator when a newer ext bundle exists (matches the search-box ext-update icon).
+                trailing = if (extUpdateAvailable) {
+                    { androidx.compose.material3.Badge() }
+                } else {
+                    null
+                },
             )
             if (supportsExtensionImport) {
                 SettingsItem(
