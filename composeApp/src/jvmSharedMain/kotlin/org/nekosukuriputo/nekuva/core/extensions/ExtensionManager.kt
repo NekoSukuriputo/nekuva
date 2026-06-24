@@ -113,7 +113,12 @@ class ExtensionManager(
     suspend fun checkAndUpdate(): Boolean = withContext(Dispatchers.IO) {
         _state.value = ExtState.Working
         runCatching {
-            val index = json.decodeFromString<ExtIndex>(httpGet(RELEASE_BASE + "index.json"))
+            // Verify the catalog signature before trusting it (only the maintainer's signed bundles).
+            // index.json's sha256 then gates the artifacts. Bootstrap: passes when no key is configured.
+            val indexBytes = httpGetBytes(RELEASE_BASE + "index.json")
+            val sig = runCatching { httpGet(RELEASE_BASE + "index.json.sig") }.getOrNull()
+            if (!verifyExtensionSignature(indexBytes, sig)) error("Extension signature invalid — refusing to install")
+            val index = json.decodeFromString<ExtIndex>(indexBytes.decodeToString())
             if (index.abiVersion != HOST_EXT_ABI_VERSION) error("This extension needs a newer app version")
             val artifact = index.artifacts[extensionPlatformKey] ?: error("No build for this platform yet")
             if (index.version == settings.installedExtensionVersion && loaded != null) {
