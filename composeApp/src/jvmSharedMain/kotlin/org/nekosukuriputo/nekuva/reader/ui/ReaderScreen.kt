@@ -370,24 +370,34 @@ fun ReaderScreen(
                         onShowMenu = { showConfigSheet = true },
                     )
                   }
-                    // Bottom stack: thin info bar (always, if enabled) + actions bar (only when controls shown).
+                    // Top info overlay (Doki ReaderInfoBarView): chapter • clock • battery • page, pinned to
+                    // the VERY top edge (into the status-bar / notch zone — text sits left/right of the centred
+                    // cutout). Only when controls are hidden so it doesn't fight the app bar.
+                    if (!controlsVisible) {
+                        Column(
+                            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (showInfoBar && pageIndicator.total > 0) {
+                                ReaderInfoBar(indicator = pageIndicator, transparent = infoBarTransparent)
+                            } else if (showPageNumbers && pageIndicator.total > 0) {
+                                Text(
+                                    text = "${pageIndicator.page} / ${pageIndicator.total}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .padding(top = 4.dp)
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), MaterialTheme.shapes.small)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                    // Bottom stack: auto-scroll control + actions bar (only when controls shown).
                     Column(
                         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        if (showInfoBar && pageIndicator.total > 0) {
-                            ReaderInfoBar(indicator = pageIndicator, transparent = infoBarTransparent)
-                        } else if (showPageNumbers && pageIndicator.total > 0) {
-                            Text(
-                                text = "${pageIndicator.page} / ${pageIndicator.total}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier
-                                    .padding(bottom = 4.dp)
-                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), MaterialTheme.shapes.small)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                            )
-                        }
                         // Auto-scroll speed control stays visible while active so it can be stopped.
                         if (autoScrollActive) {
                             AutoScrollControl(

@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Color
+import android.os.Build
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -29,6 +30,9 @@ private class AndroidReaderWindowController(
 	// Original bar colours, captured once, so reset() restores the rest of the app's appearance.
 	private val originalStatusBar: Int? = activity?.window?.statusBarColor
 	private val originalNavBar: Int? = activity?.window?.navigationBarColor
+	// Original display-cutout mode, so reset() restores it when leaving the reader.
+	private val originalCutoutMode: Int? =
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) activity?.window?.attributes?.layoutInDisplayCutoutMode else null
 
 	override fun apply(keepScreenOn: Boolean, fullscreen: Boolean, orientationIndex: Int) {
 		val a = activity ?: return
@@ -43,6 +47,18 @@ private class AndroidReaderWindowController(
 		WindowCompat.setDecorFitsSystemWindows(a.window, false)
 		a.window.statusBarColor = Color.TRANSPARENT
 		a.window.navigationBarColor = Color.TRANSPARENT
+		// Draw the page UNDER the display cutout (notch) too — otherwise the cutout zone is letterboxed
+		// black at the top (Doki draws all the way to the notch). ALWAYS (API 30+) keeps content in the
+		// cutout even while the bars are hidden; SHORT_EDGES covers API 28–29.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			a.window.attributes = a.window.attributes.apply {
+				layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+				} else {
+					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+				}
+			}
+		}
 		insetsController(a)?.let { controller ->
 			controller.isAppearanceLightStatusBars = false
 			controller.isAppearanceLightNavigationBars = false
@@ -74,6 +90,9 @@ private class AndroidReaderWindowController(
 		WindowCompat.setDecorFitsSystemWindows(a.window, true)
 		originalStatusBar?.let { a.window.statusBarColor = it }
 		originalNavBar?.let { a.window.navigationBarColor = it }
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && originalCutoutMode != null) {
+			a.window.attributes = a.window.attributes.apply { layoutInDisplayCutoutMode = originalCutoutMode }
+		}
 		insetsController(a)?.show(WindowInsetsCompat.Type.systemBars())
 		a.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 	}
