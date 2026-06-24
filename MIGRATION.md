@@ -1815,3 +1815,22 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
 - **Titik di baris "Perbarui ekstensi"** (`AboutSettingsScreen`): `SettingsItem(trailing = { Badge() })` saat
   `updateAvailable`. About memicu `checkForUpdate()` juga (selain `loadInstalled()`).
 - **Cek saat app start:** `MainScreen` `LaunchedEffect` panggil `extManager.checkForUpdate()` (background).
+
+**Poin 5 — Audit string resource** ✅ (committed)
+- **Branding Doki → Nekuva:** sapu SEMUA katalog (`values*/strings.xml`): 109 "Doki" → "Nekuva", 16 `doki://`
+  → `nekuva://` (skema URI), 1 "Dokia" (genitif Kroasia) → "Nekuva". Default `values/` + `values-id`/`-in`
+  sudah bersih sebelumnya. Atribusi GPL Kotatsu/Doki hanya di README (bukan di strings) — tak disentuh.
+- **Format specifier `%s`/`%d` → positional `%1$s`/`%1$d`:** Compose Resources TIDAK substitusi specifier polos
+  (sebab toast "Versi baru: %s"). Diaudit semua key yang dipanggil dengan `formatArgs` di kode
+  (`new_version_s`, `size_s`, `minutes_short`, `hours_short`, `search_on_s`, + yang sudah positional:
+  `chapter_d_of_d`, `hours_minutes_short`, `items_count`, `restore_done`, `filter_overwrite_confirm`,
+  `extensions_sources_d`). Yang masih polos (`%d`/`%s` di terjemahan non-default) diubah ke positional di
+  **SEMUA** bahasa. Default + id memang sudah positional; bug ada di katalog terjemahan.
+- **Kelengkapan key bahasa user (id/in):** Indonesia kurang 21 key dari en (909→930) — ditambahkan ke
+  `values-id` **dan** `values-in` (identik, sesuai aturan CLAUDE.md), terjemahan Indonesia untuk teks UI nyata
+  (action_done, help_wanted, in_library, not_set, source_icons, …), proper-noun/scrobbler as-is (AniList, MAL,
+  Kitsu, Shikimori, Discord), pattern glue positional. id kini = en (930 key, 0 hilang).
+- **Bahasa lain:** key yang belum diterjemahkan otomatis fallback ke default `values/` (en) by design Compose
+  Resources — tak crash/blank, hanya tampil Inggris. Tak menyalin ratusan key Inggris ke ~60 bahasa (nihil
+  manfaat vs fallback). Fokus audit = branding + format specifier (selesai, lintas semua bahasa) + kelengkapan
+  bahasa user.

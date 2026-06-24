@@ -54,7 +54,7 @@
     <string name="passwords_mismatch">รหัสผ่านไม่ตรงกัน</string>
     <string name="text_empty_holder_primary">ที่นี่มันว่างเปล่า…</string>
     <string name="filter">กรอง</string>
-    <string name="search_on_s">ค้นหาบน %s</string>
+    <string name="search_on_s">ค้นหาบน %1$s</string>
     <string name="delete_manga">ลบมังงะ</string>
     <string name="_continue">ดำเนินการต่อ</string>
     <string name="internal_storage">ที่เก็บข้อมูลภายใน</string>
@@ -145,7 +145,7 @@
     <string name="dont_check">ไม่ต้องตรวจสอบ</string>
     <string name="enter_password">ใส่รหัสผ่าน</string>
     <string name="protect_application">ป้องกันแอป</string>
-    <string name="protect_application_summary">เมื่อเข้าแอป Doki จะขึ้นให้ใส่รหัส</string>
+    <string name="protect_application_summary">เมื่อเข้าแอป Nekuva จะขึ้นให้ใส่รหัส</string>
     <string name="about">เกี่ยวกับ</string>
     <string name="right_to_left">ขวาไปซ้าย</string>
     <string name="create_category">หมวดหมู่ใหม่</string>

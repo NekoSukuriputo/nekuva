@@ -73,7 +73,7 @@
     <string name="save_page">পেজ সেভ করুন</string>
     <string name="page_saved">Page saved</string>
     <string name="standard">স্ট্যান্ডার্ড</string>
-    <string name="search_on_s">%s এ খুঁজুন</string>
+    <string name="search_on_s">%1$s এ খুঁজুন</string>
     <string name="delete_manga">মানগা ডিলিট করুন</string>
     <string name="text_delete_local_manga">\"%s\" পারমানেন্ট ভাবে ডিভাইস থেকে ডিলিট করতে চান\?</string>
     <string name="reader_settings">রিডারের সেটিংস</string>

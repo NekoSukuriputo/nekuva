@@ -64,7 +64,7 @@
     <string name="webtoon">Манхва</string>
     <string name="read_mode">Рэжым чытання</string>
     <string name="grid_size">Памер табліцы</string>
-    <string name="search_on_s">Пошук па %s</string>
+    <string name="search_on_s">Пошук па %1$s</string>
     <string name="delete_manga">Выдаліць мангу</string>
     <string name="reader_settings">Налады чытання</string>
     <string name="switch_pages">Гартанне старонак</string>
@@ -613,8 +613,8 @@
     <string name="unsupported_backup_message">Абярыце правільны файл рэзервовай копіі Nekuva</string>
     <string name="last_used">Апошні раз выкарыстоўваўся</string>
     <string name="hours_minutes_short">%1$d гз. %2$d хв.</string>
-    <string name="minutes_short">%d хв.</string>
-    <string name="hours_short">%d гз.</string>
+    <string name="minutes_short">%1$d хв.</string>
+    <string name="hours_short">%1$d гз.</string>
     <string name="fix">Выправіць</string>
     <string name="missing_storage_permission">Няма дазволу на доступ да мангі на знешнім сховішчы</string>
     <string name="show_updated">Паказаць абноўлена</string>

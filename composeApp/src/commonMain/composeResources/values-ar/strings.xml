@@ -57,7 +57,7 @@
     <string name="clear_pages_cache">مسح ذاكرة التخزين المؤقت للصفحة</string>
     <string name="webtoon">ويبتون</string>
     <string name="read_mode">وضع القراءة</string>
-    <string name="search_on_s">بحث على %s</string>
+    <string name="search_on_s">بحث على %1$s</string>
     <string name="delete_manga">حذف المانغا</string>
     <string name="text_delete_local_manga">حذف \"%s\" من الجهاز نهائيا؟</string>
     <string name="reader_settings">إعدادات القارئ</string>
@@ -618,7 +618,7 @@
     <string name="unread">غير مقروءة</string>
     <string name="show_pages_thumbs">إظهار الصور المصغرة للصفحات</string>
     <string name="unsupported_backup_message">الرجاء تحديد ملف النسخ الاحتياطي السليم لNekuva</string>
-    <string name="minutes_short">%d ش</string>
+    <string name="minutes_short">%1$d ش</string>
     <string name="hours_minutes_short">%1$d س %2$d ش</string>
     <string name="webtoon_gaps">الفجوات في وضع الويبتون</string>
     <string name="location">المكان</string>
@@ -630,7 +630,7 @@
     <string name="recent_queries">الأستعلامات الأخيره</string>
     <string name="suggested_queries">الاستعلامات المقترحة</string>
     <string name="single_cbz_file">ملف CBZ واحد</string>
-    <string name="hours_short">%d س</string>
+    <string name="hours_short">%1$d س</string>
     <string name="webtoon_gaps_summary">إظهار الفجوات الرأسية بين الصفحات في وضع الويبتون</string>
     <string name="authors">المؤلفون</string>
     <string name="disable_connectivity_check_summary">تخطي التحقق من الاتصال في حالة وجود مشكلات في الاتصال (على سبيل المثال، الانتقال إلى وضع عدم الاتصال بالإنترنت على الرغم من اتصال الشبكة)</string>

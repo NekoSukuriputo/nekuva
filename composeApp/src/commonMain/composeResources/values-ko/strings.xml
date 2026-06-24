@@ -64,7 +64,7 @@
     <string name="clear_pages_cache">페이지 캐시 지우기</string>
     <string name="read_mode">읽기 모드</string>
     <string name="grid_size">격자 크기</string>
-    <string name="search_on_s">%s에서 검색</string>
+    <string name="search_on_s">%1$s에서 검색</string>
     <string name="text_delete_local_manga">장치에서 \"%s\"를 영구적으로 삭제하시겠습니까\?</string>
     <string name="switch_pages">페이지 전환</string>
     <string name="webtoon">웹툰</string>

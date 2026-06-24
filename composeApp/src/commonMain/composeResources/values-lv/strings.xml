@@ -96,7 +96,7 @@
     <string name="enter_password">Ievadi paroli</string>
     <string name="wrong_password">Nepareiza parole</string>
     <string name="protect_application">Pasargāt aplikāciju</string>
-    <string name="protect_application_summary">Prasīt paroli, kad atver Doki</string>
+    <string name="protect_application_summary">Prasīt paroli, kad atver Nekuva</string>
     <string name="repeat_password">Atkārto paroli</string>
     <string name="passwords_mismatch">Nesakrīt paroles</string>
     <string name="about">Par</string>
@@ -115,7 +115,7 @@
     <string name="page_saved">Saglabāta</string>
     <string name="share_image">Kopīgot attēlu</string>
     <string name="_import">Importēt</string>
-    <string name="search_on_s">Meklēt %sā</string>
+    <string name="search_on_s">Meklēt %1$sā</string>
     <string name="delete_manga">Izdzēst mangu</string>
     <string name="text_delete_local_manga">Pilnībā izdzēst \"%s\" no ierīces?</string>
     <string name="reader_settings">Lasīšanas iestatījumi</string>

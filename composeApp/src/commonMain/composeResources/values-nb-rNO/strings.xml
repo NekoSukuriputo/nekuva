@@ -120,7 +120,7 @@
     <string name="switch_pages">Bytt sider</string>
     <string name="reader_settings">Leserinnstillinger</string>
     <string name="delete_manga">Slett manga</string>
-    <string name="search_on_s">Søk på %s</string>
+    <string name="search_on_s">Søk på %1$s</string>
     <string name="grid_size">Rutenettsstørrelse</string>
     <string name="read_mode">Lesemodus</string>
     <string name="no_description">Ingen beskrivelse</string>

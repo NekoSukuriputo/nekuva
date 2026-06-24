@@ -21,7 +21,7 @@
     <string name="text_file_not_supported">Pumili ng ZIP o CBZ file.</string>
     <string name="no_description">Walang paglalarawan</string>
     <string name="grid_size">Laki ng grid</string>
-    <string name="search_on_s">Hanapin sa %s</string>
+    <string name="search_on_s">Hanapin sa %1$s</string>
     <string name="delete_manga">Tanggalin ang manga</string>
     <string name="text_delete_local_manga">Permanenteng tanggalin ang \"%s\" mula sa device?</string>
     <string name="reader_settings">Mga setting sa reader</string>
@@ -611,8 +611,8 @@
     <string name="show_pages_thumbs_summary">Paganahin ang tab na \"Mga Pahina\" sa screen ng mga detalye</string>
     <string name="error_no_data_received">Walang natanggap na data mula sa server</string>
     <string name="unsupported_backup_message">Pumili ng wastong backup file ng Nekuva</string>
-    <string name="hours_short">%d o</string>
-    <string name="minutes_short">%d m</string>
+    <string name="hours_short">%1$d o</string>
+    <string name="minutes_short">%1$d m</string>
     <string name="hours_minutes_short">%1$d o %2$d m</string>
     <string name="fix">Ayusin</string>
     <string name="missing_storage_permission">Walang pahintulot na ma-access ang manga sa external storage</string>

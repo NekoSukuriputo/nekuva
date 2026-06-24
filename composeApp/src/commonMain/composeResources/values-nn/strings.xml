@@ -338,7 +338,7 @@
     <string name="text_search_holder_secondary">Røyn å skriva det om.</string>
     <string name="you_have_not_favourites_yet">Ingen likte enno</string>
     <string name="popular">Mest lest for tida</string>
-    <string name="search_on_s">Søk på %s</string>
+    <string name="search_on_s">Søk på %1$s</string>
     <string name="text_history_holder_secondary">Finn lesnadar i sidemenyen.</string>
     <string name="screenshots_allow">Tillat</string>
     <string name="allow_unstable_updates">Tillat ustøe oppdateringar</string>

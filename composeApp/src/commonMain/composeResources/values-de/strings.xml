@@ -135,7 +135,7 @@
     <string name="switch_pages">Seiten wechseln</string>
     <string name="reader_settings">Leseeinstellungen</string>
     <string name="delete_manga">Manga löschen</string>
-    <string name="search_on_s">Suche auf %s</string>
+    <string name="search_on_s">Suche auf %1$s</string>
     <string name="grid_size">Rastergröße</string>
     <string name="read_mode">Lesemodus</string>
     <string name="webtoon">Webtoon</string>
@@ -612,8 +612,8 @@
     <string name="show_pages_thumbs_summary">Registerkarte \"Seiten\" auf dem Detailbildschirm aktivieren</string>
     <string name="error_no_data_received">Keine Daten vom Server erhalten</string>
     <string name="last_used">Zuletzt verwendet</string>
-    <string name="hours_short">%d h</string>
-    <string name="minutes_short">%d m</string>
+    <string name="hours_short">%1$d h</string>
+    <string name="minutes_short">%1$d m</string>
     <string name="invalid_server_address_message">Ungültige Server-Addresse</string>
     <string name="pages_saved">Seiten wurden gespeichert</string>
 	<string name="text_empty_holder_secondary_filtered">Es gibt keine Manga, die deinen Filtern entsprechen.</string>

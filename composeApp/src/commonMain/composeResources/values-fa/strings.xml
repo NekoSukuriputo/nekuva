@@ -147,7 +147,7 @@
     <string name="clear_updates_feed">پاکسازی فیدهای بروزرسانی</string>
     <string name="clear_feed">پاکسازی فید</string>
     <string name="search">جستجو</string>
-    <string name="search_on_s">جستجو برای %s</string>
+    <string name="search_on_s">جستجو برای %1$s</string>
     <string name="black_dark_theme_summary">استفاده کردن باتری کمتربرروی صفحه های AMOLED</string>
     <string name="genres">ژانرها</string>
     <string name="done">انجام شد</string>

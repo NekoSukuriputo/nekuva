@@ -319,7 +319,7 @@
     <string name="zoom_mode_fit_width">Sobita laijusele</string>
     <string name="read_more">Loe veel</string>
     <string name="reset_filter">Nulli filter</string>
-    <string name="search_on_s">Otsi %s-st</string>
+    <string name="search_on_s">Otsi %1$s-st</string>
     <string name="status_dropped">Lõpetatud</string>
     <string name="nsfw">18+</string>
     <string name="disable_nsfw">Lülita välja NSFW</string>

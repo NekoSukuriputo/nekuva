@@ -253,7 +253,7 @@
     <string name="suggestions_excluded_genres">Kecualikan genre</string>
     <string name="download_slowdown_summary">Membantu mengelakkan alamat IP anda disekat</string>
     <string name="delete">Buang</string>
-    <string name="search_on_s">Cari pada %s</string>
+    <string name="search_on_s">Cari pada %1$s</string>
     <string name="clear_thumbs_cache">Kosongkan cache imej kenit</string>
     <string name="chapters_will_removed_background">Bab akan dibuang dalam latar belakang</string>
     <string name="operation_not_supported">Operasi ini tidak disokong</string>
@@ -619,8 +619,8 @@
 	<string name="show_pages_thumbs_summary">Dayakan tab \"Halaman\" pada skrin Butiran</string>
 	<string name="error_no_data_received">Tiada data diterima dari pelayan</string>
 	<string name="unsupported_backup_message">Sila pilih fail sandaran Nekuva yang betul</string>
-	<string name="hours_short">%d j</string>
-	<string name="minutes_short">%d m</string>
+	<string name="hours_short">%1$d j</string>
+	<string name="minutes_short">%1$d m</string>
 	<string name="seconds_short">%d s</string>
 	<string name="hours_minutes_short">%1$d j %2$d m</string>
 	<string name="minutes_seconds_short">%1$d m %2$d d</string>

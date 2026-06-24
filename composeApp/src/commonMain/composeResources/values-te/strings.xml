@@ -67,7 +67,7 @@
 	<string name="webtoon">వెబ్‌టూన్</string>
 	<string name="read_mode">రీడ్ మోడ్</string>
 	<string name="grid_size">గ్రిడ్ పరిమాణం</string>
-	<string name="search_on_s">%s లో వెతుకు</string>
+	<string name="search_on_s">%1$s లో వెతుకు</string>
 	<string name="delete_manga">మంగా తొలగించు</string>
 	<string name="text_delete_local_manga">“%s”ను పరికరం నుండి శాశ్వతంగా తొలగించాలా?</string>
 	<string name="reader_settings">రీడర్ సెట్టింగ్స్</string>

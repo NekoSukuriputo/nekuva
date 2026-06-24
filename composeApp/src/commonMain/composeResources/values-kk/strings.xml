@@ -61,7 +61,7 @@
     <string name="standard">Стандарт</string>
     <string name="webtoon">Уебтүн</string>
     <string name="grid_size">Кесте өлшемі</string>
-    <string name="search_on_s">%s-те іздеу</string>
+    <string name="search_on_s">%1$s-те іздеу</string>
     <string name="delete_manga">Манганы жою</string>
     <string name="reader_settings">Оқыманы баптау</string>
     <string name="switch_pages">Парақтау</string>

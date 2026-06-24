@@ -83,7 +83,7 @@
     <string name="operation_not_supported">Bu işlem desteklenmiyor</string>
     <string name="standard">Standart</string>
     <string name="clear_pages_cache">Sayfa önbelleğini temizle</string>
-    <string name="search_on_s">%s üzerinde ara</string>
+    <string name="search_on_s">%1$s üzerinde ara</string>
     <string name="internal_storage">Dahili depolama</string>
     <string name="notifications">Bildirimler</string>
     <string name="switch_pages">Sayfalarda ilerleme</string>
@@ -125,7 +125,7 @@
     <string name="size_s">Boyut: %1$s</string>
     <string name="updates_feed_cleared">Temizlendi</string>
     <string name="enter_password">Parola gir</string>
-    <string name="protect_application_summary">Doki başlatılırken parola sor</string>
+    <string name="protect_application_summary">Nekuva başlatılırken parola sor</string>
     <string name="track_sources">Güncellemeleri ara</string>
     <string name="clear_updates_feed">Güncelleme akışını temizle</string>
     <string name="feed_will_update_soon">Akış güncellemesi yakında başlayacak</string>
@@ -292,7 +292,7 @@
     <string name="removed_from_favourites">Favorilerden kaldırıldı</string>
     <string name="exit_confirmation">Çıkış doğrulaması</string>
     <string name="comics_archive">Çizgi roman arşivi</string>
-    <string name="manga_error_description_pattern">Hata ayrıntıları:&lt;br&gt;&lt;tt&gt;%1$s&lt;/tt&gt;&lt;br&gt;&lt;br&gt;1. Kaynağında bulunduğundan emin olmak için &lt;a href=%2$s&gt;mangayı bir web tarayıcısında açmayı&lt;/a&gt; deneyin&lt;br&gt;2. &lt;a href=doki://about&gt;Doki\'nun en son sürümünü&lt;/a&gt;&lt;br&gt;3 kullandığınızdan emin olun. Varsa, geliştiricilere bir hata raporu gönderin.</string>
+    <string name="manga_error_description_pattern">Hata ayrıntıları:&lt;br&gt;&lt;tt&gt;%1$s&lt;/tt&gt;&lt;br&gt;&lt;br&gt;1. Kaynağında bulunduğundan emin olmak için &lt;a href=%2$s&gt;mangayı bir web tarayıcısında açmayı&lt;/a&gt; deneyin&lt;br&gt;2. &lt;a href=nekuva://about&gt;Nekuva\'nun en son sürümünü&lt;/a&gt;&lt;br&gt;3 kullandığınızdan emin olun. Varsa, geliştiricilere bir hata raporu gönderin.</string>
     <string name="categories_delete_confirm">Seçilen favori kategorileri silmek istediğinizden emin misiniz? \nİçindeki tüm mangalar kaybolur ve bu işlem geri alınamaz.</string>
     <string name="reorder">Yeniden sırala</string>
     <string name="pages_cache">Sayfa önbelleği</string>
@@ -610,9 +610,9 @@
     <string name="show_pages_thumbs_summary">Ayrıntılar ekranında \"Sayfalar\" sekmesini etkinleştir</string>
     <string name="show_pages_thumbs">Sayfa küçük resimlerini göster</string>
     <string name="error_no_data_received">Sunucudan veri alınamadı</string>
-    <string name="unsupported_backup_message">Lütfen uygun bir Doki yedekleme dosyası seçin</string>
-    <string name="hours_short">%d sa</string>
-    <string name="minutes_short">%d dak</string>
+    <string name="unsupported_backup_message">Lütfen uygun bir Nekuva yedekleme dosyası seçin</string>
+    <string name="hours_short">%1$d sa</string>
+    <string name="minutes_short">%1$d dak</string>
     <string name="hours_minutes_short">%1$d sa %2$d dak</string>
     <string name="fix">Düzelt</string>
     <string name="missing_storage_permission">Harici depolama alanındaki mangalara erişim izni yok</string>
@@ -657,7 +657,7 @@
     <string name="chapters_read">Okunan bölüm</string>
     <string name="chapters_left">Kalan bölüm</string>
     <string name="external_source">Harici/eklenti</string>
-    <string name="plugin_incompatible">Uyumsuz eklenti veya dahili hata. Eklentinin ve Doki\'nun en son sürümünü kullandığınızdan emin olun</string>
+    <string name="plugin_incompatible">Uyumsuz eklenti veya dahili hata. Eklentinin ve Nekuva\'nun en son sürümünü kullandığınızdan emin olun</string>
     <string name="text_empty_holder_secondary_filtered">Seçtiğiniz filtrelerle eşleşen manga yok</string>
     <string name="connection_ok">Bağlantı tamam</string>
     <string name="invalid_proxy_configuration">Geçersiz vekil sunucu yapılandırması</string>
@@ -740,7 +740,7 @@
     <string name="screen_orientation">Ekran yönü</string>
     <string name="portrait">Dikey</string>
     <string name="landscape">Yatay</string>
-    <string name="plugin_incompatible_with_cause">Eklenti hatası: %s\n Eklentinin ve Doki\'nun son sürümünü kullandığınızdan emin olun</string>
+    <string name="plugin_incompatible_with_cause">Eklenti hatası: %s\n Eklentinin ve Nekuva\'nun son sürümünü kullandığınızdan emin olun</string>
     <string name="error_not_image">Geçersiz biçim: görsel yerine %s alındı</string>
     <string name="access_denied_403">Erişim reddedildi (403)</string>
     <string name="max_backups_count">Maks yedek sayısı</string>
@@ -768,7 +768,7 @@
     <string name="send_backups_telegram">Yedekleri Telegram\'a gönder</string>
     <string name="test_connection">Bağlantıyı test et</string>
     <string name="telegram_chat_id_summary">Yedeklerin gönderileceği sohbetin ID\'sini girin</string>
-    <string name="open_telegram_bot_summary">Doki Yedek Botu ile sohbeti açmak için dokunun</string>
+    <string name="open_telegram_bot_summary">Nekuva Yedek Botu ile sohbeti açmak için dokunun</string>
     <string name="enable_all_sources">Bütün manga kaynaklarını etkinleştir</string>
     <string name="enable_all_sources_summary">Bütün kullanılabilir manga kaynakları kalıcı olarak etkinleştirilecektir</string>
     <string name="all_sources_enabled">Bütün kaynaklar etkinleştirildi</string>
@@ -791,11 +791,11 @@
     <string name="unnamed_chapter">İsimsiz bölüm</string>
     <string name="search_disabled_sources">Devre dışı bırakılmış kaynaklarda ara</string>
     <string name="error_details">Hata ayrıntıları</string>
-    <string name="error_disclaimer_app_outdated">Kullandığınız Doki versiyonu güncel değil gibi görünüyor. Bütün hata düzeltmelerini almak için lütfen en son sürümü indirin.</string>
+    <string name="error_disclaimer_app_outdated">Kullandığınız Nekuva versiyonu güncel değil gibi görünüyor. Bütün hata düzeltmelerini almak için lütfen en son sürümü indirin.</string>
     <string name="error_disclaimer_manga">Manganın kaynakta var olduğundan emin olmak için bir tarayıcıda açmayı deneyin.</string>
     <string name="error_disclaimer_report">Geliştiricilere bir hata bildiriminde bulunabilirsiniz. Sorunu araştırmamıza ve çözmemize yardımcı olacaktır.</string>
     <string name="link_to_manga_on_s">%s üzerinde manganın bağlantısı</string>
-    <string name="link_to_manga_in_app">Doki üzerinde manganın bağlantısı</string>
+    <string name="link_to_manga_in_app">Nekuva üzerinde manganın bağlantısı</string>
     <string name="clear_browser_data">Tarayıcı geçmişini temizle</string>
     <string name="clear_browser_data_summary">Önbellek ve çerezler gibi tarayıcı verilerini temizleyin. Uyarı: Manga kaynakları için yapılan doğrulamalar geçersiz kalabilir</string>
     <string name="no_write_permission_to_file">Dosya yazma izni yok</string>

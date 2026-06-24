@@ -85,7 +85,7 @@
     <string name="create_shortcut">បង្កើតផ្លូវកាត់…</string>
     <string name="read_mode">អាន</string>
     <string name="grid_size">ទំហំក្រឡា</string>
-    <string name="search_on_s">រកលើ%s</string>
+    <string name="search_on_s">រកលើ%1$s</string>
     <string name="switch_pages">ប្តូរទំព័រ</string>
     <string name="open_in_browser">បើកនៅក្នុងវេបប្រោសឹរ</string>
     <string name="notifications">ជូនដំណឹង</string>

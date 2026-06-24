@@ -64,7 +64,7 @@
     <string name="webtoon">ウェブトゥーン</string>
     <string name="read_mode">読み取りモード</string>
     <string name="grid_size">グリッドのサイズ</string>
-    <string name="search_on_s">%s で検索</string>
+    <string name="search_on_s">%1$s で検索</string>
     <string name="delete_manga">マンガを削除</string>
     <string name="text_delete_local_manga">デバイスから「%s」を完全に削除しますか？</string>
     <string name="reader_settings">リーダーの設定</string>
@@ -596,8 +596,8 @@
 	<string name="show_pages_thumbs_summary">詳細画面で「ページ」タブを有効にする</string>
 	<string name="error_no_data_received">サーバーからデータを受信できませんでした</string>
 	<string name="unsupported_backup_message">Nekuvaのバックアップファイルを選択してください。</string>
-	<string name="hours_short">%d 時</string>
-	<string name="minutes_short">%d 分</string>
+	<string name="hours_short">%1$d 時</string>
+	<string name="minutes_short">%1$d 分</string>
 	<string name="seconds_short">%d 秒</string>
 	<string name="hours_minutes_short">%1$d 時 %2$d 分</string>
 	<string name="minutes_seconds_short">%1$d 分 %2$d 秒</string>

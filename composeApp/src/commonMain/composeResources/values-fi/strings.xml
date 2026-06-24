@@ -112,7 +112,7 @@
     <string name="reader_settings">Lukijan asetukset</string>
     <string name="text_delete_local_manga">Haluatko todella poistaa ”%s” puhelimen paikallisesta tallennustilasta?</string>
     <string name="delete_manga">Poista manga</string>
-    <string name="search_on_s">Hae kohteesta %s</string>
+    <string name="search_on_s">Hae kohteesta %1$s</string>
     <string name="grid_size">Ruudukon koko</string>
     <string name="read_mode">Lukutila</string>
     <string name="webtoon">Webtoon</string>

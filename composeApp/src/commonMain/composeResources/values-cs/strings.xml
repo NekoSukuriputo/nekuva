@@ -367,7 +367,7 @@
     <string name="save_page">Uložit stranu</string>
     <string name="page_saved">Stránka uložena</string>
     <string name="operation_not_supported">Tato operace není podporována</string>
-    <string name="search_on_s">Hledat na %s</string>
+    <string name="search_on_s">Hledat na %1$s</string>
     <string name="internal_storage">Interní uložiště</string>
     <string name="enabled_d_of_d" tools:ignore="PluralsCandidate">%1$d z %2$d na</string>
     <string name="notification_sound">Zvuk oznámení</string>
@@ -534,7 +534,7 @@
     <string name="remove_from_history">Odstranit z historie</string>
     <string name="incognito_mode_hint">Váš pokrok ve čtení nebude uložen</string>
     <string name="last_read">Poslední přečtený</string>
-    <string name="minutes_short">%d m</string>
+    <string name="minutes_short">%1$d m</string>
     <string name="hours_minutes_short">%1$d h %2$d m</string>
     <string name="vertical">Svisle</string>
     <string name="ask_for_dest_dir_every_time">Pokaždé se ptát na cílovou složku</string>
@@ -618,7 +618,7 @@
     <string name="stats_cleared">Statistiky smazány</string>
     <string name="delete_read_chapters_summary">Odstranit již přečtené kapitoly z místního uložiště k uvolnění paměti</string>
     <string name="split_by_translations">Rozdělení podle překladů</string>
-    <string name="hours_short">%d h</string>
+    <string name="hours_short">%1$d h</string>
     <string name="missing_storage_permission">Přístup k manze na externím úložišti není povolen</string>
     <string name="authors">Autoři</string>
     <string name="enable_source">Povolit zdroj</string>

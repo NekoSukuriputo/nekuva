@@ -49,7 +49,7 @@
     <string name="webtoon">Webtoon</string>
     <string name="read_mode">Mod citire</string>
     <string name="grid_size">Marime grila</string>
-    <string name="search_on_s">Cauta pe %s</string>
+    <string name="search_on_s">Cauta pe %1$s</string>
     <string name="delete_manga">Sterge manga</string>
     <string name="text_delete_local_manga">Sterge permanent \"%s\" de pe acest dizpozitiv?</string>
     <string name="reader_settings">Setari cititor</string>

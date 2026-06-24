@@ -912,4 +912,25 @@
     <string name="all_sources">Semua sumber</string>
     <string name="move_up">Pindah ke atas</string>
     <string name="move_down">Pindah ke bawah</string>
+    <string name="action_done">Selesai</string>
+    <string name="anilist">AniList</string>
+    <string name="app_name">Nekuva</string>
+    <string name="auto_double_foldable">Dua Halaman Otomatis pada Lipat</string>
+    <string name="breadcrumbs_separator"><![CDATA[" > "]]></string>
+    <string name="chapters_time_pattern">%1$s (%2$s)</string>
+    <string name="discord">Discord</string>
+    <string name="download_summary_pattern">%1$s · %2$s</string>
+    <string name="fraction_pattern">%1$d/%2$d</string>
+    <string name="help_wanted">Butuh bantuan?</string>
+    <string name="in_library">Di pustaka</string>
+    <string name="inline_preference_pattern">%1$s: %2$s</string>
+    <string name="items_count">%1$d item</string>
+    <string name="kitsu">Kitsu</string>
+    <string name="list_ellipsize_pattern">(+%1$d)</string>
+    <string name="mal">MyAnimeList</string>
+    <string name="new_chapters_pattern">%1$s: %2$d</string>
+    <string name="not_set">Belum diatur</string>
+    <string name="ok">OK</string>
+    <string name="shikimori">Shikimori</string>
+    <string name="source_icons">Ikon sumber</string>
 </resources>
