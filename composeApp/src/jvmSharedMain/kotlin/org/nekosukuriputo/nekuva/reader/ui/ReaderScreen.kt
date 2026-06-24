@@ -252,6 +252,9 @@ fun ReaderScreen(
     }
 
     Scaffold(
+        // Full-bleed: the page fills the whole screen (no status-bar gap). The TopAppBar self-insets for
+        // the status bar; the bottom bar adds navigationBarsPadding below.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             AnimatedVisibility(visible = controlsVisible) {
                 TopAppBar(
@@ -356,7 +359,7 @@ fun ReaderScreen(
                   }
                     // Bottom stack: thin info bar (always, if enabled) + actions bar (only when controls shown).
                     Column(
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(paddingValues),
+                        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         if (showInfoBar && pageIndicator.total > 0) {
