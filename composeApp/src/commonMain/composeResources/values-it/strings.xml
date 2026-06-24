@@ -90,7 +90,7 @@
     <string name="about">Informazioni</string>
     <string name="passwords_mismatch">Le password non corrispondono</string>
     <string name="repeat_password">Ripeti la password</string>
-    <string name="">Chiedi la password all\'avvio dell\'applicazione</string>
+    <string name="protect_application_summary">Chiedi la password all\'avvio dell\'applicazione</string>
     <string name="protect_application">Proteggi l\'applicazione</string>
     <string name="wrong_password">Password sbagliata</string>
     <string name="enter_password">Inserisci la password</string>
