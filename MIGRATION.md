@@ -1787,3 +1787,20 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   menghantam source berulang; di-clear saat retry). `ReaderScreen` menampilkan snackbar dengan action →
   `LocalUriHandler.openUri(manga.publicUrl)`. Reuse key Doki `not_found_404` + `open_in_browser` (sudah ada di
   en/id). Bab terunduh tetap kebuka offline tanpa toast.
+
+**Poin 3 — Ikon update aplikasi di kotak pencarian + alur unduh/instal APK (mirror Doki AppUpdateActivity)** ✅ (committed)
+- **Cek update saat app start:** `MainScreen` `LaunchedEffect` panggil `AppUpdateRepository.fetchUpdate(AppInfo.VERSION_NAME)`
+  sekali (background) bila belum ada hasil → `observeAvailableUpdate()` terisi bila ada rilis lebih baru.
+- **Ikon update di kotak pencarian** (`MainTopBar`): param `appUpdateAvailable`/`onAppUpdateClick`; muncul ikon
+  `SystemUpdate` + dot badge **hanya** saat ada update; klik → dialog update. Overflow "App update available"
+  juga buka dialog yang sama (dulu navigate ke About).
+- **Dialog update (gambar 5)** `AppUpdateDialog`: versi baru (`new_version_s`), ukuran APK (`size_s`, Android saja),
+  catatan rilis (GitHub body, ditampilkan teks), tombol **Update**/Batal.
+- **Platform launcher** `AppUpdateLauncher` (expect `jvmShared` + actual android/desktop):
+  - **Android:** `DownloadManager` enqueue APK (`VISIBILITY_VISIBLE_NOTIFY_COMPLETED` → progres di notification
+    shade), `BroadcastReceiver` `ACTION_DOWNLOAD_COMPLETE` → `Intent.ACTION_INSTALL_PACKAGE` (prompt instal). Izin
+    `REQUEST_INSTALL_PACKAGES` sudah ada di manifest. Tanpa aset APK → fallback buka browser.
+  - **Desktop:** `Desktop.browse(version.url)` (buka halaman rilis di browser default).
+- **About:** tap versi → kalau ada update tampilkan `AppUpdateDialog` (dulu cuma toast `new_version_s`).
+- **Fix format string (sekaligus bagian Poin 5):** `new_version_s` + `size_s` diubah `%s` → **positional `%1$s`**
+  di **SEMUA** katalog bahasa (Compose Resources tak substitusi `%s` polos → dulu tampil literal "Versi baru: %s").

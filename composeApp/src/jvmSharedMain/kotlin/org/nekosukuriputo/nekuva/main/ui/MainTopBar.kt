@@ -12,6 +12,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -32,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import nekuva.composeapp.generated.resources.Res
+import nekuva.composeapp.generated.resources.app_update_available
 import nekuva.composeapp.generated.resources.search_manga
 import nekuva.composeapp.generated.resources.voice_search
 import org.jetbrains.compose.resources.stringResource
@@ -54,6 +58,10 @@ fun MainTopBar(
     searchActive: Boolean = false,
     onSearchFocusChanged: (Boolean) -> Unit = {},
     onCloseSearch: () -> Unit = {},
+    // App-update notification icon (Doki: update badge near the search box) — shown only when a newer
+    // release is available; tapping it opens the update dialog.
+    appUpdateAvailable: Boolean = false,
+    onAppUpdateClick: () -> Unit = {},
 ) {
     // Voice search (Doki VoiceInputContract): null on Desktop / when no recognizer → no mic button.
     val voiceSearch = org.nekosukuriputo.nekuva.core.os.rememberVoiceSearchLauncher { onQueryChange(it) }
@@ -99,6 +107,17 @@ fun MainTopBar(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         )
+        // App-update icon — appears only when a newer release exists (a dot badge marks it), like Doki.
+        if (appUpdateAvailable) {
+            IconButton(onClick = onAppUpdateClick) {
+                BadgedBox(badge = { Badge() }) {
+                    Icon(
+                        Icons.Outlined.SystemUpdate,
+                        contentDescription = stringResource(Res.string.app_update_available),
+                    )
+                }
+            }
+        }
         Box {
             var expanded by remember { mutableStateOf(false) }
             IconButton(onClick = { expanded = true }) {

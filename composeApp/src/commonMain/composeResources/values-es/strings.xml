@@ -103,8 +103,8 @@
     <string name="updates">Actualizaciones</string>
     <string name="text_feed_holder">Aquí se muestran los nuevos capítulos de lo que está leyendo</string>
     <string name="search_results">Resultados de la búsqueda</string>
-    <string name="new_version_s">Nueva versión: %s</string>
-    <string name="size_s">Tamaño: %s</string>
+    <string name="new_version_s">Nueva versión: %1$s</string>
+    <string name="size_s">Tamaño: %1$s</string>
     <string name="clear_updates_feed">Borrar actualizaciones</string>
     <string name="updates_feed_cleared">Borrar el feed de actualizaciones</string>
     <string name="rotate_screen">Girar pantalla</string>

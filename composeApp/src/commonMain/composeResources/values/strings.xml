@@ -125,9 +125,9 @@
     <string name="updates">Updates</string>
     <string name="text_feed_holder">New chapters of what you are reading are shown here</string>
     <string name="search_results">Search results</string>
-    <string name="new_version_s">New version: %s</string>
+    <string name="new_version_s">New version: %1$s</string>
     <string name="youre_using_the_latest_version">You\'re using the latest version</string>
-    <string name="size_s">Size: %s</string>
+    <string name="size_s">Size: %1$s</string>
     <string name="clear_updates_feed">Clear updates feed</string>
     <string name="updates_feed_cleared">Cleared</string>
     <string name="rotate_screen">Rotate screen</string>

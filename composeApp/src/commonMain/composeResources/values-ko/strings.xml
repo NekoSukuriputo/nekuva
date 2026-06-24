@@ -24,7 +24,7 @@
     <string name="done">완료</string>
     <string name="favourites_category_empty">빈 카테고리</string>
     <string name="updates">업데이트</string>
-    <string name="new_version_s">새 버전: %s</string>
+    <string name="new_version_s">새 버전: %1$s</string>
     <string name="clear_updates_feed">업데이트 피드 지우기</string>
     <string name="local_storage">내장 메모리</string>
     <string name="favourites">즐겨찾기</string>
@@ -81,7 +81,7 @@
     <string name="all_favourites">모든 즐겨찾기</string>
     <string name="read_later">나중에 읽기</string>
     <string name="search_results">검색 결과</string>
-    <string name="size_s">크기: %s</string>
+    <string name="size_s">크기: %1$s</string>
     <string name="computing_">계산중…</string>
     <string name="clear">지우기</string>
     <string name="text_local_holder_primary">먼저 아무거나 저장해보세요</string>

@@ -137,7 +137,7 @@
 	<string name="updates">更新内容</string>
 	<string name="text_feed_holder">在读漫画的新章节将在这里显示</string>
 	<string name="search_results">搜索结果</string>
-	<string name="new_version_s">新版本：%s</string>
+	<string name="new_version_s">新版本：%1$s</string>
 	<string name="clear_updates_feed">清除订阅更新记录</string>
 	<string name="updates_feed_cleared">订阅更新记录已清除</string>
 	<string name="rotate_screen">旋转屏幕</string>
@@ -294,7 +294,7 @@
 	<string name="importing_manga">漫画导入中</string>
 	<string name="reader_info_pattern">第 %1$d/%2$d 章 第 %3$d/%4$d 页</string>
 	<string name="enabled_d_of_d" tools:ignore="PluralsCandidate">共 %2$d ，已启用 %1$d</string>
-	<string name="size_s">大小：%s</string>
+	<string name="size_s">大小：%1$s</string>
 	<string name="confirm_exit">再按一次返回键退出</string>
 	<string name="exit_confirmation_summary">按两次返回键退出应用</string>
 	<string name="exit_confirmation">退出确认</string>

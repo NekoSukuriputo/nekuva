@@ -86,7 +86,7 @@
     <string name="update">अद्यतन</string>
     <string name="feed_will_update_soon">फीड अद्यतन शीघ्र ही आरंभ होगा</string>
     <string name="app_update_available">इस ऐप का नया संस्करण उपलब्ध हैं</string>
-    <string name="new_version_s">नया संस्करण: %s</string>
+    <string name="new_version_s">नया संस्करण: %1$s</string>
     <string name="text_delete_local_manga">डिवाइस से \"%s\" को स्थायी रूप से मिटाएं?</string>
     <string name="text_history_holder_primary">आप जो पढ़ेंगे वह यहां प्रदर्शित किया जाएगा</string>
     <string name="delete_manga">मंगा मिटाएं</string>
@@ -98,7 +98,7 @@
     <string name="track_sources">अद्यतन देखें</string>
     <string name="clear_search_history">खोज इतिहास साफ करें</string>
     <string name="download">डाउनलोड</string>
-    <string name="size_s">आकार: %s</string>
+    <string name="size_s">आकार: %1$s</string>
     <string name="new_chapters">नये अध्याय</string>
     <string name="clear_updates_feed">अद्यतन फीड साफ करें</string>
     <string name="notifications_settings">सुचना के सेटिंग</string>

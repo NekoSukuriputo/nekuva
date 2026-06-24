@@ -49,7 +49,7 @@
     <string name="read_later">Basahin mamaya</string>
     <string name="updates">Mga update</string>
     <string name="search_results">Mga resulta ng paghahanap</string>
-    <string name="size_s">Laki: %s</string>
+    <string name="size_s">Laki: %1$s</string>
     <string name="clear_updates_feed">Linisin ang feed ng mga update</string>
     <string name="updates_feed_cleared">Nalinisan na</string>
     <string name="update">Update</string>
@@ -135,7 +135,7 @@
     <string name="pages">Mga pahina</string>
     <string name="clear_history">Linisin ang kasaysayan</string>
     <string name="clear_search_history">Linisin ang kasaysayan ng paghahanap</string>
-    <string name="new_version_s">Bagong bersyon: %s</string>
+    <string name="new_version_s">Bagong bersyon: %1$s</string>
     <string name="passwords_mismatch">Hindi tumutugma sa mga password</string>
     <string name="clear_cookies">Linisin ang mga cookie</string>
     <string name="clear_pages_cache">Linisin ang page cache</string>

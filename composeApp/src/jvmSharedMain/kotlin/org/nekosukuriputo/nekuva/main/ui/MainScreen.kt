@@ -86,9 +86,18 @@ fun MainScreen(
     val feedUnread by trackingRepo.observeUnreadUpdatesCount().collectAsState(initial = 0)
     val feedHeaderOn by settings.observeBoolean(AppSettings.KEY_FEED_HEADER, true)
         .collectAsState(initial = settings.isFeedHeaderVisible)
-    // App-update available (Doki opt_main action_app_update): a prominent overflow entry when a newer release exists.
+    // App-update available (Doki opt_main action_app_update): a search-box icon + overflow entry when a
+    // newer release exists. Check GitHub once per app launch (background); the icon appears if newer.
     val appUpdateRepo = koinInject<org.nekosukuriputo.nekuva.core.github.AppUpdateRepository>()
     val appUpdate by appUpdateRepo.observeAvailableUpdate().collectAsState()
+    var showAppUpdateDialog by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (appUpdateRepo.observeAvailableUpdate().value == null) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                runCatching { appUpdateRepo.fetchUpdate(org.nekosukuriputo.nekuva.core.AppInfo.VERSION_NAME) }
+            }
+        }
+    }
     // Incognito toggle (Doki opt_main checkable item), observed live so the menu checkbox stays in sync.
     val incognitoOn by settings.observeBoolean(AppSettings.KEY_INCOGNITO_MODE, false)
         .collectAsState(initial = settings.isIncognitoModeEnabled)
@@ -105,7 +114,7 @@ fun MainScreen(
         onShowUpdated = { settings.isFeedHeaderVisible = !feedHeaderOn },
         onClearFeed = { showClearFeed = true },
         appUpdateAvailable = appUpdate != null,
-        onAppUpdate = { navController.navigate(AboutSettingsRoute) },
+        onAppUpdate = { showAppUpdateDialog = true },
     )
     // Local import (Doki opt_local action_import → ImportDialog): pick a .cbz or a folder, copy + parse.
     val importer = koinInject<org.nekosukuriputo.nekuva.local.domain.MangaImportUseCase>()
@@ -261,6 +270,8 @@ fun MainScreen(
                             searchActive = showSuggestions,
                             onSearchFocusChanged = { if (it) searchActive = true },
                             onCloseSearch = { dismissSearch() },
+                            appUpdateAvailable = appUpdate != null,
+                            onAppUpdateClick = { showAppUpdateDialog = true },
                         )
                     }
                     Box(modifier = Modifier.weight(1f)) {
@@ -286,6 +297,8 @@ fun MainScreen(
                             searchActive = showSuggestions,
                             onSearchFocusChanged = { if (it) searchActive = true },
                             onCloseSearch = { dismissSearch() },
+                            appUpdateAvailable = appUpdate != null,
+                            onAppUpdateClick = { showAppUpdateDialog = true },
                         )
                     }
                 },
@@ -328,6 +341,16 @@ fun MainScreen(
                     }
                 }
             }
+        }
+    }
+
+    // App-update dialog (Doki AppUpdateActivity): shown from the search-box update icon / overflow entry.
+    appUpdate?.let { version ->
+        if (showAppUpdateDialog) {
+            org.nekosukuriputo.nekuva.settings.ui.about.AppUpdateDialog(
+                version = version,
+                onDismiss = { showAppUpdateDialog = false },
+            )
         }
     }
 

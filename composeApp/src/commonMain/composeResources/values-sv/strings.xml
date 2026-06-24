@@ -164,7 +164,7 @@
     <string name="favourites_category_empty">Tom kategori</string>
     <string name="read_later">Läs senare</string>
     <string name="updates">Uppdateringar</string>
-    <string name="new_version_s">Ny version: %s</string>
+    <string name="new_version_s">Ny version: %1$s</string>
     <string name="text_local_holder_secondary">Spara något från en onlinekatalog eller importera från en fil.</string>
     <string name="recent_manga">Nytt</string>
     <string name="manga_save_location">Nedladdningsmapp</string>
@@ -174,7 +174,7 @@
     <string name="rotate_screen">Rotera skärm</string>
     <string name="cannot_find_available_storage">Inget tillgängligt lagringsutrymme</string>
     <string name="done">Färdig</string>
-    <string name="size_s">Storlek: %s</string>
+    <string name="size_s">Storlek: %1$s</string>
     <string name="update">Uppdatera</string>
     <string name="enter_password">Ange lösenord</string>
     <string name="all_favourites">Alla favoriter</string>

@@ -63,7 +63,7 @@
     <string name="read_later">Les seinare</string>
     <string name="updates">Oppdateringar</string>
     <string name="search_results">Søkesvar</string>
-    <string name="new_version_s">Ny utgåve: %s</string>
+    <string name="new_version_s">Ny utgåve: %1$s</string>
     <string name="updates_feed_cleared">Tømt</string>
     <string name="rotate_screen">Snu skjermen</string>
     <string name="track_sources">Leit etter oppdateringar</string>
@@ -102,7 +102,7 @@
     <string name="text_local_holder_primary">Hent noko først</string>
     <string name="not_available">Ikkje tilgjengeleg</string>
     <string name="update">Oppdater</string>
-    <string name="size_s">Storleik: %s</string>
+    <string name="size_s">Storleik: %1$s</string>
     <string name="black_dark_theme_summary">Brukar mindre straum på AMOLED-skjermar</string>
     <string name="app_version">Utgåve %s</string>
     <string name="no_update_available">Ingen tilgjengelege oppdateringar</string>

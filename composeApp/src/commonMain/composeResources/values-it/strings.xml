@@ -101,8 +101,8 @@
     <string name="rotate_screen">Ruota lo schermo</string>
     <string name="updates_feed_cleared">Flusso degli aggiornamenti cancellato</string>
     <string name="clear_updates_feed">Cancella il flusso degli aggiornamenti</string>
-    <string name="size_s">Dimensioni: %s</string>
-    <string name="new_version_s">Nuova versione: %s</string>
+    <string name="size_s">Dimensioni: %1$s</string>
+    <string name="new_version_s">Nuova versione: %1$s</string>
     <string name="search_results">Risultati della ricerca</string>
     <string name="text_feed_holder">Qui potrai vedere i nuovi capitoli del manga che stai leggendo</string>
     <string name="updates">Aggiornamenti</string>

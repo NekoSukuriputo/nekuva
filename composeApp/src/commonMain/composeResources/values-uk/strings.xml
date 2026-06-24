@@ -96,8 +96,8 @@
     <string name="favourites_category_empty">Порожня категорія</string>
     <string name="read_later">Прочитати пізніше</string>
     <string name="updates">Оновлення</string>
-    <string name="new_version_s">Нова версія: %s</string>
-    <string name="size_s">Розмір: %s</string>
+    <string name="new_version_s">Нова версія: %1$s</string>
+    <string name="size_s">Розмір: %1$s</string>
     <string name="clear_updates_feed">Очистити стрічку оновлень</string>
     <string name="updates_feed_cleared">Очищено</string>
     <string name="rotate_screen">Повернути екран</string>

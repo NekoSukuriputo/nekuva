@@ -88,8 +88,8 @@
     <string name="read_later">Θα διαβαστούν αργότερα</string>
     <string name="updates">Ενημερώσεις</string>
     <string name="search_results">Αποτελέσματα αναζήτησης</string>
-    <string name="new_version_s">Νέα έκδοση: %s</string>
-    <string name="size_s">Μέγεθος: %s</string>
+    <string name="new_version_s">Νέα έκδοση: %1$s</string>
+    <string name="size_s">Μέγεθος: %1$s</string>
     <string name="clear_updates_feed">Εκκαθάριση τροφοδοτικού ενημερώσεων</string>
     <string name="updates_feed_cleared">Καθαρίστηκε</string>
     <string name="rotate_screen">Περιστροφή οθόνης</string>

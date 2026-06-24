@@ -111,7 +111,7 @@
     <string name="update">تحديث</string>
     <string name="feed_will_update_soon">سيبدأ تحديث الموجز قريبًا</string>
     <string name="app_update_available">تتوفر نسخة جديدة من التطبيق</string>
-    <string name="new_version_s">نسخة جديدة: %s</string>
+    <string name="new_version_s">نسخة جديدة: %1$s</string>
     <string name="sync_settings">إعدادات التزامن</string>
     <string name="create_category">قائمة جديدة</string>
     <string name="notification_sound">صوت الإشعار</string>
@@ -130,7 +130,7 @@
     <string name="just_now">الآن</string>
     <string name="download">تنزيل</string>
     <string name="chapter_is_missing">الفصل مفقود</string>
-    <string name="size_s">الحجم: %s</string>
+    <string name="size_s">الحجم: %1$s</string>
     <string name="about">حول</string>
     <string name="check_for_new_chapters">التحقق من الفصول الجديدة</string>
     <string name="captcha_solve">حل</string>

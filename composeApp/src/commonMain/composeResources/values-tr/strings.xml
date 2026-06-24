@@ -122,7 +122,7 @@
     <string name="text_local_holder_secondary">Çevrim içi kaynaklardan kaydedin veya dosyaları içe aktarın.</string>
     <string name="manga_shelf">Raf</string>
     <string name="recent_manga">Son</string>
-    <string name="size_s">Boyut: %s</string>
+    <string name="size_s">Boyut: %1$s</string>
     <string name="updates_feed_cleared">Temizlendi</string>
     <string name="enter_password">Parola gir</string>
     <string name="protect_application_summary">Doki başlatılırken parola sor</string>
@@ -165,7 +165,7 @@
     <string name="no_update_available">Güncelleme yok</string>
     <string name="all_favourites">Tüm favoriler</string>
     <string name="text_feed_holder">Okuduklarınızın yeni bölümleri burada gösterilir</string>
-    <string name="new_version_s">Yeni sürüm: %s</string>
+    <string name="new_version_s">Yeni sürüm: %1$s</string>
     <string name="protect_application">Uygulamayı koru</string>
     <string name="passwords_mismatch">Parolalar eşleşmiyor</string>
     <string name="right_to_left">Sağdan-sola</string>

@@ -103,8 +103,8 @@
     <string name="updates">Абнаўленні</string>
     <string name="text_feed_holder">Тут паказваюцца новыя раздзелы таго, што вы чытаеце</string>
     <string name="search_results">Вынікі пошуку</string>
-    <string name="new_version_s">Новая версія: %s</string>
-    <string name="size_s">Памер: %s</string>
+    <string name="new_version_s">Новая версія: %1$s</string>
+    <string name="size_s">Памер: %1$s</string>
     <string name="clear_updates_feed">Ачысціць стужку абнаўленняў</string>
     <string name="updates_feed_cleared">Ачышчана</string>
     <string name="rotate_screen">Павярнуць экран</string>

@@ -29,19 +29,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.*
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
@@ -80,19 +80,21 @@ fun AboutSettingsScreen(
         is ExtState.Idle -> stringResource(Res.string.extensions_using_builtin)
     }
 
+    // When the manual check finds a newer release, show the full update dialog (Doki AppUpdateActivity) —
+    // download + install on Android, open the release page on Desktop — instead of a bare toast.
+    var updateAvailable by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<org.nekosukuriputo.nekuva.core.github.AppVersion?>(null)
+    }
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is UpdateCheckResult.UpToDate -> snackbar.showSnackbar(upToDate)
-                is UpdateCheckResult.Available -> {
-                    val result = snackbar.showSnackbar(
-                        message = getString(Res.string.new_version_s, event.version.name),
-                        actionLabel = "↗",
-                    )
-                    if (result == SnackbarResult.ActionPerformed) uriHandler.openUri(event.version.url)
-                }
+                is UpdateCheckResult.Available -> updateAvailable = event.version
             }
         }
+    }
+    updateAvailable?.let { version ->
+        AppUpdateDialog(version = version, onDismiss = { updateAvailable = null })
     }
 
     Scaffold(

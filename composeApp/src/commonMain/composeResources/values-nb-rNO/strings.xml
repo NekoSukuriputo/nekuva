@@ -32,7 +32,7 @@
     <string name="update">Oppdater</string>
     <string name="updates_feed_cleared">Tømt</string>
     <string name="clear_updates_feed">Tøm oppdateringsflyt</string>
-    <string name="new_version_s">Ny versjon: %s</string>
+    <string name="new_version_s">Ny versjon: %1$s</string>
     <string name="text_feed_holder">Nye kapitler av det du leser vises her</string>
     <string name="updates">Oppdatering</string>
     <string name="other_storage">Annen lagring</string>
@@ -93,7 +93,7 @@
     <string name="enter_password">Skriv inn passord</string>
     <string name="dont_check">Ikke sjekk</string>
     <string name="rotate_screen">Roter skjerm</string>
-    <string name="size_s">Størrelse: %s</string>
+    <string name="size_s">Størrelse: %1$s</string>
     <string name="search_results">Søkeresultater</string>
     <string name="read_later">Les senere</string>
     <string name="favourites_category_empty">Tom kategori</string>

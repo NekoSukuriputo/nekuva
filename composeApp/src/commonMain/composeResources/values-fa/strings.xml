@@ -174,9 +174,9 @@
     <string name="light_indicator">نشانگر ال ای دی</string>
     <string name="pages_animation">انیمیشن صفحه</string>
     <string name="updates">به روز شده ها</string>
-    <string name="new_version_s">نسخه ی جدید: %s</string>
+    <string name="new_version_s">نسخه ی جدید: %1$s</string>
     <string name="other_storage">محل های ذخیره سازی دیگر</string>
-    <string name="size_s">حجم: %s</string>
+    <string name="size_s">حجم: %1$s</string>
     <string name="rotate_screen">چرخاندن صفحه</string>
     <string name="update">به روزرسانی</string>
     <string name="feed_will_update_soon">آپدیت فید به زودی شروع می شود</string>

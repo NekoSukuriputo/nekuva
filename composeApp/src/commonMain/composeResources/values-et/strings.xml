@@ -149,7 +149,7 @@
     <string name="select_range">Valige vahemik</string>
     <string name="tracker_warning">Mõnedel seadmetel on erinev süsteemikäitumine, mis võib katkestada taustatööd.</string>
     <string name="network_error">Võrguviga</string>
-    <string name="new_version_s">Uus versioon: %s</string>
+    <string name="new_version_s">Uus versioon: %1$s</string>
     <string name="no_manga_sources">Pole manga allikaid</string>
     <string name="light">Valge</string>
     <string name="suggestions_excluded_genres_summary">Täpsusta žanrid, mida te ei soovi ettepanekutes näha</string>
@@ -216,7 +216,7 @@
     <string name="reader_info_pattern">Pt. %1$d/%2$d Lk. %3$d/%4$d</string>
     <string name="contrast">Kontrast</string>
     <string name="history_cleared">Ajalugu tühjendatud</string>
-    <string name="size_s">Suurus: %s</string>
+    <string name="size_s">Suurus: %1$s</string>
     <string name="reader_slider">Näita lehekülje vahetamise liugurit</string>
     <string name="no_manga_sources_text">Lülita sisse manga allikaid, et lugeda mangat online</string>
     <string name="about">Rakenduse teave</string>

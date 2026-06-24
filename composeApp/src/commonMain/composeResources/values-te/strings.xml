@@ -113,8 +113,8 @@
 	<string name="updates">నవీకరణలు</string>
 	<string name="text_feed_holder">మీరు చదువుతున్న కొత్త అధ్యాయాలు ఇక్కడ చూపబడతాయి</string>
 	<string name="search_results">వెతుకుపరి ఫలితాలు</string>
-	<string name="new_version_s">కొత్త వెర్షన్: %s</string>
-	<string name="size_s">సైజ్: %s</string>
+	<string name="new_version_s">కొత్త వెర్షన్: %1$s</string>
+	<string name="size_s">సైజ్: %1$s</string>
 	<string name="clear_updates_feed">నవీకరణ ఫీడ్ క్లియర్ చెయ్యి</string>
 	<string name="updates_feed_cleared">ఫీడ్ క్లియర్ అయింది</string>
 	<string name="rotate_screen">స్క్రీన్ తిరగబెట్టు</string>

@@ -76,7 +76,7 @@
     <string name="favourites_category_empty">Prázdná kategorie</string>
     <string name="text_feed_holder">Nové kapitoly toho co čtete jsou zobrazeny zde</string>
     <string name="search_results">Výsledky vyhledávání</string>
-    <string name="new_version_s">Nová verze: %s</string>
+    <string name="new_version_s">Nová verze: %1$s</string>
     <string name="updates_feed_cleared">Vyčištěno</string>
     <string name="rotate_screen">Otočit displej</string>
     <string name="update">Aktualizovat</string>
@@ -382,7 +382,7 @@
     <string name="remove_category">Odstranit</string>
     <string name="read_later">Přečíst později</string>
     <string name="updates">Aktualizace</string>
-    <string name="size_s">Velikost: %s</string>
+    <string name="size_s">Velikost: %1$s</string>
     <string name="passwords_mismatch">Neodpovídající heslo</string>
     <string name="track_sources">Hledat aktualizace</string>
     <string name="protect_application_summary">Zeptat se na heslo při zapnutí Nekuva</string>

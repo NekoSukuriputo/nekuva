@@ -88,7 +88,7 @@
     <string name="error">Грешка</string>
     <string name="new_chapters">Нова поглавља</string>
     <string name="notifications_settings">Подешавања обавештења</string>
-    <string name="new_version_s">Нова верзија: %s</string>
+    <string name="new_version_s">Нова верзија: %1$s</string>
     <string name="about_app_translation_summary">Преведи ову апликацију</string>
     <string name="about_app_translation">Превод</string>
     <string name="screenshots_policy">Политика снимања екрана</string>
@@ -350,7 +350,7 @@
     <string name="reader_info_pattern">Поглавље %1$d/%2$d Страна %3$d/%4$d</string>
     <string name="contrast">Контраст</string>
     <string name="history_cleared">Историја је очишћена</string>
-    <string name="size_s">Величина: %s</string>
+    <string name="size_s">Величина: %1$s</string>
     <string name="reader_slider">Прикажи клизач за пребацивање страница</string>
     <string name="no_manga_sources_text">Омогући изворе манге за читање манге на мрежи</string>
     <string name="downloaded">Преузето</string>

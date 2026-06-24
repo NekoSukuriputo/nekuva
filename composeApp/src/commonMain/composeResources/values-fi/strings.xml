@@ -66,8 +66,8 @@
     <string name="rotate_screen">Käännä näyttöä</string>
     <string name="clear_updates_feed">Tyhjennä päivityssyöte</string>
     <string name="updates_feed_cleared">Päivitykset syötteen tyhjennetty</string>
-    <string name="size_s">Koko: %s</string>
-    <string name="new_version_s">Uusi versio: %s</string>
+    <string name="size_s">Koko: %1$s</string>
+    <string name="new_version_s">Uusi versio: %1$s</string>
     <string name="search_results">Hakutulokset</string>
     <string name="text_feed_holder">Täällä näet lukemasi mangan uudet luvut</string>
     <string name="updates">Päivitykset</string>

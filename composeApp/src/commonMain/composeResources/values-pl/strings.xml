@@ -192,8 +192,8 @@
     <string name="favourites_category_empty">Pusta kategoria</string>
     <string name="read_later">Czytaj później</string>
     <string name="updates">Aktualizacje</string>
-    <string name="new_version_s">Nowa wersja: %s</string>
-    <string name="size_s">Wielkość: %s</string>
+    <string name="new_version_s">Nowa wersja: %1$s</string>
+    <string name="size_s">Wielkość: %1$s</string>
     <string name="rotate_screen">Obróć ekran</string>
     <string name="update">Odśwież</string>
     <string name="track_sources">Szukaj aktualizacji</string>

@@ -100,8 +100,8 @@
 	<string name="read_later">Ler depois</string>
 	<string name="updates">Atualizações</string>
 	<string name="search_results">Resultados da busca</string>
-	<string name="new_version_s">Nova versão: %s</string>
-	<string name="size_s">Tamanho: %s</string>
+	<string name="new_version_s">Nova versão: %1$s</string>
+	<string name="size_s">Tamanho: %1$s</string>
 	<string name="clear_updates_feed">Limpar o fluxo de atualizações</string>
 	<string name="rotate_screen">Girar a tela</string>
 	<string name="update">Atualizar</string>

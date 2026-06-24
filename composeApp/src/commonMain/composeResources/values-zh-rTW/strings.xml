@@ -113,8 +113,8 @@
     <string name="all_favourites">所有最愛</string>
     <string name="favourites_category_empty">空白分類</string>
     <string name="search_results">搜尋結果</string>
-    <string name="new_version_s">新版本: %s</string>
-    <string name="size_s">大小: %s</string>
+    <string name="new_version_s">新版本: %1$s</string>
+    <string name="size_s">大小: %1$s</string>
     <string name="updates_feed_cleared">已清除</string>
     <string name="clear_updates_feed">清除更新訂閱</string>
     <string name="rotate_screen">旋轉畫面</string>

@@ -103,7 +103,7 @@
     <string name="updates">更新</string>
     <string name="text_feed_holder">あなたが読んでいるものの新しい章がここに示されています</string>
     <string name="search_results">の検索結果</string>
-    <string name="size_s">サイズ:%s</string>
+    <string name="size_s">サイズ:%1$s</string>
     <string name="clear_updates_feed">更新フィードをクリア</string>
     <string name="updates_feed_cleared">クリア</string>
     <string name="update">アップデート</string>
@@ -121,7 +121,7 @@
     <string name="text_empty_holder_primary">ここは空っぽです…</string>
     <string name="favourites_category_empty">空のカテゴリー</string>
     <string name="text_local_holder_secondary">オンラインソースから保存するかファイルをインポートします。</string>
-    <string name="new_version_s">新しいバージョン:%s</string>
+    <string name="new_version_s">新しいバージョン:%1$s</string>
     <string name="rotate_screen">画面を回転させる</string>
     <string name="enter_password">パスワードを入力してください</string>
     <string name="wrong_password">パスワードが間違っています</string>

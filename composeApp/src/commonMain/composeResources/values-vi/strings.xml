@@ -72,7 +72,7 @@
     <string name="read_later">Đọc sau</string>
     <string name="updates">Cập nhật</string>
     <string name="search_results">Kết quả tìm kiếm</string>
-    <string name="size_s">Kích thước: %s</string>
+    <string name="size_s">Kích thước: %1$s</string>
     <string name="rotate_screen">Xoay màn hình</string>
     <string name="feed_will_update_soon">Cập nhật danh sách sẽ bắt đầu sớm</string>
     <string name="track_sources">Kiểm tra tập / chương truyện mới</string>
@@ -201,7 +201,7 @@
     <string name="screenshots_allow">Cho phép</string>
     <string name="suggestions_info">Tất cả dữ liệu chỉ được phân tích cục bộ trên thiết bị này và không bao giờ gửi đi nơi nào khác.</string>
     <string name="all_favourites">Tất cả danh mục yêu thích</string>
-    <string name="new_version_s">Phiên bản mới: %s</string>
+    <string name="new_version_s">Phiên bản mới: %1$s</string>
     <string name="clear_updates_feed">Xoá danh sách cập nhật</string>
     <string name="updates_feed_cleared">Đã xoá</string>
     <string name="update">Cập nhật</string>

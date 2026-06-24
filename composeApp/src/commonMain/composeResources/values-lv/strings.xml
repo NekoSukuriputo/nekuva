@@ -136,8 +136,8 @@
     <string name="updates">Atjauninājumi</string>
     <string name="text_feed_holder">Jaunas daļas no tā, ko tu lasi parādās šeit</string>
     <string name="search_results">Meklēšanas rezultāti</string>
-    <string name="new_version_s">Jauna versija: %s</string>
-    <string name="size_s">Izmērs: %s</string>
+    <string name="new_version_s">Jauna versija: %1$s</string>
+    <string name="size_s">Izmērs: %1$s</string>
     <string name="clear_updates_feed">Attīrīt atjauninājumus</string>
     <string name="updates_feed_cleared">Attīrīts</string>
     <string name="update">Atjaunināt</string>

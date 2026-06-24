@@ -4,8 +4,8 @@
     <string name="text_history_holder_secondary">«Шолу» бөлімінен не оқуға болатынын табыңыз.</string>
     <string name="text_local_holder_secondary">Файлдан импорттаңыз не онлайн каталогтан бірдеңе сақтаңыз.</string>
     <string name="other_storage">Басқа бума</string>
-    <string name="new_version_s">Жаңа нұсқа: %s</string>
-    <string name="size_s">Өлшемі: %s</string>
+    <string name="new_version_s">Жаңа нұсқа: %1$s</string>
+    <string name="size_s">Өлшемі: %1$s</string>
     <string name="clear_updates_feed">Жаңарту легін тазалау</string>
     <string name="updates_feed_cleared">Тазаланды</string>
     <string name="rotate_screen">Экранды айналдыру</string>

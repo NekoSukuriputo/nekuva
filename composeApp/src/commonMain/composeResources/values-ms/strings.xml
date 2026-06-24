@@ -288,8 +288,8 @@
     <string name="crash_text">Sebuah ralat telah berlaku. Sila hantar laporan pepijat kepada pembangun untuk membantu kami membetulkannya.</string>
     <string name="saved_manga">Manga disimpan</string>
     <string name="text_feed_holder">Bab-bab baharu bacaan anda ditunjukkan di sini</string>
-    <string name="size_s">Saiz: %s</string>
-    <string name="new_version_s">Versi baharu: %s</string>
+    <string name="size_s">Saiz: %1$s</string>
+    <string name="new_version_s">Versi baharu: %1$s</string>
     <string name="clear_updates_feed">Kosongkan siaran kemaskini</string>
     <string name="updates_feed_cleared">Dikosongkan</string>
     <string name="wrong_password">Kata laluan salah</string>

@@ -107,9 +107,9 @@
     <string name="updates">Pembaruan</string>
     <string name="text_feed_holder">Bab baru dari apa yang Anda baca ditampilkan di sini</string>
     <string name="search_results">Hasil pencarian</string>
-    <string name="new_version_s">Versi baru: %s</string>
+    <string name="new_version_s">Versi baru: %1$s</string>
     <string name="youre_using_the_latest_version">Anda menggunakan versi terbaru</string>
-    <string name="size_s">Ukuran: %s</string>
+    <string name="size_s">Ukuran: %1$s</string>
     <string name="updates_feed_cleared">Dibersihkan</string>
     <string name="update">Perbarui</string>
     <string name="track_sources">Mencari pembaruan</string>

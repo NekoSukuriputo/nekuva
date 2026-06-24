@@ -256,8 +256,8 @@
     <string name="updates">புதுப்பிப்புகள்</string>
     <string name="text_feed_holder">நீங்கள் படிக்கிறவற்றின் புதிய அத்தியாயங்கள் இங்கே காட்டப்பட்டுள்ளன</string>
     <string name="search_results">தேடல் முடிவுகள்</string>
-    <string name="new_version_s">புதிய பதிப்பு: %s</string>
-    <string name="size_s">அளவு: %s</string>
+    <string name="new_version_s">புதிய பதிப்பு: %1$s</string>
+    <string name="size_s">அளவு: %1$s</string>
     <string name="clear_updates_feed">புதுப்பிப்புகளை அழிக்கவும்</string>
     <string name="updates_feed_cleared">அழிக்கப்பட்டது</string>
     <string name="rotate_screen">திரை சுழற்றுங்கள்</string>

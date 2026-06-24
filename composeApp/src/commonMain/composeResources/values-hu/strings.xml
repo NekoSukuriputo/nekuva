@@ -115,8 +115,8 @@
     <string name="read_later">Olvasás később</string>
     <string name="updates">Frissítések</string>
     <string name="search_results">eresési eredmények</string>
-    <string name="new_version_s">Új verzió: %s</string>
-    <string name="size_s">Méret: %s</string>
+    <string name="new_version_s">Új verzió: %1$s</string>
+    <string name="size_s">Méret: %1$s</string>
     <string name="clear_updates_feed">Frissítési előzmények törlése</string>
     <string name="rotate_screen">Képernyő elforgatása</string>
     <string name="update">Frissítés</string>

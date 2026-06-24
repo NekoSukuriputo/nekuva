@@ -97,8 +97,8 @@
     <string name="welcome">Willkommen</string>
     <string name="remove_category">Entfernen</string>
     <string name="rotate_screen">Bildschirm drehen</string>
-    <string name="size_s">Größe: %s</string>
-    <string name="new_version_s">Neue Version: %s</string>
+    <string name="size_s">Größe: %1$s</string>
+    <string name="new_version_s">Neue Version: %1$s</string>
     <string name="search_results">Suchergebnisse</string>
     <string name="text_feed_holder">Hier siehst du neue Kapitel der Mangas, welche du liest</string>
     <string name="read_later">Später lesen</string>

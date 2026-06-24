@@ -72,8 +72,8 @@
     <string name="read_later">อ่านทีหลัง</string>
     <string name="updates">อัพเดท</string>
     <string name="search_results">รายการค้นหา</string>
-    <string name="new_version_s">เวอร์ชั่นใหม่: %s</string>
-    <string name="size_s">ขนาด: %s</string>
+    <string name="new_version_s">เวอร์ชั่นใหม่: %1$s</string>
+    <string name="size_s">ขนาด: %1$s</string>
     <string name="update">อัพเดท</string>
     <string name="track_sources">มองหาการอัพเดท</string>
     <string name="wrong_password">รหัสผ่านผิด</string>

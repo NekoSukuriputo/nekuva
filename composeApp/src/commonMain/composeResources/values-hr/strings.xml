@@ -109,7 +109,7 @@
 	<string name="favourites_category_empty">Prazna kategorija</string>
 	<string name="text_feed_holder">Ovdje su prikazana nova poglavlja onoga što čitate</string>
 	<string name="search_results">Rezultati pretraživanja</string>
-	<string name="new_version_s">Nova verzija: %s</string>
+	<string name="new_version_s">Nova verzija: %1$s</string>
 	<string name="dont_check">Ne provjeravaj</string>
 	<string name="enter_password">Upišite lozinku</string>
 	<string name="wrong_password">Pogrešna lozinka</string>
@@ -451,7 +451,7 @@
 	<string name="remove_category">Ukloni</string>
 	<string name="done">Gotovo</string>
 	<string name="read_later">Pročitaj kasnije</string>
-	<string name="size_s">Veličina: %s</string>
+	<string name="size_s">Veličina: %1$s</string>
 	<string name="feed_will_update_soon">Ažuriranje sažetka sadržaja počet će uskoro</string>
 	<string name="track_sources">Potražite ažuriranja</string>
 	<string name="clear_search_history">Obriši povijest pretraživanja</string>

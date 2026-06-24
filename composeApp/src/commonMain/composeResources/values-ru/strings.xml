@@ -109,8 +109,8 @@
     <string name="updates">Обновления</string>
     <string name="text_feed_holder">Новые главы того, что вы читаете, будут показаны здесь</string>
     <string name="search_results">Результаты поиска</string>
-    <string name="new_version_s">Новая версия: %s</string>
-    <string name="size_s">Размер: %s</string>
+    <string name="new_version_s">Новая версия: %1$s</string>
+    <string name="size_s">Размер: %1$s</string>
     <string name="clear_updates_feed">Очистить ленту обновлений</string>
     <string name="updates_feed_cleared">Очищено</string>
     <string name="rotate_screen">Повернуть экран</string>
