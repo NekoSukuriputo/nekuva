@@ -1742,9 +1742,9 @@ build dex Android + index + signing).
   Additive (tanpa bundle = identik baseline). **Compile-green; perlu GUI run-verify** (import bundle bersumber
   baru → muncul di Explore + bisa dibuka; sumber baseline tetap normal). Catatan: paling andal muncul setelah
   **restart** (assimilasi saat startup); mid-session import mungkin perlu refresh/restart Explore.
-- ✅ **Android (Step 3)**: host `loadExtension` Android via **`DexClassLoader`** (delegasi selektif sama spt
-  Desktop; logika di-share `ExtensionClassLoaderSupport`). exts CI: `stagePluginDeps` + **d8** (Android SDK
-  runner) → `nekuva-ext-android.jar` (classes.dex) + `index.json` dua artefak (desktop+android). `--min-api 24`.
-  Compile-green; **perlu validasi end-to-end** (push tag exts → CI build → Android "Update extensions" unduh
-  artefak android → DexClassLoader muat). Import-file tetap Desktop-only; Android pakai jalur unduh.
+- ✅ **Android (Step 3) — RUN-VERIFIED**: host `loadExtension` via **`DexClassLoader`** (delegasi selektif sama
+  spt Desktop; logika di-share `ExtensionClassLoaderSupport`). exts CI: `stagePluginDeps` + **d8** (Android SDK
+  runner) → `nekuva-ext-android.jar` (classes.dex) + `index.json` dua artefak. `--min-api 24`. **Terbukti di
+  device**: push tag exts (v1.0.11) → CI build → Android "Update extensions" unduh artefak android →
+  DexClassLoader muat → "1246 sumber • 1.0.11" tampil. Import-file tetap Desktop-only; Android pakai jalur unduh.
 - ⏭️ Berikutnya: **signing** artefak (host hanya muat build resmi NekoSukuriputo) + (opsional) source-list di index.
