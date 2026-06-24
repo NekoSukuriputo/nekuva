@@ -1750,11 +1750,11 @@ build dex Android + index + signing).
 - ✅ **Signing (Step 4) — MEKANISME SELESAI**: exts CI menandatangani `index.json` (RSA SHA256, secret
   `EXT_SIGNING_KEY`) → `index.json.sig`; host (`ExtensionSigning`) verifikasi sig vs `EXT_PUBLIC_KEY_B64`
   yang ditanam sebelum install (lalu sha256 menjaga artefak). Import-file lokal tidak digate (aksi sengaja).
-  **Bootstrap:** `EXT_PUBLIC_KEY_B64` masih kosong → verifikasi dilewati sampai pemilik generate keypair,
-  set secret CI, dan tempel public key. Pakai `kotlin.io.encoding.Base64` (java.util.Base64 butuh API 26).
-- **AKSI PEMILIK (untuk mengaktifkan signing):** generate keypair RSA-2048, set private key sebagai secret
-  `EXT_SIGNING_KEY` di repo exts, tempel public key (base64 DER) ke `EXT_PUBLIC_KEY_B64`. Setelah itu app
-  hanya memuat bundle bertanda-tangan resmi.
+  Pakai `kotlin.io.encoding.Base64` (java.util.Base64 butuh API 26).
+- ✅ **AKTIF + RUN-VERIFIED**: keypair RSA-2048 dibuat, private key di secret `EXT_SIGNING_KEY` (repo exts),
+  public key tertanam di `EXT_PUBLIC_KEY_B64`. Test `ExtensionSigningTest`: signature dari private key
+  diverifikasi public key tertanam (tamper/null → ditolak). Verifikasi kini **wajib** → app menolak rilis
+  tak bertanda-tangan/lama; push tag baru di exts agar CI hasilkan rilis bertanda-tangan.
 
-**Status fitur Runtime Extensions: LENGKAP** (Desktop + Android run-verified; signing menunggu setup key pemilik).
+**Status fitur Runtime Extensions: LENGKAP & signing aktif** (Desktop + Android run-verified).
 Opsional ke depan: source-list di index (preview sebelum unduh), live-refresh Explore mid-session tanpa restart.
