@@ -9,9 +9,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+import org.nekosukuriputo.nekuva.core.extensions.ExtState
+import org.nekosukuriputo.nekuva.core.extensions.ExtensionManager
+import org.nekosukuriputo.nekuva.core.extensions.pickExtensionJar
+import org.nekosukuriputo.nekuva.core.extensions.supportsExtensionImport
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +64,22 @@ fun AboutSettingsScreen(
     val checking = stringResource(Res.string.check_for_updates)
     val upToDate = stringResource(Res.string.youre_using_the_latest_version)
 
+    // Runtime extensions (updatable parser bundle): status + check/import actions.
+    val extManager = koinInject<ExtensionManager>()
+    val extState by extManager.state.collectAsState()
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { extManager.loadInstalled() } }
+    val extSummary = when (val s = extState) {
+        is ExtState.Working -> "${stringResource(Res.string.loading)}…"
+        is ExtState.Installed -> {
+            val n = stringResource(Res.string.extensions_sources_d, s.sourceCount)
+            if (s.version.isNotBlank() && s.version != "imported") "$n • ${s.version}" else n
+        }
+        is ExtState.UpToDate -> upToDate
+        is ExtState.Error -> s.message
+        is ExtState.Idle -> stringResource(Res.string.extensions_using_builtin)
+    }
+
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -90,6 +117,28 @@ fun AboutSettingsScreen(
                 enabled = !isChecking,
                 onClick = { viewModel.checkForUpdates(APP_VERSION) },
             )
+            // Update extensions: download the latest parser bundle from the nekuva-exts release (no app
+            // rebuild). Loaded sources will plug into Explore once the runtime registry lands.
+            SettingsItem(
+                title = stringResource(Res.string.update_extensions),
+                summary = extSummary,
+                icon = Icons.Outlined.Extension,
+                enabled = extState !is ExtState.Working,
+                onClick = { scope.launch { extManager.checkAndUpdate() } },
+            )
+            if (supportsExtensionImport) {
+                SettingsItem(
+                    title = stringResource(Res.string.import_extension),
+                    icon = Icons.Outlined.FileDownload,
+                    enabled = extState !is ExtState.Working,
+                    onClick = {
+                        scope.launch {
+                            val picked = pickExtensionJar()
+                            if (picked != null) extManager.installFromFile(picked)
+                        }
+                    },
+                )
+            }
             // Changelog → GitHub releases page (Doki leaves this disabled; Nekuva already publishes releases,
             // so open them rather than show a dead "coming soon").
             SettingsItem(

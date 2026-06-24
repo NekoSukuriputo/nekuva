@@ -16,7 +16,8 @@ class MirrorSwitcher (
 	@MangaHttpClient private val okHttpClient: OkHttpClient,
 ) {
 
-	private val blacklist = EnumSet.noneOf(MangaParserSource::class.java)
+	// Keyed by source NAME so it works for both bundled and extension-bundle sources.
+	private val blacklist = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 	private val mutex: Mutex = Mutex()
 
 	val isEnabled: Boolean
@@ -24,7 +25,7 @@ class MirrorSwitcher (
 
 	suspend fun <T : Any> trySwitchMirror(repository: ParserMangaRepository, loader: suspend () -> T?): T? {
 		val source = repository.source
-		if (!isEnabled || source in blacklist) {
+		if (!isEnabled || source.name in blacklist) {
 			return null
 		}
 		val availableMirrors = repository.domains
@@ -33,7 +34,7 @@ class MirrorSwitcher (
 			return null
 		}
 		mutex.withLock {
-			if (source in blacklist) {
+			if (source.name in blacklist) {
 				return null
 			}
 			logd { "Looking for mirrors for ${source}..." }
@@ -56,7 +57,7 @@ class MirrorSwitcher (
 				}
 			}
 			repository.domain = currentHost // rollback
-			blacklist.add(source)
+			blacklist.add(source.name)
 			logd { "$source blacklisted" }
 			return null
 		}

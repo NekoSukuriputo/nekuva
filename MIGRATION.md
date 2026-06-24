@@ -1716,5 +1716,45 @@ iOS tetap tidak bisa (tak ada dynamic class-loading). Kerja besar ada di **host*
 classloader expect/actual + lepas dari enum keras + UI import/download) dan **exts** (split contract/parsers +
 build dex Android + index + signing).
 
-**Status:** riset/desain, **belum dimulai**. Lintas-repo (§8: usulkan kontrak di nekuva-exts dulu, baru host).
-Kemungkinan **Phase 2+** (setelah parity Phase 1). iOS = bundled-only sampai ada jalur deklaratif/JS.
+**Status:** **DIMULAI** (lintas-repo, branch terpisah). Kemungkinan **Phase 2+**. iOS = bundled-only.
+- ✅ **exts** (branch `feat/runtime-extensions`): `NekuvaExtensions` ABI entry point + `SourceDescriptor`;
+  task `assemblePluginArtifacts` → jar Desktop tipis + `index.json`; workflow `extensions.yml` (tag `v*`
+  → release assets). Lihat `nekuva-exts/MIGRATION.md`.
+- ✅ **host** (branch `feat/runtime-extensions-host`): `ExtensionLoader` (`core/extensions`) — Desktop
+  `URLClassLoader` dengan delegasi selektif (parser/factory/enum/entry-point dari plugin; contract+lib dari
+  host), Android stub (Step 3), `expect/actual`. **Run-verified Desktop**: memuat jar plugin → `listSources()`
+  = **1246 sumber**, ABI cocok, `ContentType` ter-share dari baseline (test `ExtensionLoaderTest`, `-PextJar=…`).
+- ✅ **host — UI "Update extensions"** (Settings → About): `ExtensionManager` (unduh dari rilis exts:
+  `index.json` → verifikasi sha256 → install → `loadExtension`; atau **Import .jar** lokal di Desktop) +
+  simpan versi terpasang + `ExtState`. Desktop Import bisa dipakai sekarang; jalur HTTP aktif setelah ada
+  rilis tag exts. Android import/update nonaktif sampai dex (Step 3).
+- ✅ **host — override sumber (resolusi by-name)**: hang awal (SHINIGAMI loading terus) disebabkan
+  `CommonHeadersInterceptor` mencocokkan source via `is MangaParserSource` (kelas host) padahal parser bundle
+  men-*tag* request dengan enum versi-plugin. **Fix:** interceptor + `MangaRepository.Factory` kini resolve
+  **by name** (bukan cek kelas). `Factory.createRepository`: nama cocok dgn baseline + bundle ter-load → pakai
+  parser bundle, dibungkus `OverrideSourceParser` (tetap melapor enum host utk identitas DB/nav). No-bundle =
+  identik baseline; error override → fallback baseline; `generation` bump → buang cache. **Compile-verified;
+  perlu GUI run-verify** (import → buka SHINIGAMI → baca; tanpa import semua tetap normal).
+- ✅ **host — Increment 2 (registry runtime)**: sumber yang **HANYA ada di bundle** kini **muncul di Explore +
+  bisa dibuka**. `PluginMangaSource` + `PluginSourceRegistry` (diisi `ExtensionManager`); `MangaSource(name)`
+  + `MangaSourcesRepository` (enumerasi/assimilasi, re-run saat bundle berubah) + `MangaSourceHeaderInterceptor`
+  + `MirrorSwitcher` semua by-name; `ParserMangaRepository.source` → `MangaSource` + `sourceOverride`.
+  Additive (tanpa bundle = identik baseline). **Compile-green; perlu GUI run-verify** (import bundle bersumber
+  baru → muncul di Explore + bisa dibuka; sumber baseline tetap normal). Catatan: paling andal muncul setelah
+  **restart** (assimilasi saat startup); mid-session import mungkin perlu refresh/restart Explore.
+- ✅ **Android (Step 3) — RUN-VERIFIED**: host `loadExtension` via **`DexClassLoader`** (delegasi selektif sama
+  spt Desktop; logika di-share `ExtensionClassLoaderSupport`). exts CI: `stagePluginDeps` + **d8** (Android SDK
+  runner) → `nekuva-ext-android.jar` (classes.dex) + `index.json` dua artefak. `--min-api 24`. **Terbukti di
+  device**: push tag exts (v1.0.11) → CI build → Android "Update extensions" unduh artefak android →
+  DexClassLoader muat → "1246 sumber • 1.0.11" tampil. Import-file tetap Desktop-only; Android pakai jalur unduh.
+- ✅ **Signing (Step 4) — MEKANISME SELESAI**: exts CI menandatangani `index.json` (RSA SHA256, secret
+  `EXT_SIGNING_KEY`) → `index.json.sig`; host (`ExtensionSigning`) verifikasi sig vs `EXT_PUBLIC_KEY_B64`
+  yang ditanam sebelum install (lalu sha256 menjaga artefak). Import-file lokal tidak digate (aksi sengaja).
+  Pakai `kotlin.io.encoding.Base64` (java.util.Base64 butuh API 26).
+- ✅ **AKTIF + RUN-VERIFIED**: keypair RSA-2048 dibuat, private key di secret `EXT_SIGNING_KEY` (repo exts),
+  public key tertanam di `EXT_PUBLIC_KEY_B64`. Test `ExtensionSigningTest`: signature dari private key
+  diverifikasi public key tertanam (tamper/null → ditolak). Verifikasi kini **wajib** → app menolak rilis
+  tak bertanda-tangan/lama; push tag baru di exts agar CI hasilkan rilis bertanda-tangan.
+
+**Status fitur Runtime Extensions: LENGKAP & signing aktif** (Desktop + Android run-verified).
+Opsional ke depan: source-list di index (preview sebelum unduh), live-refresh Explore mid-session tanpa restart.

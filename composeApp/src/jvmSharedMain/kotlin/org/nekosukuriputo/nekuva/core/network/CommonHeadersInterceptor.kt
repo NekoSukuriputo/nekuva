@@ -9,7 +9,6 @@ import okio.IOException
 import org.nekosukuriputo.nekuva.parsers.MangaLoaderContext
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.core.parser.ParserMangaRepository
-import org.nekosukuriputo.nekuva.parsers.model.MangaParserSource
 import org.nekosukuriputo.nekuva.parsers.model.MangaSource
 import org.nekosukuriputo.nekuva.parsers.util.mergeWith
 import org.nekosukuriputo.nekuva.parsers.util.runCatchingCancellable
@@ -26,11 +25,10 @@ class CommonHeadersInterceptor (
 		// MangaSourceHeaderInterceptor from the request's source extra); parser requests use the okhttp tag.
 		val source = request.tag(MangaSource::class.java)
 			?: request.headers[CommonHeaders.MANGA_SOURCE]?.let { org.nekosukuriputo.nekuva.core.model.MangaSource(it) }
-		val repository = if (source is MangaParserSource) {
-			mangaRepositoryFactoryLazy.value.create(source) as? ParserMangaRepository
-		} else {
-			null
-		}
+		// Resolve via the factory by NAME (not an `is MangaParserSource` host-class check): a request from a
+		// parser loaded out of an extension bundle is tagged with the bundle's own enum class, which would
+		// otherwise miss its per-source headers / Referer / CloudFlare handling and stall.
+		val repository = source?.let { mangaRepositoryFactoryLazy.value.create(it) as? ParserMangaRepository }
 		val headersBuilder = request.headers.newBuilder()
 			.removeAll(CommonHeaders.MANGA_SOURCE)
 		repository?.getRequestHeaders()?.let {
