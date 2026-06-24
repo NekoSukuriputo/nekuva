@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,8 +90,31 @@ fun ExploreScreen(
 			}
 		}
 		is ExploreUiState.Empty -> {
-			Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-				Text(stringResource(Res.string.text_empty_holder_primary))
+			// No sources enabled (e.g. a fresh install): guide the user to the source catalog to add some,
+			// instead of a blank screen (Doki no_manga_sources_text + a centred "Sources catalog" CTA).
+			Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+				Column(
+					horizontalAlignment = Alignment.CenterHorizontally,
+					verticalArrangement = Arrangement.spacedBy(16.dp),
+				) {
+					Icon(
+						imageVector = Icons.Default.TravelExplore,
+						contentDescription = null,
+						modifier = Modifier.size(72.dp),
+						tint = MaterialTheme.colorScheme.onSurfaceVariant,
+					)
+					Text(
+						text = stringResource(Res.string.no_manga_sources_text),
+						style = MaterialTheme.typography.bodyLarge,
+						color = MaterialTheme.colorScheme.onSurfaceVariant,
+						textAlign = TextAlign.Center,
+					)
+					Button(onClick = onManageSources) {
+						Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+						Spacer(Modifier.size(8.dp))
+						Text(stringResource(Res.string.sources_catalog))
+					}
+				}
 			}
 		}
         is ExploreUiState.Success -> {

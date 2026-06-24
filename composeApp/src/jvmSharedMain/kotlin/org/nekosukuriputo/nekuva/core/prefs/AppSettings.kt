@@ -433,7 +433,9 @@ class AppSettings(private val prefs: ObservableSettings) {
 		set(value) = prefs.putInt(KEY_SOURCES_VERSION, value)
 
 	var isAllSourcesEnabled: Boolean
-		get() = prefs.getBoolean(KEY_SOURCES_ENABLED_ALL, true)
+		// Default OFF: a fresh install starts with an EMPTY Explore (no sources enabled). The user adds the
+		// sources they want from Settings → Manga sources → Source catalog (Explore shows a CTA when empty).
+		get() = prefs.getBoolean(KEY_SOURCES_ENABLED_ALL, false)
 		set(value) = prefs.putBoolean(KEY_SOURCES_ENABLED_ALL, value)
 
 	val isPagesNumbersEnabled: Boolean

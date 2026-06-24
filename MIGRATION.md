@@ -1834,3 +1834,14 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   Resources — tak crash/blank, hanya tampil Inggris. Tak menyalin ratusan key Inggris ke ~60 bahasa (nihil
   manfaat vs fallback). Fokus audit = branding + format specifier (selesai, lintas semua bahasa) + kelengkapan
   bahasa user.
+
+**Poin 6 — Explore kosong saat pertama install + tombol tengah ke katalog** ✅ (committed)
+- **Default kosong:** `AppSettings.isAllSourcesEnabled` default `true` → **`false`**. Saat instalasi BARU,
+  `assimilateNewSources()` memasukkan baris source dengan `isEnabled = false` → Explore kosong
+  (`ExploreUiState.Empty`). User menambah sendiri dari katalog.
+- **Non-destruktif untuk install lama:** install lama sudah punya baris `isEnabled = true` (di-assimilate saat
+  default masih true), jadi `toSources`/`observeAll(enabledOnly)` tetap menampilkannya — hanya install BARU
+  yang kosong. Tak menghapus pilihan source user yang sudah ada.
+- **CTA tengah** (`ExploreScreen` state `Empty`): ikon `TravelExplore` + teks `no_manga_sources_text`
+  ("Aktifkan sumber manga…") + tombol `sources_catalog` ("Sumber katalog") → `onManageSources` (sudah
+  navigate ke `SourcesCatalogRoute`). Dulu cuma teks "It's kind of empty here…".
