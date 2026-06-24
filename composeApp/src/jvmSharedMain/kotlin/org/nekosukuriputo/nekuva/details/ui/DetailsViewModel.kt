@@ -270,47 +270,69 @@ class DetailsViewModel(
         viewModelScope.launch {
             _uiState.value = DetailsUiState.Loading
             try {
-                // 1. Find Manga in DB
-                var manga = mangaDataRepository.findMangaById(mangaId, withChapters = true)
-                if (manga == null) {
-                    _uiState.value = DetailsUiState.Error(IllegalArgumentException("Manga with ID $mangaId not found in local cache."))
+                val base = mangaDataRepository.findMangaById(mangaId, withChapters = true)
+                    ?: run {
+                        _uiState.value = DetailsUiState.Error(
+                            IllegalArgumentException("Manga with ID $mangaId not found in local cache."),
+                        )
+                        return@launch
+                    }
+
+                if (base.isLocal) {
+                    // Local manga read their chapters from the file.
+                    val local = localMangaRepository.getDetails(base)
+                    mangaDataRepository.storeManga(local, replaceExisting = true)
+                    finishLoad(local)
                     return@launch
                 }
-                
-                // 2. Fetch details: local manga read their chapters from the file; remote from the parser.
-                if (manga!!.isLocal) {
-                    manga = localMangaRepository.getDetails(manga!!)
-                    // Persist the local chapters (real ids from index.json) so the reader can resolve
-                    // a chapter by id via findMangaById(withChapters = true).
-                    mangaDataRepository.storeManga(manga!!, replaceExisting = true)
-                } else {
-                    val source = MangaParserSource.entries.find { it.name == manga!!.source.name }
+
+                val source = MangaParserSource.entries.find { it.name == base.source.name }
+                // Offline-first (Doki): if this manga is downloaded/saved, show the saved copy immediately and
+                // refresh from the source in the BACKGROUND — so it opens even if the source link changed /
+                // was removed / there's no network (the cause of "Status=404" on saved manga).
+                val saved = runCatching {
+                    localMangaRepository.findSavedManga(base, withDetails = true)?.manga
+                }.getOrNull()
+                if (saved != null) {
+                    mangaDataRepository.storeManga(saved, replaceExisting = false)
+                    finishLoad(saved)
                     if (source != null) {
-                        val parserRepository = repositoryFactory.create(source)
-                        manga = parserRepository.getDetails(manga!!)
-                        // Save the fetched details and chapters to DB
-                        mangaDataRepository.storeManga(manga!!, replaceExisting = true)
+                        viewModelScope.launch {
+                            val fresh = runCatching { repositoryFactory.create(source).getDetails(base) }.getOrNull()
+                            if (fresh != null) {
+                                mangaDataRepository.storeManga(fresh, replaceExisting = true)
+                                finishLoad(fresh)
+                            }
+                        }
                     }
-                }
-
-                // Apply the user override (custom title/cover) for display only — the DB row keeps the
-                // original source values (storeManga above already persisted them). Doki: Manga.withOverride.
-                val override = mangaDataRepository.getOverride(mangaId)
-                _override.value = override
-                manga = manga!!.withOverride(override)
-
-                _uiState.value = DetailsUiState.Success(manga!!)
-                loadedManga.value = manga
-                loadRelatedManga(manga!!)
-                // Refine the reading-time estimate from recorded stats (Doki getTimePerPage), if any.
-                if (settings.isStatsEnabled) {
-                    runCatching {
-                        val ms = statsRepository.getTimePerPage(mangaId)
-                        if (ms > 0L) secondsPerPage.value = (ms / 1000L).toInt().coerceAtLeast(1)
-                    }
+                } else if (source != null) {
+                    // Not saved → online (may throw → Error, as before).
+                    val fresh = repositoryFactory.create(source).getDetails(base)
+                    mangaDataRepository.storeManga(fresh, replaceExisting = true)
+                    finishLoad(fresh)
+                } else {
+                    // Unknown source, not saved → show whatever the DB cached.
+                    finishLoad(base)
                 }
             } catch (e: Exception) {
                 _uiState.value = DetailsUiState.Error(e)
+            }
+        }
+    }
+
+    /** Apply the user override, publish Success, and kick off related-manga + reading-time refinement. */
+    private suspend fun finishLoad(manga: Manga) {
+        val override = mangaDataRepository.getOverride(mangaId)
+        _override.value = override
+        val shown = manga.withOverride(override)
+        _uiState.value = DetailsUiState.Success(shown)
+        loadedManga.value = shown
+        loadRelatedManga(shown)
+        // Refine the reading-time estimate from recorded stats (Doki getTimePerPage), if any.
+        if (settings.isStatsEnabled) {
+            runCatching {
+                val ms = statsRepository.getTimePerPage(mangaId)
+                if (ms > 0L) secondsPerPage.value = (ms / 1000L).toInt().coerceAtLeast(1)
             }
         }
     }

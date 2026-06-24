@@ -144,16 +144,29 @@ fun ReaderScreen(
     val bookmarkAddedMsg = stringResource(Res.string.bookmark_added)
     val bookmarkRemovedMsg = stringResource(Res.string.bookmark_removed)
     val incognitoMsg = stringResource(Res.string.incognito_mode)
+    // Source-broken toast (Doki's NotFoundException snackbar) when scrolling into a non-downloaded chapter.
+    val notFoundMsg = stringResource(Res.string.not_found_404)
+    val openInBrowserLabel = stringResource(Res.string.open_in_browser)
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     LaunchedEffect(Unit) {
         viewModel.toast.collect { t ->
-            snackbarHost.showSnackbar(
-                when (t) {
-                    ReaderToast.BookmarkAdded -> bookmarkAddedMsg
-                    ReaderToast.BookmarkRemoved -> bookmarkRemovedMsg
-                    is ReaderToast.Chapter -> t.name
-                    ReaderToast.Incognito -> incognitoMsg
-                },
-            )
+            when (t) {
+                ReaderToast.BookmarkAdded -> snackbarHost.showSnackbar(bookmarkAddedMsg)
+                ReaderToast.BookmarkRemoved -> snackbarHost.showSnackbar(bookmarkRemovedMsg)
+                is ReaderToast.Chapter -> snackbarHost.showSnackbar(t.name)
+                ReaderToast.Incognito -> snackbarHost.showSnackbar(incognitoMsg)
+                is ReaderToast.SourceError -> {
+                    // "Content not found or removed" + an "Open in web browser" action (mirrors Doki).
+                    val result = snackbarHost.showSnackbar(
+                        message = notFoundMsg,
+                        actionLabel = t.url.takeIf { it.isNotEmpty() }?.let { openInBrowserLabel },
+                        duration = SnackbarDuration.Long,
+                    )
+                    if (result == SnackbarResult.ActionPerformed && t.url.isNotEmpty()) {
+                        runCatching { uriHandler.openUri(t.url) }
+                    }
+                }
+            }
         }
     }
 

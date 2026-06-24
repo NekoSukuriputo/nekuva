@@ -84,6 +84,13 @@ sealed interface ReaderToast {
     data object BookmarkRemoved : ReaderToast
     data class Chapter(val name: String) : ReaderToast
     data object Incognito : ReaderToast // forced incognito (opened from a bookmark)
+
+    /**
+     * A non-downloaded chapter failed to load while scrolling — the source link likely changed or the
+     * content was removed (Doki's `NotFoundException` → "Content not found or removed" snackbar with an
+     * "Open in web browser" action). [url] is the manga's public URL to open ("" if unknown → no action).
+     */
+    data class SourceError(val url: String) : ReaderToast
 }
 
 /**
@@ -362,6 +369,21 @@ class ReaderViewModel(
     private var prependingChapterId: Long? = null
     private var navJob: Job? = null
 
+    // Continuous chapters that failed to load (broken source): don't re-hammer the source on every scroll,
+    // and only show the "content not found" toast once. Cleared on an explicit reader retry.
+    private val failedChapterIds = HashSet<Long>()
+
+    /**
+     * Surface the Doki-style "content not found / source broken" reader toast when a NON-downloaded chapter
+     * fails to load during continuous scrolling (append/prepend). Reported once per chapter; downloaded
+     * chapters read from disk and never blame the source.
+     */
+    private fun notifyChapterLoadFailed(chapterId: Long) {
+        if (chapterId in downloadedChapterIds) return
+        if (!failedChapterIds.add(chapterId)) return
+        _toast.tryEmit(ReaderToast.SourceError(manga?.publicUrl.orEmpty()))
+    }
+
     init {
         loadInitial()
     }
@@ -370,6 +392,7 @@ class ReaderViewModel(
 
     private fun loadInitial() {
         navJob?.cancel()
+        failedChapterIds.clear()
         navJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading
             try {
@@ -508,6 +531,7 @@ class ReaderViewModel(
         if (idx < 0) return
         val next = chapters.getOrNull(idx + 1) ?: return        // last chapter -> nothing to append
         if (appendingChapterId == next.id) return               // already in flight
+        if (next.id in failedChapterIds) return                 // broken source — don't re-hammer it
         if (loadedPages.any { it.chapterId == next.id }) return  // already appended
         appendingChapterId = next.id
         viewModelScope.launch {
@@ -522,8 +546,11 @@ class ReaderViewModel(
                     trimLoadedPages(fromFront = true)
                     emitSuccess()
                 }
-            } catch (_: Exception) {
-                // Appending failed (e.g. stubbed JS / network); the explicit Next button still works.
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                // A non-downloaded next chapter failed to load (source link changed/removed): show the
+                // Doki-style "content not found" toast. The explicit Next button still works.
+                notifyChapterLoadFailed(next.id)
             } finally {
                 appendingChapterId = null
             }
@@ -540,6 +567,7 @@ class ReaderViewModel(
         if (idx <= 0) return                                     // already at the first chapter
         val prev = chapters.getOrNull(idx - 1) ?: return
         if (prependingChapterId == prev.id) return               // already in flight
+        if (prev.id in failedChapterIds) return                  // broken source — don't re-hammer it
         if (loadedPages.any { it.chapterId == prev.id }) return  // already prepended
         prependingChapterId = prev.id
         viewModelScope.launch {
@@ -554,8 +582,10 @@ class ReaderViewModel(
                     trimLoadedPages(fromFront = false)
                     emitSuccess()
                 }
-            } catch (_: Exception) {
-                // Prepend failed (network/JS); the explicit Prev button still works.
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                // A non-downloaded previous chapter failed to load: show the "content not found" toast.
+                notifyChapterLoadFailed(prev.id)
             } finally {
                 prependingChapterId = null
             }

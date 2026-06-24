@@ -1758,3 +1758,32 @@ build dex Android + index + signing).
 
 **Status fitur Runtime Extensions: LENGKAP & signing aktif** (Desktop + Android run-verified).
 Opsional ke depan: source-list di index (preview sebelum unduh), live-refresh Explore mid-session tanpa restart.
+
+---
+
+## SESI 2026-06-25 — Beta-polish batch (7 poin, langsung di `main`, commit per-poin)
+
+Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah tiap poin.
+
+**Poin 1 — Reader full-screen (Android): hilangkan strip putih status bar** ✅ (committed)
+- `ReaderWindowController.android.kt`: `WindowCompat.setDecorFitsSystemWindows(window, false)` + `statusBarColor`/
+  `navigationBarColor = TRANSPARENT` + ikon bar terang (`isAppearanceLightStatusBars/Nav = false`) saat reader
+  aktif; `reset()` mengembalikan `decorFitsSystemWindows = true` + warna bar asli saat keluar reader. Warna asli
+  ditangkap sekali di konstruktor agar sisa app tak terpengaruh.
+- `ReaderScreen.kt`: `Scaffold(contentWindowInsets = WindowInsets(0,0,0,0))` (full-bleed, page mengisi seluruh
+  layar — tak ada gap di bawah status bar); stack bawah pakai `navigationBarsPadding()`. TopAppBar self-insets.
+
+**Poin 2 — Offline-first detail + reader (manga tersimpan/diunduh), toast "source rusak" ala Doki** ✅ (committed)
+- **Detail offline-first** (`DetailsViewModel.loadDetails()`): di-refactor — helper `finishLoad(m)` (override +
+  emit Success + loadedManga + related + stats). Cabang remote sekarang: kalau `localMangaRepository.findSavedManga`
+  mengembalikan salinan tersimpan → **tampilkan offline dulu** (`finishLoad(saved)`) lalu refresh online di
+  background (sukses → `finishLoad(fresh)`, gagal → tetap pakai salinan offline, **tak Error**). Ini menutup bug
+  gambar 2 (source ganti link → manga tersimpan dulu 404; sekarang tetap kebuka dari simpanan). Tak tersimpan →
+  online seperti dulu (boleh throw → Error).
+- **Reader sudah offline-first** (`fetchPages` → `getPagesIfDownloaded` dulu, baru online) — tetap.
+- **Toast "Konten tidak ditemukan atau dihapus" + aksi "Buka di peramban web"** (mirror Doki `NotFoundException`):
+  `ReaderToast.SourceError(url)` baru; `appendNextChapter`/`prependPrevChapter` saat gagal memuat bab **belum
+  diunduh** → `notifyChapterLoadFailed(id)` (sekali per bab, lewati bab terunduh, set `failedChapterIds` agar tak
+  menghantam source berulang; di-clear saat retry). `ReaderScreen` menampilkan snackbar dengan action →
+  `LocalUriHandler.openUri(manga.publicUrl)`. Reuse key Doki `not_found_404` + `open_in_browser` (sudah ada di
+  en/id). Bab terunduh tetap kebuka offline tanpa toast.
