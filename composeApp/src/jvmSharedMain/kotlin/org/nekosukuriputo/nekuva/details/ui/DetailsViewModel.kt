@@ -290,11 +290,12 @@ class DetailsViewModel(
                 // Offline-first (Doki): if this manga is downloaded/saved, show the saved copy immediately and
                 // refresh from the source in the BACKGROUND — so it opens even if the source link changed /
                 // was removed / there's no network (the cause of "Status=404" on saved manga).
-                val saved = runCatching {
-                    localMangaRepository.findSavedManga(base, withDetails = true)?.manga
-                }.getOrNull()
+                val saved = findSavedCopy(base)
                 if (saved != null) {
-                    mangaDataRepository.storeManga(saved, replaceExisting = false)
+                    // replaceExisting = true so the downloaded copy's CHAPTERS reach the DB — the reader
+                    // resolves a downloaded chapter by id via findMangaById(withChapters), which otherwise
+                    // returns the chapter-less restored row ("Chapter with ID … not found").
+                    mangaDataRepository.storeManga(saved, replaceExisting = true)
                     finishLoad(saved)
                     if (source != null) {
                         viewModelScope.launch {
@@ -305,11 +306,33 @@ class DetailsViewModel(
                             }
                         }
                     }
-                } else if (source != null) {
-                    // Not saved → online (may throw → Error, as before).
-                    val fresh = repositoryFactory.create(source).getDetails(base)
-                    mangaDataRepository.storeManga(fresh, replaceExisting = true)
-                    finishLoad(fresh)
+                    return@launch
+                }
+                if (source != null) {
+                    // Not saved → try online. On failure (e.g. broken/removed source → 404) fall back to a
+                    // downloaded copy if one turns up, then to whatever chapters the DB cached, so a
+                    // downloaded manga still opens offline instead of erroring outright.
+                    val freshResult = runCatching { repositoryFactory.create(source).getDetails(base) }
+                    val fresh = freshResult.getOrNull()
+                    when {
+                        fresh != null -> {
+                            mangaDataRepository.storeManga(fresh, replaceExisting = true)
+                            finishLoad(fresh)
+                        }
+                        else -> {
+                            val savedFallback = findSavedCopy(base)
+                            when {
+                                savedFallback != null -> {
+                                    mangaDataRepository.storeManga(savedFallback, replaceExisting = true)
+                                    finishLoad(savedFallback)
+                                }
+                                !base.chapters.isNullOrEmpty() -> finishLoad(base)
+                                else -> _uiState.value = DetailsUiState.Error(
+                                    freshResult.exceptionOrNull() ?: IllegalStateException("Source unavailable"),
+                                )
+                            }
+                        }
+                    }
                 } else {
                     // Unknown source, not saved → show whatever the DB cached.
                     finishLoad(base)
@@ -319,6 +342,11 @@ class DetailsViewModel(
             }
         }
     }
+
+    /** The downloaded/saved local copy of [base] (with chapters from its index.json), or null. */
+    private suspend fun findSavedCopy(base: Manga): Manga? = runCatching {
+        localMangaRepository.findSavedManga(base, withDetails = true)?.manga
+    }.getOrNull()
 
     /** Apply the user override, publish Success, and kick off related-manga + reading-time refinement. */
     private suspend fun finishLoad(manga: Manga) {

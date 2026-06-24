@@ -23,6 +23,7 @@ import org.koin.mp.KoinPlatform
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.bookmarks.domain.BookmarksRepository
 import org.nekosukuriputo.nekuva.core.nav.ReaderRoute
+import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.core.model.isNsfw
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
@@ -396,8 +397,21 @@ class ReaderViewModel(
         navJob = viewModelScope.launch {
             _uiState.value = ReaderUiState.Loading
             try {
-                val m = mangaDataRepository.findMangaById(mangaId, withChapters = true)
+                var m = mangaDataRepository.findMangaById(mangaId, withChapters = true)
                     ?: throw IllegalArgumentException("Manga with ID $mangaId not found.")
+                // The cached DB row can be missing the chapter we're opening — e.g. restored from a backup
+                // that stores only a chapter COUNT, or a source that's now broken/offline. Pull the chapter
+                // list from the DOWNLOADED copy (its index.json) so a downloaded chapter still opens offline
+                // (Doki reads downloaded chapters offline). Only swap if the saved copy actually has it.
+                val savedManga = runCatching {
+                    localMangaRepository.findSavedManga(m, withDetails = true)?.manga
+                }.getOrNull()
+                if (!m.isLocal && m.chapters?.any { it.id == initialChapterId } != true &&
+                    savedManga?.chapters?.any { it.id == initialChapterId } == true
+                ) {
+                    runCatching { mangaDataRepository.storeManga(savedManga, replaceExisting = true) }
+                    m = savedManga
+                }
                 manga = m
                 mangaFlow.value = m
                 resolveIncognito(m)
@@ -409,9 +423,7 @@ class ReaderViewModel(
                 refreshImageServerState()
                 allChapters = m.chapters ?: emptyList()
                 // Which chapters are downloaded → SD-card badge in the chapters sheet (Doki reader parity).
-                downloadedChapterIds = runCatching {
-                    localMangaRepository.findSavedManga(m, withDetails = true)?.manga?.chapters?.mapTo(HashSet()) { it.id }
-                }.getOrNull() ?: emptySet()
+                downloadedChapterIds = savedManga?.chapters?.mapTo(HashSet()) { it.id } ?: emptySet()
                 val chapter = allChapters.find { it.id == initialChapterId }
                     ?: throw IllegalArgumentException("Chapter with ID $initialChapterId not found.")
                 // Default the branch SELECTOR to the opened chapter's branch. Navigation (append +

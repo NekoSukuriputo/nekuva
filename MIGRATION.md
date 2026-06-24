@@ -1858,3 +1858,29 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   (jumlah + urutan) benar-benar berlaku (kalau masih blanket `true`, `toSources` menandai semua aktif → jumlah
   meleset). `BackupRepository` kini terima `AppSettings` (Koin `get()` ke-3).
 - Backup tetap `findAll().filter { isEnabled }` (hanya source aktif, = Doki `dumpEnabled`), round-trip cocok.
+
+### SESI 2026-06-25 (lanjutan) — perbaikan hasil run-verify user (gambar)
+
+**Bug 1 — Reader Android masih ada bilah hitam di atas (tak sampai notch)** ✅ (committed)
+- Edge-to-edge saja tak cukup: konten ter-letterbox hitam di zona cutout. `ReaderWindowController.android`
+  `apply()` set `window.attributes.layoutInDisplayCutoutMode = ALWAYS` (API 30+) / `SHORT_EDGES` (API 28–29),
+  `reset()` kembalikan mode asli. Sekarang halaman menggambar sampai ke notch (seperti Doki).
+
+**Bug 2 — Info bar (bab/halaman/jam/baterai) pindah ke ATAS** ✅ (committed)
+- `ReaderScreen`: `ReaderInfoBar` (+ fallback nomor halaman) dipindah dari bottom-stack ke overlay
+  `Alignment.TopCenter` di tepi paling atas (zona status-bar/notch; teks kiri-kanan mengapit cutout tengah,
+  ala Doki gambar 2). Tampil hanya saat kontrol disembunyikan agar tak bentrok app bar. Action bar tetap di bawah.
+
+**Bug 3 — Manga terunduh dari source rusak tak bisa dibaca setelah restore** ✅ (committed)
+- **Akar masalah:** backup (Kotatsu) berisi `local_manga_dirs=["/storage/emulated/0/Manhwa/.New Folder"]` →
+  `userSpecifiedMangaDirectories`; `getConfiguredStorageDirs` memindainya → `findSavedManga` menemukan unduhan.
+  Backup `chapters` per-history hanyalah **angka** (count), bukan daftar — jadi bab HANYA ada di file unduhan
+  (index.json). **Prasyarat user:** pulihkan bagian **"pengaturan"** (membawa folder unduhan) + beri izin
+  **akses semua file** (Android 11+), kalau tidak dir tak terbaca → `findSavedManga` null → 404.
+- **Fix kode (robust walau online 404):**
+  - `DetailsViewModel.loadDetails`: salinan unduhan disimpan `replaceExisting = true` (dulu `false` → **bab tak
+    masuk DB** → reader "Chapter with ID … not found"). Saat online gagal: fallback ke salinan unduhan, lalu ke
+    bab cache DB, baru Error (pertahankan exception asli utk tombol "Buka di peramban web").
+  - `ReaderViewModel.loadInitial`: kalau baris DB tak punya bab yang dibuka (mis. restore hanya simpan count),
+    tarik daftar bab dari salinan unduhan (`findSavedManga`), persist, pakai itu → bab terunduh tetap kebuka.
+    `downloadedChapterIds` dipakai ulang dari hasil find yang sama.
