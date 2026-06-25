@@ -48,6 +48,13 @@
 -keep class okhttp3.** { *; }
 -keep class okio.** { *; }
 -keep class androidx.collection.** { *; }
+# The bundle links against the host's KOTLIN STDLIB (parent classloader). R8 strips stdlib classes the host
+# doesn't reference by name — e.g. kotlin.enums.EnumEntriesKt (the enum `.entries` accessor): the host's use
+# gets inlined so R8 drops the class, but the bundle's dex references it directly -> ClassNotFoundException.
+# Keep the stdlib classes the bundle can reach so it always resolves against the host.
+-keep class kotlin.** { *; }
+-keep class kotlinx.coroutines.** { *; }
+-dontwarn kotlinx.coroutines.**
 
 # ---------- Koin DI ----------
 -keep class org.koin.** { *; }
