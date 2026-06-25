@@ -61,10 +61,12 @@ internal fun loadExtensionFrom(loader: ClassLoader): LoadedExtension? = runCatch
         override fun createParser(sourceName: String, context: MangaLoaderContext): MangaParser =
             createParserMethod.invoke(instance, sourceName, context) as MangaParser
     }
-}.onFailure {
-    // Capture the real cause (shown in the "Update extensions" error + logcat) — a release-only failure here
-    // usually means R8 stripped/renamed a host class the bundle links against (add a keep in proguard-rules).
-    lastExtensionError = "${it::class.simpleName}: ${it.message}"
-    println("[Nekuva][ext] loadExtensionFrom failed: ${it::class.simpleName}: ${it.message}")
-    it.printStackTrace()
+}.onFailure { e ->
+    // Capture the ROOT cause (shown in the "Update extensions" error + logcat). Reflective invokes wrap the
+    // real error in InvocationTargetException (message=null), so walk the cause chain to the actual throwable
+    // — a release failure here usually means R8 stripped a class the bundle links against (add a keep).
+    val root = generateSequence(e) { it.cause }.last()
+    lastExtensionError = "${root::class.simpleName}: ${root.message ?: "(no message)"}"
+    println("[Nekuva][ext] loadExtensionFrom failed: $lastExtensionError")
+    e.printStackTrace()
 }.getOrNull()
