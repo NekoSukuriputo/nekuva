@@ -179,6 +179,7 @@ fun ReaderScreen(
         if (zoomMode == org.nekosukuriputo.nekuva.core.model.ZoomMode.KEEP_START) Alignment.TopCenter else Alignment.Center
     }
     val showInfoBar = remember { settings.prefBoolean("reader_bar", false) }
+    val infoBarTransparent = remember { settings.isReaderBarTransparent }
     val showPageNumbers = remember { settings.prefBoolean("pages_numbers", false) }
     val webtoonGaps = remember { settings.isWebtoonGapsEnabled }
     // Webtoon zoom (Doki webtoon_zoom + webtoon_zoom_out): gate pinch-zoom + default zoom-out percent.
@@ -335,23 +336,15 @@ fun ReaderScreen(
             is ReaderUiState.Success -> {
                 Box(modifier = Modifier.fillMaxSize().background(readerBackgroundColor(readerBackground))) {
                   Column(modifier = Modifier.fillMaxSize()) {
-                    // Top info strip (Doki ReaderInfoBarView): chapter • clock • battery • page. A solid dark
-                    // bar in the top status-bar / notch zone, padded to clear the display cutout so its text
-                    // isn't under the camera. It RESERVES space (it's a Column row, not an overlay), so the
-                    // manga below never overlaps it — drawing the page edge-to-edge into the notch isn't
-                    // reliable on every device, so the info bar gets that top strip instead. Shown only when
-                    // the controls are hidden (the app bar takes over when they're visible).
+                    // Thin top info bar (Doki ReaderInfoBarView): chapter • clock • battery • page. A slim row
+                    // at the very top of the page area (no notch-inset padding — the page already sits below the
+                    // status bar/notch on this device, so adding the cutout inset here only doubled the empty
+                    // band). It still RESERVES its own thin height (Column row), so the page below never
+                    // overlaps it. Shown only when the controls are hidden (the app bar takes over otherwise).
                     if (!controlsVisible && pageIndicator.total > 0 && (showInfoBar || showPageNumbers)) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-                                .windowInsetsPadding(
-                                    WindowInsets.statusBars.union(WindowInsets.displayCutout).only(WindowInsetsSides.Top),
-                                ),
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
                             if (showInfoBar) {
-                                ReaderInfoBar(indicator = pageIndicator, transparent = true)
+                                ReaderInfoBar(indicator = pageIndicator, transparent = infoBarTransparent)
                             } else {
                                 Text(
                                     text = "${pageIndicator.page} / ${pageIndicator.total}",
