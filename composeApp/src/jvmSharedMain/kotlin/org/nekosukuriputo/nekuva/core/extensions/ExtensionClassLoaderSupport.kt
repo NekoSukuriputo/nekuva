@@ -57,4 +57,10 @@ internal fun loadExtensionFrom(loader: ClassLoader): LoadedExtension? = runCatch
         override fun createParser(sourceName: String, context: MangaLoaderContext): MangaParser =
             createParserMethod.invoke(instance, sourceName, context) as MangaParser
     }
+}.onFailure {
+    // Surface the real cause in logcat — otherwise the UI only shows "Incompatible or invalid extension
+    // bundle". A release-only failure here usually means R8 stripped/renamed a host class the bundle links
+    // against (add a keep in proguard-rules.pro).
+    println("[Nekuva][ext] loadExtensionFrom failed: ${it::class.simpleName}: ${it.message}")
+    it.printStackTrace()
 }.getOrNull()

@@ -30,4 +30,7 @@ actual fun loadExtension(path: String): LoadedExtension? = runCatching {
     val optimizedDir = File(ctx.codeCacheDir, "ext_dex").apply { mkdirs() }
     val parent = MangaParser::class.java.classLoader ?: return null
     loadExtensionFrom(AndroidExtensionClassLoader(jar.absolutePath, optimizedDir.absolutePath, parent))
+}.onFailure {
+    println("[Nekuva][ext] loadExtension failed: ${it::class.simpleName}: ${it.message}")
+    it.printStackTrace()
 }.getOrNull()

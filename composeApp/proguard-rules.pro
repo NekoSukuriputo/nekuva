@@ -36,6 +36,19 @@
 -keep class org.nekosukuriputo.nekuva.core.db.entity.** { *; }
 -keep class org.nekosukuriputo.nekuva.**.data.model.** { *; }
 
+# ---------- Runtime extensions (DexClassLoader plugin) ----------
+# The downloaded/imported bundle is loaded at runtime via a child-first DexClassLoader and links against the
+# HOST's shared contract through reflection. If R8 renames/removes any of the host loader, the plugin model,
+# or a class the bundle links against, loadExtension() throws and the UI shows
+# "Incompatible or invalid extension bundle". Keep them ABI-stable + the HTML/HTTP libs the parsers use.
+-keep class org.nekosukuriputo.nekuva.core.extensions.** { *; }
+-keep class org.nekosukuriputo.nekuva.core.model.** { *; }
+-keep class org.jsoup.** { *; }
+-dontwarn org.jsoup.**
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keep class androidx.collection.** { *; }
+
 # ---------- Koin DI ----------
 -keep class org.koin.** { *; }
 -dontwarn org.koin.**
