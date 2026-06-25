@@ -286,6 +286,14 @@ fun DetailsScreen(
                     }
                 },
                 actions = {
+                    // Refresh button next to Share — re-fetch from the source. The main alternative to
+                    // pull-to-refresh, which isn't available on Desktop (no touch).
+                    IconButton(
+                        onClick = { viewModel.refresh() },
+                        enabled = uiState is DetailsUiState.Success && !isRefreshing,
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = stringResource(Res.string.try_again))
+                    }
                     IconButton(
                         onClick = {
                             (uiState as? DetailsUiState.Success)?.manga?.let {

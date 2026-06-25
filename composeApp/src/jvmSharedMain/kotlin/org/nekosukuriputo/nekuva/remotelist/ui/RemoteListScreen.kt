@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -186,6 +187,10 @@ fun RemoteListScreen(
                             IconButton(onClick = { searchActive = true }) {
                                 Icon(Icons.Default.Search, contentDescription = stringResource(Res.string.search))
                             }
+                        }
+                        // Refresh (Doki): reload the list — the alternative to pull-to-refresh on Desktop.
+                        IconButton(onClick = { viewModel.refresh() }, enabled = !isRefreshing) {
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(Res.string.try_again))
                         }
                         IconButton(onClick = { viewModel.openRandom() }, enabled = !isRandomLoading) {
                             Icon(Icons.Default.Casino, contentDescription = stringResource(Res.string.random))
