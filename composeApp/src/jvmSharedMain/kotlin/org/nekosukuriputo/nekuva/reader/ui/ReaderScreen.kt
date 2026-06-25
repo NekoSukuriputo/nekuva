@@ -271,6 +271,10 @@ fun ReaderScreen(
         topBar = {
             AnimatedVisibility(visible = controlsVisible) {
                 TopAppBar(
+                    // The reader is fullscreen (bars hidden) and the page sits at the very top, so the app bar
+                    // must NOT add a status-bar/notch inset — otherwise it's pushed down by the notch height,
+                    // leaving a big empty band above it.
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     title = {
                         val state = uiState
                         if (state is ReaderUiState.Success) {
