@@ -179,7 +179,6 @@ fun ReaderScreen(
         if (zoomMode == org.nekosukuriputo.nekuva.core.model.ZoomMode.KEEP_START) Alignment.TopCenter else Alignment.Center
     }
     val showInfoBar = remember { settings.prefBoolean("reader_bar", false) }
-    val infoBarTransparent = remember { settings.isReaderBarTransparent }
     val showPageNumbers = remember { settings.prefBoolean("pages_numbers", false) }
     val webtoonGaps = remember { settings.isWebtoonGapsEnabled }
     // Webtoon zoom (Doki webtoon_zoom + webtoon_zoom_out): gate pinch-zoom + default zoom-out percent.
@@ -335,6 +334,35 @@ fun ReaderScreen(
             )
             is ReaderUiState.Success -> {
                 Box(modifier = Modifier.fillMaxSize().background(readerBackgroundColor(readerBackground))) {
+                  Column(modifier = Modifier.fillMaxSize()) {
+                    // Top info strip (Doki ReaderInfoBarView): chapter • clock • battery • page. A solid dark
+                    // bar in the top status-bar / notch zone, padded to clear the display cutout so its text
+                    // isn't under the camera. It RESERVES space (it's a Column row, not an overlay), so the
+                    // manga below never overlaps it — drawing the page edge-to-edge into the notch isn't
+                    // reliable on every device, so the info bar gets that top strip instead. Shown only when
+                    // the controls are hidden (the app bar takes over when they're visible).
+                    if (!controlsVisible && pageIndicator.total > 0 && (showInfoBar || showPageNumbers)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                                .windowInsetsPadding(
+                                    WindowInsets.statusBars.union(WindowInsets.displayCutout).only(WindowInsetsSides.Top),
+                                ),
+                        ) {
+                            if (showInfoBar) {
+                                ReaderInfoBar(indicator = pageIndicator, transparent = true)
+                            } else {
+                                Text(
+                                    text = "${pageIndicator.page} / ${pageIndicator.total}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.align(Alignment.Center).padding(vertical = 4.dp),
+                                )
+                            }
+                        }
+                    }
+                  Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                   CompositionLocalProvider(
                       LocalReaderImageOptions provides readerImageOptions,
                       LocalReaderMangaSource provides state.manga.source,
@@ -370,29 +398,6 @@ fun ReaderScreen(
                         onShowMenu = { showConfigSheet = true },
                     )
                   }
-                    // Top info overlay (Doki ReaderInfoBarView): chapter • clock • battery • page, pinned to
-                    // the VERY top edge (into the status-bar / notch zone — text sits left/right of the centred
-                    // cutout). Only when controls are hidden so it doesn't fight the app bar.
-                    if (!controlsVisible) {
-                        Column(
-                            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            if (showInfoBar && pageIndicator.total > 0) {
-                                ReaderInfoBar(indicator = pageIndicator, transparent = infoBarTransparent)
-                            } else if (showPageNumbers && pageIndicator.total > 0) {
-                                Text(
-                                    text = "${pageIndicator.page} / ${pageIndicator.total}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier
-                                        .padding(top = 4.dp)
-                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f), MaterialTheme.shapes.small)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                                )
-                            }
-                        }
-                    }
                     // Bottom stack: auto-scroll control + actions bar (only when controls shown).
                     Column(
                         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding(),
@@ -426,12 +431,11 @@ fun ReaderScreen(
                             )
                         }
                     }
-                    // On-screen zoom buttons (Doki ZoomControl): bottom-end, shown with the controls.
-                    if (zoomButtonsEnabled) {
-                        AnimatedVisibility(
-                            visible = controlsVisible,
-                            modifier = Modifier.align(Alignment.BottomEnd).padding(paddingValues),
-                        ) {
+                    // On-screen zoom buttons (Doki ZoomControl): bottom-end, shown with the controls. Plain
+                    // visibility (no fade) — AnimatedVisibility would resolve to the outer Column's overload
+                    // here and clash with Box.align.
+                    if (zoomButtonsEnabled && controlsVisible) {
+                        Box(modifier = Modifier.align(Alignment.BottomEnd).padding(paddingValues)) {
                             ZoomButtons(
                                 modifier = Modifier.padding(end = 16.dp, bottom = 88.dp),
                                 onZoomIn = { zoomCommands.tryEmit(1.2f) },
@@ -439,6 +443,8 @@ fun ReaderScreen(
                             )
                         }
                     }
+                  } // inner content Box
+                  } // Column
                 }
             }
         }

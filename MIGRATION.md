@@ -1894,3 +1894,13 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   device_database/external** (persis Doki). Auto-backup kini hanya bawa pengaturan, BUKAN pustaka — pustaka lewat
   `.bk.zip` manual. Install ulang jadi benar-benar bersih → Explore kosong (Point 6) bekerja.
 - **Untuk bersihkan state sekarang:** `adb shell pm clear org.nekosukuriputo.nekuva.debug` lalu buka lagi.
+
+**Bug 1/2 (revisi) — info bar di STRIP atas, manga tak ketimpa** ✅ (committed)
+- Edge-to-edge ke notch tak dihormati di sebagian device (mis. MIUI "sembunyikan notch" → letterbox hitam),
+  jadi gambar tak bisa sampai ke notch. Sesuai permintaan user: info bar ditaruh di **strip gelap atas**,
+  bukan overlay transparan yang menimpa manga.
+- `ReaderScreen` Success di-restrukturisasi jadi `Column`: [strip info atas] + [Box konten (weight 1f)].
+  Strip = bar gelap solid (`surface` α0.92) dengan `windowInsetsPadding(statusBars ∪ displayCutout, Top)`
+  (teks lewat di bawah kamera), **memesan ruang** → manga di bawahnya tak pernah ketimpa. Tampil saat kontrol
+  disembunyikan (app bar ambil alih saat kontrol tampil). Tombol zoom: `if` biasa (AnimatedVisibility bentrok
+  overload ColumnScope vs Box.align). `infoBarTransparent` dihapus (strip selalu punya background).
