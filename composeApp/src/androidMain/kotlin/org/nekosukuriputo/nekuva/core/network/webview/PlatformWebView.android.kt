@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import org.koin.compose.koinInject
 import org.nekosukuriputo.nekuva.core.network.webview.adblock.AdBlock
+import org.nekosukuriputo.nekuva.parsers.network.UserAgents
 import java.io.ByteArrayInputStream
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -31,6 +32,10 @@ actual fun PlatformWebView(
                     javaScriptEnabled = true
                     domStorageEnabled = true
                     databaseEnabled = true
+                    // Use the SAME User-Agent as OkHttp (the parser). cf_clearance is bound to the UA, so if
+                    // the challenge is solved with a different UA the parser's request is rejected and the
+                    // "CAPTCHA required" wall comes straight back.
+                    userAgentString = UserAgents.FIREFOX_MOBILE
                 }
                 webViewClient = object : WebViewClient() {
                     // Capture custom-scheme redirects (e.g. OAuth `nekuva://oauth?code=...`) which the engine
