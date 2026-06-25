@@ -10,6 +10,14 @@
         <!-- Padded logo (content in the inner ~66% safe-zone) so Android 12+'s circular splash mask
              never clips the cat's ears / rounded-square corners. -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
-        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+        <item name="postSplashScreenTheme">@style/Theme.Nekuva</item>
+    </style>
+
+    <!-- App window theme. DARK NoActionBar so the system status bar is dark (matches the dark app) instead of
+         the old Light theme's white bar. On Android 15+ the opt-out lives in values-v35/themes.xml so screens
+         stay NON-edge-to-edge (app bar below the status bar — the default look the app expects). The reader
+         turns edge-to-edge on/off itself, so it's unaffected. -->
+    <style name="Theme.Nekuva" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 </resources>

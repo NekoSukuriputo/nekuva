@@ -209,7 +209,10 @@ android {
     defaultConfig {
         applicationId = "org.nekosukuriputo.nekuva"
         minSdk = 24
-        targetSdk = 36
+        // targetSdk 35 (not 36) so android:windowOptOutEdgeToEdgeEnforcement is honoured — it lets the app
+        // keep the classic non-edge-to-edge layout (app bar below the status bar) on Android 15+. At
+        // targetSdk 36 the opt-out is ignored and edge-to-edge would be forced.
+        targetSdk = 35
         versionCode = appVersionCodeValue
         versionName = appVersionName
     }

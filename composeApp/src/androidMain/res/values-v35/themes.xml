@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 15+ (API 35) forces edge-to-edge for apps targeting SDK 35+. This app is designed around the
+      classic layout (opaque status bar, app bar BELOW it), so opt out of the enforcement here. The reader
+      still turns edge-to-edge on/off via its window controller, so full-screen reading is unaffected.
+      (windowOptOutEdgeToEdgeEnforcement is only honoured when targetSdk <= 35 — see build.gradle.kts.)
+    -->
+    <style name="Theme.Nekuva" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>
