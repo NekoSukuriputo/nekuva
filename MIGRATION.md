@@ -1884,3 +1884,13 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   - `ReaderViewModel.loadInitial`: kalau baris DB tak punya bab yang dibuka (mis. restore hanya simpan count),
     tarik daftar bab dari salinan unduhan (`findSavedManga`), persist, pakai itu → bab terunduh tetap kebuka.
     `downloadedChapterIds` dipakai ulang dari hasil find yang sama.
+
+**Bug 6b — Explore TAK kosong setelah uninstall+install ulang (sumber sudah ada)** ✅ (committed)
+- **Bukan bawaan APK.** `android:allowBackup="true"` TANPA aturan → **Android Auto Backup** mem-backup seluruh
+  `/data/data/<pkg>/` (termasuk Room DB tabel `sources` dengan enabled+pin lama) ke akun Google & **memulihkannya
+  otomatis saat install ulang**. Folder `Android/data` yang dicek user itu cache/unduhan eksternal, bukan lokasi DB.
+- **Fix (parity Doki):** tambah `res/xml/backup_rules.xml` (`dataExtractionRules`, Android 12+) + `backup_content.xml`
+  (`fullBackupContent`, lawas) + referensi di manifest. Aturan = **include sharedpref, EXCLUDE database/
+  device_database/external** (persis Doki). Auto-backup kini hanya bawa pengaturan, BUKAN pustaka — pustaka lewat
+  `.bk.zip` manual. Install ulang jadi benar-benar bersih → Explore kosong (Point 6) bekerja.
+- **Untuk bersihkan state sekarang:** `adb shell pm clear org.nekosukuriputo.nekuva.debug` lalu buka lagi.

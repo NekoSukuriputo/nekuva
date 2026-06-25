@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy (pre-Android 12) auto-backup rules (Doki parity). Same intent as backup_rules.xml: back up only the
+  SharedPreferences, never the Room database — library data is restored via Nekuva's own .bk.zip backup.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <exclude domain="database" />
+    <exclude domain="device_database" />
+    <exclude domain="external" />
+</full-backup-content>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ auto-backup rules (Doki parity). Back up ONLY the SharedPreferences (app settings) — NOT the
+  Room database. The library (sources/favourites/history/…) lives in the DB and is handled by Nekuva's own
+  backup/restore (.bk.zip); excluding it stops a reinstall from silently cloud-restoring the old DB (which
+  made Explore look pre-populated even after an "empty by default" fresh install).
+-->
+<data-extraction-rules>
+    <cloud-backup disableIfNoEncryptionCapabilities="false">
+        <include domain="sharedpref" path="." />
+        <exclude domain="database" />
+        <exclude domain="device_database" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="." />
+        <exclude domain="database" />
+        <exclude domain="device_database" />
+    </device-transfer>
+</data-extraction-rules>
