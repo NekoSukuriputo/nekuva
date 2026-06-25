@@ -111,6 +111,7 @@ fun RemoteListScreen(
     val filterState by viewModel.filterState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isRandomLoading by viewModel.isRandomLoading.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     // Appearance: list mode + grid size (Doki — remote browse uses the global list mode).
     val settings = koinInject<AppSettings>()
@@ -241,7 +242,11 @@ fun RemoteListScreen(
                     onEditSearch = { searchActive = true },
                 )
             }
-            Box(modifier = Modifier.fillMaxSize()) {
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 when (val state = uiState) {
                     is RemoteListUiState.Loading -> LoadingState()
                     is RemoteListUiState.Empty -> {

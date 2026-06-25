@@ -27,11 +27,11 @@ dependencyResolutionManagement {
     }
 }
 
-// includeBuild("../nekuva-exts") { // Sesuaikan path relatif ini menuju folder nekuva-exts buat local testing sebelum publish ke JitPack
-//     dependencySubstitution {
-//         substitute(module("com.github.NekoSukuriputo:nekuva-exts")).using(project(":"))
-//     }
-// }
+includeBuild("../nekuva-exts") { // Sesuaikan path relatif ini menuju folder nekuva-exts buat local testing sebelum publish ke JitPack
+    dependencySubstitution {
+        substitute(module("com.github.NekoSukuriputo:nekuva-exts")).using(project(":"))
+    }
+}
 
 include(":composeApp")
 rootProject.name = "Nekuva"

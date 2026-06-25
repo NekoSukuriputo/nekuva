@@ -233,7 +233,17 @@ class RemoteListViewModel(
         )
     }
 
-    private fun loadMangaList(append: Boolean) {
+    /** Pull-to-refresh in progress (Doki list swipe) — keeps the grid visible with a spinner on top. */
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    /** Pull-to-refresh: reload from offset 0 WITHOUT clearing the shown grid. */
+    fun refresh() {
+        if (_isRefreshing.value) return
+        loadMangaList(append = false, refreshing = true)
+    }
+
+    private fun loadMangaList(append: Boolean, refreshing: Boolean = false) {
         val repo = repository
         if (repo == null) {
             _uiState.value = RemoteListUiState.Error(IllegalArgumentException("Source not found: $sourceId"))
@@ -246,10 +256,11 @@ class RemoteListViewModel(
             val currentState = _uiState.value
             val prevList = if (append && currentState is RemoteListUiState.Success) currentState.mangaList else emptyList()
 
-            if (append && currentState is RemoteListUiState.Success) {
-                _uiState.value = currentState.copy(isAppending = true)
-            } else {
-                _uiState.value = RemoteListUiState.Loading
+            when {
+                append && currentState is RemoteListUiState.Success -> _uiState.value = currentState.copy(isAppending = true)
+                // Refresh keeps the current content visible; the pull-to-refresh spinner shows progress.
+                refreshing -> _isRefreshing.value = true
+                else -> _uiState.value = RemoteListUiState.Loading
             }
 
             try {
@@ -270,11 +281,15 @@ class RemoteListViewModel(
                     )
                 }
             } catch (e: Exception) {
-                if (append && currentState is RemoteListUiState.Success) {
-                    _uiState.value = currentState.copy(isAppending = false, hasNextPage = false)
-                } else {
-                    _uiState.value = RemoteListUiState.Error(e)
+                when {
+                    append && currentState is RemoteListUiState.Success ->
+                        _uiState.value = currentState.copy(isAppending = false, hasNextPage = false)
+                    // A failed refresh keeps the grid that's already shown.
+                    refreshing && currentState is RemoteListUiState.Success -> Unit
+                    else -> _uiState.value = RemoteListUiState.Error(e)
                 }
+            } finally {
+                if (refreshing) _isRefreshing.value = false
             }
         }
     }

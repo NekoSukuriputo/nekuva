@@ -82,6 +82,7 @@ fun DetailsScreen(
     onResolveCloudFlare: (url: String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pagesState by viewModel.pagesState.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
     val allCategories by viewModel.allCategories.collectAsState()
@@ -452,32 +453,39 @@ fun DetailsScreen(
                     if (names.isEmpty()) stringResource(Res.string.default_category) else names.joinToString(", ")
                 }
                 
-                MangaDetailsContent(
-                    manga = state.manga,
-                    isFavorite = isFavorite,
-                    favoriteText = favoriteText,
-                    onFavoriteClick = {
-                        if (allCategories.isEmpty()) {
-                            viewModel.toggleCategory(0L, !isFavorite)
-                        } else {
-                            showCategoryDialog = true
-                        }
-                    },
-                    relatedManga = relatedManga,
-                    onRelatedClick = onRelatedClick,
-                    readingTimeText = readingTime?.let { formatReadingTime(it) },
-                    onCoverClick = { fullScreenCover = it },
-                    onTagClick = { tagDialogFor = it },
-                    onAuthorClick = { authorDialogFor = it },
-                    progressPercent = history?.percent?.takeIf { it >= 0f },
-                    currentChapterNumber = history?.let { h ->
-                        (uiState as? DetailsUiState.Success)?.manga?.chapters
-                            ?.indexOfFirst { it.id == h.chapterId }?.takeIf { it >= 0 }?.plus(1)
-                    },
-                    scrobblingInfo = scrobblingInfo,
-                    onScrobblingClick = { editingScrobblingInfo = it },
-                    paddingValues = paddingValues
-                )
+                // Pull-to-refresh (Doki details swipe): re-fetch from the source, keeping the content shown.
+                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    MangaDetailsContent(
+                        manga = state.manga,
+                        isFavorite = isFavorite,
+                        favoriteText = favoriteText,
+                        onFavoriteClick = {
+                            if (allCategories.isEmpty()) {
+                                viewModel.toggleCategory(0L, !isFavorite)
+                            } else {
+                                showCategoryDialog = true
+                            }
+                        },
+                        relatedManga = relatedManga,
+                        onRelatedClick = onRelatedClick,
+                        readingTimeText = readingTime?.let { formatReadingTime(it) },
+                        onCoverClick = { fullScreenCover = it },
+                        onTagClick = { tagDialogFor = it },
+                        onAuthorClick = { authorDialogFor = it },
+                        progressPercent = history?.percent?.takeIf { it >= 0f },
+                        currentChapterNumber = history?.let { h ->
+                            (uiState as? DetailsUiState.Success)?.manga?.chapters
+                                ?.indexOfFirst { it.id == h.chapterId }?.takeIf { it >= 0 }?.plus(1)
+                        },
+                        scrobblingInfo = scrobblingInfo,
+                        onScrobblingClick = { editingScrobblingInfo = it },
+                        paddingValues = paddingValues
+                    )
+                }
             }
         }
     }
