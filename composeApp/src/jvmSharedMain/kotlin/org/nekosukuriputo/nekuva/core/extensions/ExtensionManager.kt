@@ -172,7 +172,9 @@ class ExtensionManager(
         val ext = loadExtension(jar.absolutePath)
         if (ext == null) {
             runCatching { jar.delete() } // bad/incompatible download — don't keep it
-            error("Incompatible or invalid extension bundle")
+            // Include the captured reason (e.g. an R8-stripped class in the release build) so it's visible
+            // in the "Update extensions" error without needing logcat.
+            error(lastExtensionError?.let { "Bundle load failed — $it" } ?: "Incompatible or invalid extension bundle")
         }
         loaded = ext
         publish(ext)

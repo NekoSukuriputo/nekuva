@@ -6,6 +6,13 @@ import org.nekosukuriputo.nekuva.parsers.MangaParser
 /** Host⇄extension ABI the loader requires; must match nekuva-exts `NekuvaExtensions.ABI_VERSION`. */
 const val HOST_EXT_ABI_VERSION: Int = 1
 
+/**
+ * Why the most recent [loadExtension] failed (e.g. an R8-stripped symbol in a release build). Surfaced in the
+ * "Update extensions" error so the cause is visible without logcat. Null after a successful load.
+ */
+@Volatile
+var lastExtensionError: String? = null
+
 /** Host-side view of one source provided by a loaded extension bundle (mirrors exts `SourceDescriptor`). */
 data class ExtSource(
     val name: String,

@@ -5,13 +5,10 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.graphics.Color
-import android.os.Build
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -21,18 +18,22 @@ actual fun rememberReaderWindowController(): ReaderWindowController {
 	return remember(context) { AndroidReaderWindowController(context.findActivity()) }
 }
 
+/**
+ * The app is NOT edge-to-edge (Theme.Nekuva opts out on Android 15+), so other screens keep their normal
+ * layout (app bar below the status bar). For immersive reading the reader simply HIDES the system bars —
+ * which makes the page fill the screen — and shows them again on exit. It deliberately does NOT toggle
+ * `decorFitsSystemWindows` / bar colours / cutout mode: doing so turned the window edge-to-edge and the
+ * state leaked back to the detail screen (a big empty band at the top) after pressing back.
+ */
 private class AndroidReaderWindowController(
 	private val activity: Activity?,
 ) : ReaderWindowController {
 
 	override val supportsOrientation: Boolean = true
 
-	// Original bar colours, captured once, so reset() restores the rest of the app's appearance.
-	private val originalStatusBar: Int? = activity?.window?.statusBarColor
-	private val originalNavBar: Int? = activity?.window?.navigationBarColor
-	// Original display-cutout mode, so reset() restores it when leaving the reader.
-	private val originalCutoutMode: Int? =
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) activity?.window?.attributes?.layoutInDisplayCutoutMode else null
+	// Original bar-icon appearance, captured once, so reset() restores the rest of the app's look.
+	private val originalLightStatusBars: Boolean? = activity?.let { insetsController(it)?.isAppearanceLightStatusBars }
+	private val originalLightNavBars: Boolean? = activity?.let { insetsController(it)?.isAppearanceLightNavigationBars }
 
 	override fun apply(keepScreenOn: Boolean, fullscreen: Boolean, orientationIndex: Int) {
 		val a = activity ?: return
@@ -41,25 +42,8 @@ private class AndroidReaderWindowController(
 		} else {
 			a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 		}
-		// Edge-to-edge with transparent bars so the page fills the whole screen (no white strip under the
-		// status bar). When fullscreen is on the bars are hidden entirely; otherwise they float transparent
-		// over the page. Light (white) bar icons so they stay visible over dark/varied page images.
-		WindowCompat.setDecorFitsSystemWindows(a.window, false)
-		a.window.statusBarColor = Color.TRANSPARENT
-		a.window.navigationBarColor = Color.TRANSPARENT
-		// Draw the page UNDER the display cutout (notch) too — otherwise the cutout zone is letterboxed
-		// black at the top (Doki draws all the way to the notch). ALWAYS (API 30+) keeps content in the
-		// cutout even while the bars are hidden; SHORT_EDGES covers API 28–29.
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-			a.window.attributes = a.window.attributes.apply {
-				layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-				} else {
-					WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-				}
-			}
-		}
 		insetsController(a)?.let { controller ->
+			// Light (white) bar icons so they stay visible over dark/varied page images.
 			controller.isAppearanceLightStatusBars = false
 			controller.isAppearanceLightNavigationBars = false
 			if (fullscreen) {
@@ -86,14 +70,11 @@ private class AndroidReaderWindowController(
 	override fun reset() {
 		val a = activity ?: return
 		a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-		// Undo the reader's edge-to-edge so the rest of the app keeps its normal layout/bar colours.
-		WindowCompat.setDecorFitsSystemWindows(a.window, true)
-		originalStatusBar?.let { a.window.statusBarColor = it }
-		originalNavBar?.let { a.window.navigationBarColor = it }
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && originalCutoutMode != null) {
-			a.window.attributes = a.window.attributes.apply { layoutInDisplayCutoutMode = originalCutoutMode }
+		insetsController(a)?.let { controller ->
+			controller.show(WindowInsetsCompat.Type.systemBars())
+			originalLightStatusBars?.let { controller.isAppearanceLightStatusBars = it }
+			originalLightNavBars?.let { controller.isAppearanceLightNavigationBars = it }
 		}
-		insetsController(a)?.show(WindowInsetsCompat.Type.systemBars())
 		a.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 	}
 

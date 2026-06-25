@@ -24,13 +24,20 @@ private class AndroidExtensionClassLoader(
 }
 
 actual fun loadExtension(path: String): LoadedExtension? = runCatching {
-    val jar = File(path).takeIf { it.isFile } ?: return null
+    val jar = File(path).takeIf { it.isFile } ?: run {
+        lastExtensionError = "bundle file missing: $path"
+        return null
+    }
     val ctx = GlobalContext.get().get<Context>()
     // The bundle is a jar containing classes.dex (built by the exts CI with d8).
     val optimizedDir = File(ctx.codeCacheDir, "ext_dex").apply { mkdirs() }
-    val parent = MangaParser::class.java.classLoader ?: return null
+    val parent = MangaParser::class.java.classLoader ?: run {
+        lastExtensionError = "no host classloader"
+        return null
+    }
     loadExtensionFrom(AndroidExtensionClassLoader(jar.absolutePath, optimizedDir.absolutePath, parent))
 }.onFailure {
+    lastExtensionError = "${it::class.simpleName}: ${it.message}"
     println("[Nekuva][ext] loadExtension failed: ${it::class.simpleName}: ${it.message}")
     it.printStackTrace()
 }.getOrNull()

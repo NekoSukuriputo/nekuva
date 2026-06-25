@@ -30,7 +30,10 @@ internal fun isExtensionPluginClass(name: String): Boolean =
 internal fun loadExtensionFrom(loader: ClassLoader): LoadedExtension? = runCatching {
     val entry = loader.loadClass("org.nekosukuriputo.nekuva.parsers.NekuvaExtensions")
     val abi = entry.getField("ABI_VERSION").getInt(null)
-    if (abi != HOST_EXT_ABI_VERSION) return null
+    if (abi != HOST_EXT_ABI_VERSION) {
+        lastExtensionError = "ABI mismatch: bundle=$abi, host=$HOST_EXT_ABI_VERSION"
+        return null
+    }
     val instance = entry.getField("INSTANCE").get(null)
 
     val descriptors = entry.getMethod("listSources").invoke(instance) as List<*>
@@ -51,6 +54,7 @@ internal fun loadExtensionFrom(loader: ClassLoader): LoadedExtension? = runCatch
         MangaLoaderContext::class.java,
     )
 
+    lastExtensionError = null
     object : LoadedExtension {
         override val abiVersion: Int = abi
         override val sources: List<ExtSource> = sources
@@ -58,9 +62,9 @@ internal fun loadExtensionFrom(loader: ClassLoader): LoadedExtension? = runCatch
             createParserMethod.invoke(instance, sourceName, context) as MangaParser
     }
 }.onFailure {
-    // Surface the real cause in logcat — otherwise the UI only shows "Incompatible or invalid extension
-    // bundle". A release-only failure here usually means R8 stripped/renamed a host class the bundle links
-    // against (add a keep in proguard-rules.pro).
+    // Capture the real cause (shown in the "Update extensions" error + logcat) — a release-only failure here
+    // usually means R8 stripped/renamed a host class the bundle links against (add a keep in proguard-rules).
+    lastExtensionError = "${it::class.simpleName}: ${it.message}"
     println("[Nekuva][ext] loadExtensionFrom failed: ${it::class.simpleName}: ${it.message}")
     it.printStackTrace()
 }.getOrNull()
