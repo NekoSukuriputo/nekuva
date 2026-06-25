@@ -28,6 +28,9 @@ actual fun loadExtension(path: String): LoadedExtension? = runCatching {
         lastExtensionError = "bundle file missing: $path"
         return null
     }
+    // Android 14+ (W^X / "Writable dex file is not allowed"): DexClassLoader refuses a DEX the app can still
+    // write to. Make the jar read-only first. (Cleanup can still delete it — that needs dir write, not file.)
+    runCatching { jar.setReadOnly() }
     val ctx = GlobalContext.get().get<Context>()
     // The bundle is a jar containing classes.dex (built by the exts CI with d8).
     val optimizedDir = File(ctx.codeCacheDir, "ext_dex").apply { mkdirs() }
