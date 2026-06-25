@@ -1941,5 +1941,11 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   `LocalQuickTagFilter` = `LazyRow` `FilterChip` (ikon `Icons.AutoMirrored.Filled.Label` ≈ ic_tag), applied-first,
   cap 16, self-hide saat <3 tag & none applied; disembunyikan di selection-mode. Konten layar dibungkus `Column`
   (chip row di atas + state di bawah). Desktop: `horizontalWheelScroll(chipScroll)` (A1) → mouse-wheel
-  menggulir chip. Shared (`jvmSharedMain`) → otomatis Android + Desktop. **Compile-green; perlu run-verify GUI user**
-  (buka Local dengan ≥3 genre berbeda → baris chip muncul; tap genre → daftar terfilter; tap lagi → kembali).
+  menggulir chip. Shared (`jvmSharedMain`) → otomatis Android + Desktop.
+- **FIX (2026-06-25) — chip tak muncul (availableTags kosong):** `LocalMangaRepository.getFilterOptions()`
+  mengambil tag dari `localMangaIndex.getAvailableTags()` — padahal `LocalMangaIndex` itu cache **in-memory**
+  yang HANYA terisi lewat flow `LocalStorageChanges` (kosong untuk pustaka yang sudah ada di disk, tak ada yang
+  di-emit). Akibat: chip quick-filter **dan** daftar genre di filter-sheet kosong. **Fix:** `getFilterOptions()`
+  kini scan pustaka nyata (`getRawList()`), kumpulkan judul tag unik, map ke tag `LocalMangaSource` (filter lokal
+  cocok by-title) — mirror Doki. **Run-verified Desktop:** log `availableTags=4: Action, Adventure, Comedy,
+  Fantasy` (dari Eleceed.cbz) → baris chip kini tampil. Memperbaiki daftar genre di filter-sheet sekaligus.

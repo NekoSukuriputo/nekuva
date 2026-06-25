@@ -88,16 +88,26 @@ class LocalMangaRepository constructor(
 		}
 
 	@OptIn(org.nekosukuriputo.nekuva.parsers.InternalParsersApi::class)
-	override suspend fun getFilterOptions() = MangaListFilterOptions(
-		availableTags = localMangaIndex.getAvailableTags(
-			skipNsfw = settings.isNsfwContentDisabled,
-		).mapToSet { MangaTag(title = it, key = it, source = source) },
-		availableContentRating = if (!settings.isNsfwContentDisabled) {
-			EnumSet.of(ContentRating.SAFE, ContentRating.ADULT)
-		} else {
-			emptySet()
-		},
-	)
+	override suspend fun getFilterOptions(): MangaListFilterOptions {
+		// Derive available genres from the ACTUAL scanned library, not localMangaIndex — that index is an
+		// in-memory cache populated only via the LocalStorageChanges flow, so it is EMPTY for a library that
+		// already exists on disk (nothing emitted yet). Reading it left the quick-filter chips and the filter
+		// sheet's genre list blank. Scan, collect distinct tag titles, and map them to LocalMangaSource tags
+		// (the local filter matches by title) — mirrors Doki's getFilterOptions.
+		val list = getRawList()
+		if (settings.isNsfwContentDisabled) {
+			list.removeAll { it.manga.isNsfw() }
+		}
+		val tagTitles = list.flatMap { it.manga.tags?.map { t -> t.title } ?: emptyList() }.distinct()
+		return MangaListFilterOptions(
+			availableTags = tagTitles.mapToSet { MangaTag(title = it, key = it, source = source) },
+			availableContentRating = if (!settings.isNsfwContentDisabled) {
+				EnumSet.of(ContentRating.SAFE, ContentRating.ADULT)
+			} else {
+				emptySet()
+			},
+		)
+	}
 
 	override suspend fun getList(offset: Int, order: SortOrder?, filter: MangaListFilter?): List<Manga> {
 		if (offset > 0) {
