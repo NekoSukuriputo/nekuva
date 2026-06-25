@@ -80,7 +80,11 @@ fun AboutSettingsScreen(
         is ExtState.Working -> "${stringResource(Res.string.loading)}…"
         is ExtState.Installed -> {
             val n = stringResource(Res.string.extensions_sources_d, s.sourceCount)
-            if (s.version.isNotBlank() && s.version != "imported") "$n • ${s.version}" else n
+            val base = if (s.version.isNotBlank() && s.version != "imported") "$n • ${s.version}" else n
+            // Diagnostic: if a source's bundle-parser override fell back to the built-in (set while browsing),
+            // surface the reason here so it's visible without logcat.
+            val overrideErr = org.nekosukuriputo.nekuva.core.extensions.lastExtensionError
+            if (overrideErr != null) "$base\n⚠ $overrideErr" else base
         }
         is ExtState.UpToDate -> upToDate
         is ExtState.Error -> s.message
