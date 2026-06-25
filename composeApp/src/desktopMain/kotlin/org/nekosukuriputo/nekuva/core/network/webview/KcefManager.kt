@@ -16,7 +16,16 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.cef.browser.CefRendering
+import org.nekosukuriputo.nekuva.parsers.network.UserAgents
 import java.io.File
+
+/**
+ * The single Chrome UA pinned on the Desktop browser engine. KCEF's own native UA isn't available before
+ * init completes, and OkHttp's default UA (AppMangaLoaderContext.desktop) must equal the browser UA so a
+ * solved CloudFlare `cf_clearance` (UA-bound) is accepted by the parser's OkHttp requests. A Chrome-family
+ * UA also keeps the engine fingerprint consistent so challenges pass normally instead of looping.
+ */
+const val DESKTOP_USER_AGENT: String = UserAgents.CHROME_WINDOWS
 
 /**
  * Desktop embedded-Chromium engine (KCEF/JCEF) — the Desktop counterpart of Android's WebView.
@@ -71,6 +80,8 @@ object KcefManager {
                         }
                         settings {
                             cachePath = File(installDir, "cache").absolutePath
+                            // Pin the browser UA to match OkHttp's default (cf_clearance is UA-bound).
+                            userAgent = DESKTOP_USER_AGENT
                         }
                     },
                     onError = { e -> _state.value = State.Failed(e) },

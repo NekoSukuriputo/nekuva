@@ -1,5 +1,7 @@
 package org.nekosukuriputo.nekuva.details.ui
 
+import org.nekosukuriputo.nekuva.core.exceptions.requestUserAgent
+
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +38,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -79,7 +83,7 @@ fun DetailsScreen(
     // Doki "Search everywhere": global search carrying the search kind (tag → TAG, author → AUTHOR).
     onGlobalSearch: (query: String, kind: org.nekosukuriputo.nekuva.search.domain.SearchKind) -> Unit = { _, _ -> },
     onOpenBrowser: (url: String) -> Unit = {},
-    onResolveCloudFlare: (url: String) -> Unit = {},
+    onResolveCloudFlare: (url: String, userAgent: String?) -> Unit = { _, _ -> },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -443,7 +447,7 @@ fun DetailsScreen(
                 error = state.exception,
                 onRetry = { viewModel.retry() },
                 modifier = Modifier.padding(paddingValues),
-                onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+                onResolveCloudFlare = { onResolveCloudFlare(it.url, it.requestUserAgent()) },
             )
             is DetailsUiState.Success -> {
                 val favoriteText = if (!isFavorite) {
@@ -964,7 +968,10 @@ fun ChaptersSheetContent(
             }
 
             // Doki-style split button: main = read/continue + a connected trailing segment opening the popup.
+            // weight(1f, fill = false) caps this row at the space left after the view icons so a long resume
+            // title truncates instead of pushing the dropdown segment off-screen / under the edge (gambar 5).
             Row(
+                modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
@@ -977,6 +984,8 @@ fun ChaptersSheetContent(
                             onChapterClick(chapters.first())
                         }
                     },
+                    // Take the remaining width and let the title truncate; keeps the dropdown segment visible.
+                    modifier = Modifier.weight(1f, fill = false),
                     shape = RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp, topEnd = 4.dp, bottomEnd = 4.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
@@ -1158,6 +1167,30 @@ private fun ChaptersTab(
             .let { list -> if (reversed) list.asReversed() else list }
     }
 
+    // Read/unread state (Doki ChaptersMapper): in the canonical ascending order, chapters BEFORE the
+    // last-read (current) one are "read" → greyed; the current one is highlighted; the rest are unread.
+    val currentIndex = remember(chapters, historyChapterId) {
+        historyChapterId?.let { id -> chapters.indexOfFirst { it.id == id } } ?: -1
+    }
+    val readIds = remember(chapters, currentIndex) {
+        if (currentIndex <= 0) emptySet() else chapters.take(currentIndex).mapTo(HashSet()) { it.id }
+    }
+
+    // Auto-scroll the list to the current chapter on open (Doki scrolls to it), so the last-read chapter is
+    // visible immediately instead of having to scroll. Once only — don't fight the user's later scrolling.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    var didInitialScroll by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(displayed, historyChapterId, gridView) {
+        if (!didInitialScroll && historyChapterId != null) {
+            val idx = displayed.indexOfFirst { it.id == historyChapterId }
+            if (idx >= 0) {
+                if (gridView) gridState.scrollToItem(idx) else listState.scrollToItem(idx)
+                didInitialScroll = true
+            }
+        }
+    }
+
     fun toggle(id: Long) {
         selection = if (id in selection) selection - id else selection + id
     }
@@ -1260,6 +1293,7 @@ private fun ChaptersTab(
             if (gridView) {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 88.dp),
+                    state = gridState,
                     contentPadding = PaddingValues(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1269,6 +1303,7 @@ private fun ChaptersTab(
                             chapter = chapter,
                             isDownloaded = chapter.id in downloadedIds,
                             isCurrent = chapter.id == historyChapterId,
+                            isRead = chapter.id in readIds,
                             selected = chapter.id in selection,
                             onClick = { if (selection.isNotEmpty()) toggle(chapter.id) else onChapterClick(chapter) },
                             onLongClick = { toggle(chapter.id) },
@@ -1276,7 +1311,6 @@ private fun ChaptersTab(
                     }
                 }
             } else {
-                val listState = androidx.compose.foundation.lazy.rememberLazyListState()
                 LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(displayed, key = { it.id }) { chapter ->
                         ChapterItem(
@@ -1288,6 +1322,7 @@ private fun ChaptersTab(
                             selected = chapter.id in selection,
                             selectionMode = selection.isNotEmpty(),
                             isCurrent = chapter.id == historyChapterId,
+                            isRead = chapter.id in readIds,
                         )
                     }
                 }
@@ -1310,6 +1345,7 @@ private fun ChapterGridCell(
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    isRead: Boolean = false,
 ) {
     val container = when {
         selected -> MaterialTheme.colorScheme.primary
@@ -1331,9 +1367,16 @@ private fun ChapterGridCell(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isCurrent) FontWeight.Bold else null,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary else LocalContentColor.current,
+            // Read chapters greyed (Doki); current/selected stay prominent.
+            color = when {
+                selected -> MaterialTheme.colorScheme.onPrimary
+                isCurrent -> MaterialTheme.colorScheme.onPrimaryContainer
+                isRead -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                else -> LocalContentColor.current
+            },
         )
         if (isDownloaded) {
             Icon(
@@ -1434,7 +1477,20 @@ fun ChapterItem(
     selected: Boolean = false,
     selectionMode: Boolean = false,
     isCurrent: Boolean = false,
+    isRead: Boolean = false,
 ) {
+    // Doki ChapterListItemAD colours: current = accent (bold), read = greyed (textColorHint), unread = normal.
+    val readDim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    val titleColor = when {
+        isCurrent -> MaterialTheme.colorScheme.primary
+        isRead -> readDim
+        else -> androidx.compose.material3.LocalContentColor.current
+    }
+    val dateColor = when {
+        isCurrent -> MaterialTheme.colorScheme.primary
+        isRead -> readDim
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1447,18 +1503,27 @@ fun ChapterItem(
         if (selectionMode) {
             androidx.compose.material3.Checkbox(checked = selected, onCheckedChange = null, modifier = Modifier.padding(end = 12.dp))
         }
+        // Current-chapter marker (Doki ic_current_chapter / the reader sheet's play icon).
+        if (isCurrent && !selectionMode) {
+            Icon(
+                Icons.Filled.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(end = 8.dp).size(18.dp),
+            )
+        }
         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
             val chapterTitle = chapter.title?.takeIf { it.isNotEmpty() } ?: chapter.name
             Text(
                 text = chapterTitle,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isCurrent) FontWeight.Bold else null,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                // Doki highlights the current (last-read) chapter in the accent colour.
-                color = if (isCurrent) MaterialTheme.colorScheme.primary else androidx.compose.material3.LocalContentColor.current,
+                color = titleColor,
             )
             if (chapter.uploadDate > 0L) {
-                Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = org.nekosukuriputo.nekuva.core.util.ext.calculateTimeAgo(chapter.uploadDate), style = MaterialTheme.typography.bodySmall, color = dateColor)
             }
         }
 

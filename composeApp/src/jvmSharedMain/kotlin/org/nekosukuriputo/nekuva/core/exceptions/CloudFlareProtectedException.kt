@@ -14,3 +14,11 @@ class CloudFlareProtectedException(
 	override val source: MangaSource = source ?: UnknownMangaSource
 }
 
+/**
+ * The User-Agent OkHttp sent for the request that hit the CAPTCHA wall. The challenge must be solved with the
+ * SAME UA (cf_clearance is UA-bound). Null when unknown → the webview uses the engine's native UA, which
+ * equals OkHttp's default anyway.
+ */
+fun CloudFlareException.requestUserAgent(): String? =
+	(this as? CloudFlareProtectedException)?.headers?.get("User-Agent")
+

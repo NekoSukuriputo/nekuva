@@ -11,7 +11,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
-import org.nekosukuriputo.nekuva.parsers.network.UserAgents
 import java.lang.ref.WeakReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -27,9 +26,13 @@ object WebViewExecutor {
     private var webViewCached: WeakReference<WebView>? = null
     private val mutex = Mutex()
 
-    // Match OkHttp's UA (the parser's getDefaultUserAgent = UserAgents.FIREFOX_MOBILE) so a cf_clearance
-    // earned by the JS-challenge WebView is valid for the parser's requests too (cf_clearance is UA-bound).
-    val defaultUserAgent: String = UserAgents.FIREFOX_MOBILE
+    // The device WebView's native UA — the SAME UA OkHttp uses by default (getDefaultUserAgent →
+    // platformDefaultUserAgent → WebSettings.getDefaultUserAgent). Keeping the JS-challenge WebView on this
+    // UA means a cf_clearance it earns is valid for the parser's OkHttp requests (cf_clearance is UA-bound),
+    // and the UA stays consistent with the actual engine fingerprint so CloudFlare doesn't escalate.
+    val defaultUserAgent: String? by lazy {
+        runCatching { WebSettings.getDefaultUserAgent(context) }.getOrNull()
+    }
 
     suspend fun evaluateJs(baseUrl: String?, script: String): String? = mutex.withLock {
         withContext(Dispatchers.Main.immediate) {

@@ -1,5 +1,7 @@
 package org.nekosukuriputo.nekuva.reader.ui
 
+import org.nekosukuriputo.nekuva.core.exceptions.requestUserAgent
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -115,7 +117,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onOpenSettings: () -> Unit = {},
-    onResolveCloudFlare: (url: String) -> Unit = {},
+    onResolveCloudFlare: (url: String, userAgent: String?) -> Unit = { _, _ -> },
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isBookmarked by viewModel.isBookmarked.collectAsState()
@@ -335,7 +337,7 @@ fun ReaderScreen(
                 error = state.exception,
                 onRetry = { viewModel.retry() },
                 modifier = Modifier.padding(paddingValues),
-                onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+                onResolveCloudFlare = { onResolveCloudFlare(it.url, it.requestUserAgent()) },
             )
             is ReaderUiState.Success -> {
                 Box(modifier = Modifier.fillMaxSize().background(readerBackgroundColor(readerBackground))) {
@@ -1096,11 +1098,20 @@ private fun ReaderChaptersSheet(
             HorizontalDivider()
             when (tab) {
                 0 -> {
+                    // Open scrolled to the current chapter (Doki) so the last-read chapter is visible at once.
+                    // initialFirstVisibleItemIndex covers first layout; the LaunchedEffect re-applies if the
+                    // current index changes (e.g. branch switch) so it never gets stuck at the top.
                     val listState = androidx.compose.foundation.lazy.rememberLazyListState(
                         initialFirstVisibleItemIndex = chapters.indexOfFirst { it.isCurrent }.coerceAtLeast(0),
                     )
+                    LaunchedEffect(chapters) {
+                        val idx = chapters.indexOfFirst { it.isCurrent }
+                        if (idx >= 0) listState.scrollToItem(idx)
+                    }
                     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
                         items(chapters, key = { it.id }) { ch ->
+                            // Read chapters greyed (Doki); current highlighted; unread normal.
+                            val readDim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable { onChapterClick(ch.id) }.padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1114,10 +1125,15 @@ private fun ReaderChaptersSheet(
                                         ch.name.ifEmpty { "Chapter ${ch.number}" },
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (ch.isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                        color = when {
+                                            ch.isCurrent -> MaterialTheme.colorScheme.primary
+                                            ch.isRead -> readDim
+                                            else -> LocalContentColor.current
+                                        },
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    Text("#${ch.number}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("#${ch.number}", style = MaterialTheme.typography.bodySmall, color = if (ch.isRead && !ch.isCurrent) readDim else MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 // Downloaded chapter → SD-card badge (Doki reader chapters list parity).
                                 if (ch.isDownloaded) {

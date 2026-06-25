@@ -61,6 +61,8 @@ data class ReaderChapterItem(
     val name: String,
     val isCurrent: Boolean,
     val isDownloaded: Boolean = false,
+    // True for chapters before the current one (Doki: read → greyed in the sheet).
+    val isRead: Boolean = false,
 )
 
 /** A translation/scanlation branch for the reader's branch selector (Doki's MangaBranch). */
@@ -741,14 +743,17 @@ class ReaderViewModel(
             currentChapterName = chapter?.title?.takeIf { it.isNotEmpty() } ?: chapter?.name ?: "",
             currentChapterIndex = idx,
             chaptersTotal = chapters.size,
-            chapters = sheetChapters.mapIndexed { i, c ->
-                ReaderChapterItem(
-                    id = c.id,
-                    number = i + 1,
-                    name = c.title?.takeIf { it.isNotEmpty() } ?: c.name ?: "",
-                    isCurrent = c.id == currentChapterId,
-                    isDownloaded = c.id in downloadedChapterIds,
-                )
+            chapters = sheetChapters.indexOfFirst { it.id == currentChapterId }.let { curIdx ->
+                sheetChapters.mapIndexed { i, c ->
+                    ReaderChapterItem(
+                        id = c.id,
+                        number = i + 1,
+                        name = c.title?.takeIf { it.isNotEmpty() } ?: c.name ?: "",
+                        isCurrent = c.id == currentChapterId,
+                        isRead = curIdx >= 0 && i < curIdx,
+                        isDownloaded = c.id in downloadedChapterIds,
+                    )
+                }
             },
             hasPrev = idx > 0,
             hasNext = idx in 0 until chapters.lastIndex,

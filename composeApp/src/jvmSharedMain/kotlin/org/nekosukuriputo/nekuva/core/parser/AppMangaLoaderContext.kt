@@ -26,6 +26,15 @@ expect suspend fun evaluateJsPlatform(baseUrl: String, script: String): String?
 expect fun createBitmapPlatform(width: Int, height: Int): Bitmap
 expect fun redrawImageResponsePlatform(response: Response, redraw: (image: Bitmap) -> Bitmap): Response
 
+/**
+ * The platform browser engine's User-Agent (Android: the real device WebView UA; Desktop: the UA pinned on
+ * the KCEF/Chromium browser). Returned as the app's default UA so OkHttp, the challenge-solving webview, and
+ * the engine fingerprint all agree — `cf_clearance` is UA-bound, so a mismatch makes a solved CAPTCHA come
+ * straight back (and an inconsistent UA/fingerprint triggers harder/slower CloudFlare challenges). Mirrors
+ * Doki's `MangaLoaderContextImpl.getDefaultUserAgent` (= `webViewExecutor.defaultUserAgent`).
+ */
+expect fun platformDefaultUserAgent(): String?
+
 class AppMangaLoaderContext(
     override val httpClient: OkHttpClient,
     override val cookieJar: MutableCookieJar
@@ -40,7 +49,7 @@ class AppMangaLoaderContext(
         evaluateJsPlatform(baseUrl, script)
     }
 
-    override fun getDefaultUserAgent(): String = UserAgents.FIREFOX_MOBILE
+    override fun getDefaultUserAgent(): String = platformDefaultUserAgent() ?: UserAgents.FIREFOX_MOBILE
 
     override fun getConfig(source: MangaSource): MangaSourceConfig {
         return org.nekosukuriputo.nekuva.core.prefs.SourceSettings(

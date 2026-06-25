@@ -34,6 +34,7 @@ actual fun PlatformWebView(
     url: String,
     state: WebViewState,
     modifier: Modifier,
+    userAgent: String?,
 ) {
     var browser by remember { mutableStateOf<KCEFBrowser?>(null) }
     val scope = rememberCoroutineScope()
@@ -56,6 +57,13 @@ actual fun PlatformWebView(
                     return object : CefResourceRequestHandlerAdapter() {
                         override fun onBeforeResourceLoad(rb: CefBrowser?, rf: CefFrame?, req: CefRequest?): Boolean {
                             val u = req?.url ?: return false
+                            // Per-source UA override (Doki configureForParser): send the parser's UA so the
+                            // cf_clearance KCEF earns matches OkHttp's requests. Default UA is already pinned
+                            // globally (DESKTOP_USER_AGENT == OkHttp default), so this only matters when a
+                            // source overrides its UA.
+                            if (userAgent != null) {
+                                runCatching { req?.setHeaderByName("User-Agent", userAgent, true) }
+                            }
                             return !adBlock.shouldLoadUrl(u, state.currentUrl.ifEmpty { null })
                         }
                     }

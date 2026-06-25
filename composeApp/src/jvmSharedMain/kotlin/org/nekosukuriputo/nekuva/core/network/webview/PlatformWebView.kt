@@ -49,4 +49,8 @@ expect fun PlatformWebView(
     url: String,
     state: WebViewState,
     modifier: Modifier,
+    // The source's User-Agent (Doki configureForParser): when set, the engine sends it so a cf_clearance the
+    // browser earns matches the parser's OkHttp requests (UA-bound). Null = use the engine's native UA, which
+    // already equals OkHttp's default (getDefaultUserAgent).
+    userAgent: String? = null,
 )

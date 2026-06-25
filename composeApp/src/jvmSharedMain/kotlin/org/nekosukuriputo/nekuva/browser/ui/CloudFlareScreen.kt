@@ -47,6 +47,7 @@ fun CloudFlareScreen(
     url: String,
     onResolved: () -> Unit,
     onCancel: () -> Unit,
+    userAgent: String? = null,
 ) {
     val state = remember { WebViewState() }
     val cookieJar = koinInject<MutableCookieJar>()
@@ -100,6 +101,7 @@ fun CloudFlareScreen(
             url = url,
             state = state,
             modifier = Modifier.fillMaxSize().padding(padding),
+            userAgent = userAgent,
         )
     }
 }

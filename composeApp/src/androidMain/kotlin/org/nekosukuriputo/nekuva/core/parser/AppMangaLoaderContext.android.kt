@@ -15,6 +15,17 @@ import android.graphics.Bitmap as AndroidBitmap
 actual suspend fun evaluateJsPlatform(baseUrl: String, script: String): String? =
     WebViewExecutor.evaluateJs(baseUrl.ifEmpty { null }, script)
 
+// The device WebView's real UA (Chromium). Used as OkHttp's default UA so the parser, the in-app/CAPTCHA
+// WebView, and the engine fingerprint all match — mirrors Doki (WebSettings.getDefaultUserAgent). Cached;
+// null if the system WebView is unavailable (caller falls back to UserAgents.FIREFOX_MOBILE).
+private val deviceWebViewUserAgent: String? by lazy {
+    runCatching {
+        android.webkit.WebSettings.getDefaultUserAgent(org.koin.core.context.GlobalContext.get().get())
+    }.getOrNull()
+}
+
+actual fun platformDefaultUserAgent(): String? = deviceWebViewUserAgent
+
 actual fun createBitmapPlatform(width: Int, height: Int): Bitmap = BitmapWrapper.create(width, height)
 
 /**

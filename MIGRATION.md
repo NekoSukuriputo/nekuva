@@ -1949,3 +1949,42 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   kini scan pustaka nyata (`getRawList()`), kumpulkan judul tag unik, map ke tag `LocalMangaSource` (filter lokal
   cocok by-title) — mirror Doki. **Run-verified Desktop:** log `availableTags=4: Action, Adventure, Comedy,
   Fantasy` (dari Eleceed.cbz) → baris chip kini tampil. Memperbaiki daftar genre di filter-sheet sekaligus.
+
+### SESI 2026-06-26 — CAPTCHA UA, chapter-list read-state/auto-scroll, tombol Lanjut overflow
+
+**1. CAPTCHA tak pernah lolos (Desktop & Android) — User-Agent default salah** ✅ (committed)
+- **Doki ref:** `MangaLoaderContextImpl.getDefaultUserAgent() = webViewExecutor.defaultUserAgent ?:
+  UserAgents.FIREFOX_MOBILE` → UA default = **UA WebView asli perangkat** (Chromium). OkHttp, WebView penantang
+  CAPTCHA, dan fingerprint engine semua SAMA → CloudFlare lolos normal & `cf_clearance` (terikat-UA) yang
+  diperoleh WebView valid utk OkHttp. WebView penantang di-set UA per-sumber via `configureForParser(ua)` =
+  `repository.getRequestHeaders()[User-Agent]`.
+- **Bug Nekuva:** `AppMangaLoaderContext.getDefaultUserAgent()` hardcode `UserAgents.FIREFOX_MOBILE`, padahal
+  engine (Android WebView & Desktop KCEF) itu Chromium. Akibat: (a) Android — UA klaim Firefox tapi fingerprint
+  Chrome → CF kasih tantangan lebih berat/lambat ("buka web lambat"); (b) Desktop — KCEF tak set UA sama sekali
+  (Chrome default) ≠ OkHttp Firefox → `cf_clearance` ditolak → "solve selesai tapi sumber tetap tak tampil".
+- **Fix:** `getDefaultUserAgent() = platformDefaultUserAgent() ?: FIREFOX_MOBILE` (expect/actual baru).
+  - Android actual: `WebSettings.getDefaultUserAgent(context)` (UA WebView asli). `WebViewExecutor.defaultUserAgent`
+    + `PlatformWebView.android` dikembalikan ke UA native (hapus override FIREFOX_MOBILE; override hanya bila
+    sumber punya UA custom).
+  - Desktop actual: pin `DESKTOP_USER_AGENT = UserAgents.CHROME_WINDOWS` di OkHttp **dan** di KCEF
+    (`CefSettings.user_agent`) → cocok (run-verified: log CEF `user_agent=Mozilla/5.0 (Windows NT 10.0…)
+    Chrome/146`, sebelumnya `null`). KCEF native UA tak diketahui sebelum init → pin konstan = solusi.
+  - **Per-sumber UA (Doki configureForParser):** UA dari `CloudFlareProtectedException.headers["User-Agent"]`
+    (`requestUserAgent()`) di-thread `ErrorState → onResolveCloudFlare(url, ua) → CloudFlareRoute(url, ua) →
+    CloudFlareScreen → PlatformWebView(userAgent)`. Android set `userAgentString`; Desktop override header
+    `User-Agent` di CEF resource handler. 3 layar (RemoteList/Details/Reader) + nav diperbarui.
+- **Perlu run-verify GUI user:** buka SHIRAKAMI → Solve → sumber muncul (Desktop & Android), tanpa loop CAPTCHA.
+
+**2. List chapter: chapter terbaca abu-abu + auto-scroll ke chapter current (detail & reader sheet)** ✅ (committed)
+- **Doki ref:** `ChaptersMapper.mapChapters` + `ChapterListItemAD`: chapter SEBELUM current (last-read) = read →
+  `textColorHint` (abu-abu); current = aksen + bold + ikon; sesudahnya = unread normal. List auto-scroll ke current.
+- **Nekuva:** `DetailsScreen.ChaptersTab` — hitung `currentIndex`/`readIds` (chapter sebelum `historyChapterId`);
+  `ChapterItem`/`ChapterGridCell` dapat `isRead` → judul/tanggal abu-abu (`onSurface α0.38`), current = primary+bold
+  + ikon PlayArrow; `LaunchedEffect` scroll-sekali ke current (list & grid). `ReaderChaptersSheet` —
+  `ReaderChapterItem.isRead` (dihitung di VM: index < index current di branch) → abu-abu; auto-scroll diperkuat
+  (`initialFirstVisibleItemIndex` + `LaunchedEffect(chapters)`). **Perlu run-verify GUI user.**
+
+**3. Tombol "Lanjut" di toolbar sheet detail melebihi lebar → menutupi tombol dropdown (gambar 5)** ✅ (committed)
+- `ChaptersSheetContent`: split-button Row + tombol utama diberi `Modifier.weight(1f, fill = false)` → judul
+  resume yang panjang TRUNCATE (bukan mendorong segmen dropdown keluar layar). Dropdown selalu terlihat.
+  **Perlu run-verify GUI user.**

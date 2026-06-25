@@ -184,7 +184,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     }
                     org.nekosukuriputo.nekuva.details.ui.DetailsScreen(
                         viewModel = detailsVm,
-                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
+                        onResolveCloudFlare = { url, ua -> navController.navigate(CloudFlareRoute(url, ua)) },
                         onChapterClick = { mangaId, chapterId ->
                             openReader(mangaId, chapterId, -1, false)
                         },
@@ -246,7 +246,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                             navController.popBackStack()
                         },
                         onOpenSettings = { navController.navigate(ReaderSettingsRoute) },
-                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
+                        onResolveCloudFlare = { url, ua -> navController.navigate(CloudFlareRoute(url, ua)) },
                     )
                 }
                 composable<SettingsRoute> {
@@ -397,7 +397,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onMangaClick = { id ->
                             navController.navigate(MangaDetailsRoute(id))
                         },
-                        onResolveCloudFlare = { url -> navController.navigate(CloudFlareRoute(url)) },
+                        onResolveCloudFlare = { url, ua -> navController.navigate(CloudFlareRoute(url, ua)) },
                         onSourceSettings = { name -> navController.navigate(SourceSettingsRoute(name)) },
                         onBackClick = {
                             navController.popBackStack()
@@ -451,6 +451,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                     val args = backStackEntry.toRoute<CloudFlareRoute>()
                     org.nekosukuriputo.nekuva.browser.ui.CloudFlareScreen(
                         url = args.url,
+                        userAgent = args.userAgent,
                         onResolved = {
                             navController.previousBackStackEntry?.savedStateHandle?.set("cf_resolved", true)
                             navController.popBackStack()

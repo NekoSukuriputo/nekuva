@@ -1,5 +1,7 @@
 package org.nekosukuriputo.nekuva.remotelist.ui
 
+import org.nekosukuriputo.nekuva.core.exceptions.requestUserAgent
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -104,7 +106,7 @@ import nekuva.composeapp.generated.resources.*
 fun RemoteListScreen(
     viewModel: RemoteListViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit,
-    onResolveCloudFlare: (url: String) -> Unit = {},
+    onResolveCloudFlare: (url: String, userAgent: String?) -> Unit = { _, _ -> },
     onSourceSettings: (sourceName: String) -> Unit = {},
     onBackClick: () -> Unit
 ) {
@@ -273,7 +275,7 @@ fun RemoteListScreen(
                         ErrorState(
                             error = state.exception,
                             onRetry = { viewModel.retry() },
-                            onResolveCloudFlare = { onResolveCloudFlare(it.url) },
+                            onResolveCloudFlare = { onResolveCloudFlare(it.url, it.requestUserAgent()) },
                         )
                     }
                     is RemoteListUiState.Success -> {

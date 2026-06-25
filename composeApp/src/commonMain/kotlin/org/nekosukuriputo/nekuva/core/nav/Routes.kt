@@ -52,7 +52,7 @@ data class RelatedRoute(val mangaId: Long)
 data class BrowserRoute(val url: String, val title: String? = null)
 
 @Serializable
-data class CloudFlareRoute(val url: String)
+data class CloudFlareRoute(val url: String, val userAgent: String? = null)
 
 @Serializable
 data class OAuthRoute(val serviceId: Int)
