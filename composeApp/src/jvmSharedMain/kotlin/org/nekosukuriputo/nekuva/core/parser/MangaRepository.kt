@@ -87,6 +87,15 @@ interface MangaRepository {
 						mirrorSwitcher = mirrorSwitcher,
 						sourceOverride = identity,
 					)
+				}.onFailure {
+					// The bundle provides this source but its parser couldn't be instantiated — fall back to
+					// the built-in. Make it LOUD (and visible in the About error) so a silent fallback can't
+					// hide why a runtime-extension update "doesn't apply" for an overridden source.
+					val root = generateSequence(it as Throwable) { e -> e.cause }.last()
+					org.nekosukuriputo.nekuva.core.extensions.lastExtensionError =
+						"override '$name' failed: ${root::class.simpleName}: ${root.message ?: "(no message)"}"
+					println("[Nekuva][ext] ${org.nekosukuriputo.nekuva.core.extensions.lastExtensionError}")
+					it.printStackTrace()
 				}
 			}
 			return baseline?.let {
