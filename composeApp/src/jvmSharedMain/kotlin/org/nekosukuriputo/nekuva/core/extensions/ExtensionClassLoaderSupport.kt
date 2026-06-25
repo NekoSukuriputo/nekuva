@@ -4,14 +4,23 @@ import org.nekosukuriputo.nekuva.parsers.MangaLoaderContext
 import org.nekosukuriputo.nekuva.parsers.MangaParser
 
 // Classes the BUNDLE owns (loaded child-first from the extension): parser implementations, the generated
-// factory, the source enum, and the entry point. Everything else — the shared contract
+// factory, and the entry point. Everything else — the shared contract
 // (MangaParser/MangaLoaderContext/models/config/exception/network/util) + okhttp/jsoup/kotlin — is
 // delegated to the host loader so the ABI is identical on both sides (mirrors Usagi's PluginClassLoader).
 // Shared by the Desktop (URLClassLoader) and Android (DexClassLoader) extension class loaders.
+//
+// CRITICAL: `MangaParserSource` (the source enum) is NOT plugin-owned — it is part of the shared contract.
+// It is the return type of `MangaParser.getSource()`, so if the bundle loaded its OWN copy, the host's
+// `MangaParser` interface and the bundle's `AbstractMangaParser` would reference two different
+// `MangaParserSource` classes and the JVM rejects the link with a *loader constraint violation*
+// ("different Class objects for the type … MangaParserSource used in the signature"). That made EVERY
+// runtime-extension parser override fail and silently fall back to the built-in parser. Keeping it
+// host-loaded gives one enum on both sides. Consequence: a runtime bundle can fix/replace parsers for
+// sources that exist in the host's (compile-time) enum, but cannot add a genuinely NEW source enum value —
+// that still requires a host rebuild against the newer exts.
 private val PLUGIN_OWNED_EXACT = setOf(
     "org.nekosukuriputo.nekuva.parsers.NekuvaExtensions",
     "org.nekosukuriputo.nekuva.parsers.SourceDescriptor",
-    "org.nekosukuriputo.nekuva.parsers.model.MangaParserSource",
 )
 private val PLUGIN_OWNED_PREFIX = listOf(
     "org.nekosukuriputo.nekuva.parsers.MangaParserFactory", // generated newParser factory

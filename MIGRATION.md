@@ -1759,6 +1759,27 @@ build dex Android + index + signing).
 **Status fitur Runtime Extensions: LENGKAP & signing aktif** (Desktop + Android run-verified).
 Opsional ke depan: source-list di index (preview sebelum unduh), live-refresh Explore mid-session tanpa restart.
 
+**🔴 FIX KRITIS (2026-06-25) — override parser bundle TIDAK PERNAH benar-benar jalan (selalu diam-diam
+fallback ke built-in).** Gejala: update ekstensi via About sukses (mis. v1.0.14 fix urutan bab DoujinDesu),
+tapi perbaikan parser **tidak naik** — hanya mengubah `implementation nekuva-exts:<ver>` compile-time yang
+mengangkat fix. **Root cause:** `MangaParserSource` (enum sumber) dulu masuk `PLUGIN_OWNED` (dimuat
+child-first oleh classloader bundle). Padahal enum itu **bagian kontrak bersama** — ia tipe kembalian
+`MangaParser.getSource()`. Akibatnya interface `MangaParser` host dan `AbstractMangaParser` bundle merujuk
+**dua kelas `MangaParserSource` berbeda** → JVM menolak link dengan **`LinkageError: loader constraint
+violation` ("different Class objects for the type … MangaParserSource used in the signature")** untuk
+**SETIAP** parser. `Factory.createRepository` menelan error itu (`runCatching`) dan diam-diam pakai built-in.
+**Fix:** hapus `MangaParserSource` dari `PLUGIN_OWNED_EXACT` (`ExtensionClassLoaderSupport.kt`) → enum dimuat
+host (satu kelas di kedua sisi) → tak ada konflik loader. **Konsekuensi (diterima):** bundle runtime bisa
+**memperbaiki/mengganti parser** untuk sumber yang **sudah ada di enum host (compile-time)**, tapi **tak bisa
+menambah sumber enum BARU** — itu tetap perlu rebuild host terhadap exts lebih baru. Aman thd selisih versi:
+`when(source)` di `newParser` membungkus tiap referensi enum dalam `catch(NoSuchFieldError)` (diverifikasi via
+`javap` pada bundle), jadi nilai enum yang hanya ada di bundle (mis. v1.0.14 vs host v1.0.1) **dilewati**, tak
+meng-crash factory. **Run-verified Desktop (2026-06-25):** sebelum fix, startup membanjiri konsol dengan
+`override '…' failed: LinkageError`; setelah fix + favicon cache dibersihkan (paksa jalur override re-eksekusi),
+13 favicon (termasuk **DOUJINDESU**) ter-fetch ulang dengan **0 LinkageError / 0 NoSuchFieldError / 0 override
+gagal**. Diagnostik tetap dipasang: kegagalan override kini di-surface ke ringkasan "Update extensions"
+(`lastExtensionError`) + `printStackTrace`, bukan ditelan diam-diam.
+
 ---
 
 ## SESI 2026-06-25 — Beta-polish batch (7 poin, langsung di `main`, commit per-poin)
