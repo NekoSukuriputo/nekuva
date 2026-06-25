@@ -34,11 +34,19 @@ class LocalListViewModel(
         loadManga()
     }
 
+    // Library-wide tags for the inline quick-filter chip row (Doki QuickFilter header). Queried from the
+    // local index via getFilterOptions() so it stays populated even when the active filter empties the list
+    // (lets the user un-toggle a tag that yielded no results). Refreshed only when the library content
+    // changes, NOT on every filter change.
+    private val _availableTags = MutableStateFlow<List<org.nekosukuriputo.nekuva.parsers.model.MangaTag>>(emptyList())
+    val availableTags: StateFlow<List<org.nekosukuriputo.nekuva.parsers.model.MangaTag>> = _availableTags.asStateFlow()
+
     init {
         loadManga()
+        loadAvailableTags()
         // Refresh when storage changes (e.g. a download finished, or a manga was deleted).
         viewModelScope.launch {
-            localStorageChanges.collect { loadManga() }
+            localStorageChanges.collect { loadManga(); loadAvailableTags() }
         }
         // Re-query when the filter sheet applies (one bump = one reload; covers tags/exclude/rating/sort).
         viewModelScope.launch {
@@ -48,6 +56,22 @@ class LocalListViewModel(
 
     /** Currently-applied local filter tags (Doki filter), exposed for the filter sheet's initial state. */
     val appliedTags: StateFlow<Set<org.nekosukuriputo.nekuva.parsers.model.MangaTag>> get() = filterHolder.tags
+
+    /** Toggle a tag from the quick-filter chip row (Doki QuickFilterListener.toggleFilterOption → toggleTag).
+     *  Only touches the include-tags set (exclude/rating from the full filter sheet are left as-is). */
+    fun toggleTag(tag: org.nekosukuriputo.nekuva.parsers.model.MangaTag) {
+        val current = filterHolder.tags.value
+        filterHolder.tags.value = if (tag in current) current - tag else current + tag
+        filterHolder.notifyApplied() // bumps revision → list re-queries once
+    }
+
+    private fun loadAvailableTags() {
+        viewModelScope.launch {
+            _availableTags.value = runCatching {
+                localMangaRepository.getFilterOptions().availableTags
+            }.getOrNull().orEmpty().sortedBy { it.title }
+        }
+    }
 
     fun deleteManga(manga: org.nekosukuriputo.nekuva.parsers.model.Manga) {
         viewModelScope.launch {

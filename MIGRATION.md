@@ -47,8 +47,8 @@ itu gate terakhir sebelum Phase 1 dinyatakan selesai.
 
 **A. Desktop behavior**
 - **A1 — scroll horizontal chip filter di Desktop:** `Modifier.horizontalWheelScroll(state)` expect/actual
-  (Desktop: wheel/trackpad → `scrollBy` horizontal; Android no-op). Dipasang di chip History + RemoteList.
-  (Chip Local menyusul saat ada — local pakai bottom-sheet filter.)
+  (Desktop: wheel/trackpad → `scrollBy` horizontal; Android no-op). Dipasang di chip History + RemoteList
+  + **Local quick-filter** (2026-06-25, lihat di bawah).
 - **A2 — arrow-key scroll reader Desktop (webtoon):** WebtoonReader dapat focus + `onKeyEvent`; Arrow/Page/Space
   scroll **0.85× viewport** (bukan per-halaman) → tak "loncat" di window setengah.
 
@@ -1925,3 +1925,21 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
   (teks lewat di bawah kamera), **memesan ruang** → manga di bawahnya tak pernah ketimpa. Tampil saat kontrol
   disembunyikan (app bar ambil alih saat kontrol tampil). Tombol zoom: `if` biasa (AnimatedVisibility bentrok
   overload ColumnScope vs Box.align). `infoBarTransparent` dihapus (strip selalu punya background).
+
+**Note ketinggalan — Chip filter di layar Local (Doki QuickFilter)** ✅ (committed)
+- **Doki ref:** `LocalListViewModel.createFilterHeader` → `QuickFilter` berisi chip `ListFilterOption.Tag`
+  (ikon `ic_tag`): tag yang sedang dipakai ditaruh dulu (checked), lalu sisa tag tersedia, maxCount 16;
+  disembunyikan saat tak ada tag dipakai & tag tersedia < 3. Tap chip = `toggleFilterOption` → toggle tag
+  include. `availableTags` diambil dari `repository.getFilterOptions().availableTags` (seluruh indeks lokal,
+  **bukan** dari daftar terfilter — jadi chip tetap muncul walau filter mengosongkan daftar, agar bisa di-untoggle).
+  Chip-nya tag genre (screenshot user: Bikini/Adult/Glasses/Rape), bukan favicon-sumber (tipe chip
+  `ListFilterOption.Source` ada di Doki tapi TIDAK dipakai di quick-filter Local).
+- **Nekuva:** plumbing filter lokal sudah ada (`LocalFilterHolder` + `LocalFilterSheet` untuk filter penuh) —
+  yang kurang cuma baris chip inline. `LocalListViewModel`: `availableTags: StateFlow<List<MangaTag>>`
+  (di-load dari `getFilterOptions()`, refresh saat `localStorageChanges`, independen dari filter) +
+  `toggleTag(tag)` (toggle `filterHolder.tags` lalu `notifyApplied()` → reload sekali). `LocalListScreen`:
+  `LocalQuickTagFilter` = `LazyRow` `FilterChip` (ikon `Icons.AutoMirrored.Filled.Label` ≈ ic_tag), applied-first,
+  cap 16, self-hide saat <3 tag & none applied; disembunyikan di selection-mode. Konten layar dibungkus `Column`
+  (chip row di atas + state di bawah). Desktop: `horizontalWheelScroll(chipScroll)` (A1) → mouse-wheel
+  menggulir chip. Shared (`jvmSharedMain`) → otomatis Android + Desktop. **Compile-green; perlu run-verify GUI user**
+  (buka Local dengan ≥3 genre berbeda → baris chip muncul; tap genre → daftar terfilter; tap lagi → kembali).
