@@ -36,6 +36,11 @@ import org.nekosukuriputo.nekuva.settings.ui.components.BoolPref
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsCategoryHeader
 import org.nekosukuriputo.nekuva.settings.ui.components.SettingsItem
 
+// Discord Rich Presence is intentionally hidden (personal app — no community/RPC). The implementation
+// (DiscordRpcManager / KizzyRPC gateway / login webview) is kept intact; flip this to true to re-enable
+// the Settings → Services menu for it.
+private const val SHOW_DISCORD_RPC_MENU = false
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServicesSettingsScreen(
@@ -108,20 +113,23 @@ fun ServicesSettingsScreen(
                 }
             }
             // Discord Rich Presence (Doki DiscordRpc): Android gateway via KizzyRPC; Desktop no-op.
-            // Enable toggle + token login (webview scrape) + skip-NSFW.
-            BoolPref(settings, AppSettings.KEY_DISCORD_RPC, stringResource(Res.string.discord_rpc), stringResource(Res.string.discord_rpc_summary), false)
-            val discordEnabled by settings.observeBoolean(AppSettings.KEY_DISCORD_RPC, false)
-                .collectAsState(initial = settings.isDiscordRpcEnabled)
-            if (discordEnabled) {
-                // Re-read the token whenever it changes (login/logout) so the row label stays live.
-                val tokenTick by settings.keyChangeFlow(AppSettings.KEY_DISCORD_TOKEN).collectAsState(initial = Unit)
-                val hasToken = remember(tokenTick) { settings.discordToken != null }
-                if (hasToken) {
-                    SettingsItem(title = stringResource(Res.string.discord_token), summary = logoutLabel, onClick = { settings.discordToken = null })
-                } else {
-                    SettingsItem(title = stringResource(Res.string.discord_token), summary = signInLabel, onClick = onDiscordLogin)
+            // Enable toggle + token login (webview scrape) + skip-NSFW. Hidden by SHOW_DISCORD_RPC_MENU
+            // (personal app) — the implementation stays compiled; only the menu is gated off.
+            if (SHOW_DISCORD_RPC_MENU) {
+                BoolPref(settings, AppSettings.KEY_DISCORD_RPC, stringResource(Res.string.discord_rpc), stringResource(Res.string.discord_rpc_summary), false)
+                val discordEnabled by settings.observeBoolean(AppSettings.KEY_DISCORD_RPC, false)
+                    .collectAsState(initial = settings.isDiscordRpcEnabled)
+                if (discordEnabled) {
+                    // Re-read the token whenever it changes (login/logout) so the row label stays live.
+                    val tokenTick by settings.keyChangeFlow(AppSettings.KEY_DISCORD_TOKEN).collectAsState(initial = Unit)
+                    val hasToken = remember(tokenTick) { settings.discordToken != null }
+                    if (hasToken) {
+                        SettingsItem(title = stringResource(Res.string.discord_token), summary = logoutLabel, onClick = { settings.discordToken = null })
+                    } else {
+                        SettingsItem(title = stringResource(Res.string.discord_token), summary = signInLabel, onClick = onDiscordLogin)
+                    }
+                    BoolPref(settings, AppSettings.KEY_DISCORD_RPC_SKIP_NSFW, stringResource(Res.string.discord_rpc_skip_nsfw), null, false)
                 }
-                BoolPref(settings, AppSettings.KEY_DISCORD_RPC_SKIP_NSFW, stringResource(Res.string.discord_rpc_skip_nsfw), null, false)
             }
         }
     }

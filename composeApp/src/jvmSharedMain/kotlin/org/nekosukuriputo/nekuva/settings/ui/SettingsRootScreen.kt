@@ -149,7 +149,7 @@ fun SettingsRootScreen(
         // Services
         add(SettingsSearchEntry(stringResource(Res.string.sync), catServices, onServices))
         add(SettingsSearchEntry(stringResource(Res.string.suggestions), catServices, onServices))
-        add(SettingsSearchEntry(stringResource(Res.string.discord_token), catServices, onServices))
+        // Discord RPC menu is hidden (personal app) — keep it out of settings search too.
         // About
         add(SettingsSearchEntry(stringResource(Res.string.changelog), catAbout, onAbout))
         add(SettingsSearchEntry(stringResource(Res.string.user_manual), catAbout, onAbout))
