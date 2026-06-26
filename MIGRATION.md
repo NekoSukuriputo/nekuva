@@ -1988,3 +1988,26 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
 - `ChaptersSheetContent`: split-button Row + tombol utama diberi `Modifier.weight(1f, fill = false)` → judul
   resume yang panjang TRUNCATE (bukan mendorong segmen dropdown keluar layar). Dropdown selalu terlihat.
   **Perlu run-verify GUI user.**
+
+### SESI 2026-06-26 (lanjutan) — Reader: cleartext (KomikTap), kedip hitam, preload
+
+**1. Sumber HTTP (KomikTap / `cdnasu.xyz`) gagal load: "CLEARTEXT communication not permitted"** ✅ (committed)
+- **Akar:** Android memblokir lalu-lintas HTTP (cleartext) secara default di targetSdk 28+. Beberapa sumber
+  menyajikan gambar dari CDN plain-HTTP → gambar gagal (reader: "Kesalahan/Ulangi"; unduhan: error). Doki pakai
+  `android:networkSecurityConfig="@xml/network_security_config"` dengan `cleartextTrafficPermitted="true"`.
+- **Fix (parity Doki, Android-only):** tambah `composeApp/src/androidMain/res/xml/network_security_config.xml`
+  (`cleartextTrafficPermitted=true` + trust system/user CA) + atribut `networkSecurityConfig` di `<application>`.
+  Desktop JVM tak punya kebijakan ini (sudah jalan). `assembleDebug` hijau. **Perlu run-verify: buka KomikTap →
+  gambar load; unduh KomikTap → sukses.**
+
+**2. Kedip hitam saat pindah halaman + 3. terasa load per-halaman (Doki mulus)** ✅ (committed)
+- **Paged (Standard/RTL/Vertical):** `HorizontalPager`/`VerticalPager` dulu `beyondViewportPageCount=0` → halaman
+  tetangga baru di-compose & di-load SAAT swipe → kedip hitam/spinner. Set `beyondViewportPageCount=2` → tetangga
+  ter-compose + gambar ter-load sebelum swipe (Doki menjaga tetangga ter-decode).
+- **Webtoon (continuous):** placeholder loading dulu kotak 400dp lalu LONCAT ke tinggi gambar asli saat decode =
+  "kedip". Tambah cache rasio aspek per-halaman (`url → w/h`, hoisted di `WebtoonReader`): halaman yang sudah
+  pernah ter-load me-reserve tinggi aslinya via `aspectRatio()` → scroll balik mulus tanpa loncat; placeholder
+  awal diperbesar (560dp). `onSuccess` menyimpan rasio.
+- **Preload (#3):** `PRELOAD_AHEAD` 5 → 8 (lebih banyak halaman dihangatkan ke cache Coil di depan posisi). Gate
+  jaringan tetap (Doki `pages_preload`: always/wifi/never; default wifi — jika di data seluler/metered, preload
+  mati → bisa diubah ke "Selalu" di setelan). **Perlu run-verify GUI: scroll terasa lebih mulus, kedip berkurang.**

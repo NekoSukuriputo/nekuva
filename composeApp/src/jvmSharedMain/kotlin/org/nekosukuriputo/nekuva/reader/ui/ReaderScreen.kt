@@ -1304,8 +1304,9 @@ private fun ReaderPagePreloader(pages: List<LoadedPage>, currentIndex: Int, enab
 
 // Pages to warm into Coil's cache ahead of the current page (Doki PageLoader PREFETCH_LIMIT = 6/10). With
 // the manga client's CacheLimitInterceptor forcing a min cache age, these stick on disk so slow CDNs
-// (e.g. desu.photos) don't re-download on scroll-back.
-private const val PRELOAD_AHEAD = 5
+// (e.g. desu.photos) don't re-download on scroll-back. Larger window = fewer "page loading as I scroll"
+// stalls (the user feels per-page loading at 5).
+private const val PRELOAD_AHEAD = 8
 
 /** Continuous vertical reader (full-width images, multi-chapter append). */
 @Composable
@@ -1328,6 +1329,11 @@ private fun WebtoonReader(
     onShowMenu: () -> Unit,
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // Cache each page's loaded aspect ratio (url → width/height). LazyColumn recycles off-screen items, so
+    // without this a page re-entering view starts as a fixed-height placeholder and JUMPS to the real height
+    // when the (cached) image decodes — the "black flicker" on scroll. With it, a known page reserves its
+    // exact height up front, so re-scrolling is seamless.
+    val aspectRatios = remember { androidx.compose.runtime.mutableStateMapOf<String, Float>() }
     // Preload upcoming pages into Coil's cache (Doki prefetch), gated by the network policy.
     ReaderPagePreloader(pages, listState.firstVisibleItemIndex, preloadAllowed)
     // Desktop keyboard scroll: arrow Up/Down + PageUp/Down + Space scroll by a fraction of the VISIBLE
@@ -1460,7 +1466,7 @@ private fun WebtoonReader(
             verticalArrangement = if (webtoonGaps) Arrangement.spacedBy(12.dp) else Arrangement.Top,
         ) {
             itemsIndexed(items = pages, key = { _, p -> "${p.chapterId}_${p.pageInChapter}" }) { index, loadedPage ->
-                WebtoonPageItem(page = loadedPage.page, index = index, colorFilter = colorFilter)
+                WebtoonPageItem(page = loadedPage.page, index = index, colorFilter = colorFilter, aspectRatios = aspectRatios)
             }
         }
         org.nekosukuriputo.nekuva.core.ui.components.FastScrollbar(
@@ -1630,6 +1636,9 @@ private fun PagedReader(
                 modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = !pageZoomed,
                 pageSpacing = pageSpacing,
+                // Compose (and load) the adjacent pages before the swipe so turning a page shows the next
+                // image immediately instead of a black/spinner flash (Doki keeps neighbours decoded).
+                beyondViewportPageCount = 2,
             ) { u ->
                 // Resolve getPageUrl (some sources return an intermediate page URL) — else blank in vertical mode.
                 ZoomablePage(rememberResolvedPageUrl(pages.getOrNull(unitFirstPage(u))?.page), colorFilter, contentScale, pageAlignment, u == pagerState.currentPage, zoomCommands, { pageZoomed = it }, onTapGrid)
@@ -1646,6 +1655,9 @@ private fun PagedReader(
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = !pageZoomed,
                     pageSpacing = pageSpacing,
+                    // Compose (and load) the adjacent pages before the swipe so turning a page shows the next
+                    // image immediately instead of a black/spinner flash (Doki keeps neighbours decoded).
+                    beyondViewportPageCount = 2,
                 ) { u ->
                     // Keep page content laid out LTR regardless of the pager's RTL flow.
                     androidx.compose.runtime.CompositionLocalProvider(
@@ -1868,23 +1880,39 @@ private fun reportAspect(state: coil3.compose.AsyncImagePainter.State.Success, o
 }
 
 @Composable
-private fun WebtoonPageItem(page: MangaPage, index: Int, colorFilter: ColorFilter?) {
+private fun WebtoonPageItem(
+    page: MangaPage,
+    index: Int,
+    colorFilter: ColorFilter?,
+    aspectRatios: androidx.compose.runtime.snapshots.SnapshotStateMap<String, Float>,
+) {
     var retryHash by remember { mutableIntStateOf(0) }
+    val url = rememberResolvedPageUrl(page)
+    val knownAspect = url?.let { aspectRatios[it] }?.takeIf { it > 0f }
+    // Reserve the real height when known (cached across recycling) so re-scrolling never jumps; otherwise a
+    // ~viewport-tall placeholder keeps the gap from being a tiny box that then snaps to full height.
+    val itemModifier = if (knownAspect != null) {
+        Modifier.fillMaxWidth().aspectRatio(knownAspect)
+    } else {
+        Modifier.fillMaxWidth().wrapContentHeight()
+    }
+    val placeholderModifier = if (knownAspect != null) Modifier.fillMaxSize() else Modifier.fillMaxWidth().height(560.dp)
     key(retryHash) {
         SubcomposeAsyncImage(
-            model = rememberReaderPageModel(rememberResolvedPageUrl(page)),
+            model = rememberReaderPageModel(url),
             contentDescription = "Page $index",
             contentScale = ContentScale.FillWidth,
             colorFilter = colorFilter,
-            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+            modifier = itemModifier,
+            onSuccess = { st -> reportAspect(st) { a -> if (a > 0f && url != null) aspectRatios[url] = a } },
             loading = {
-                Box(modifier = Modifier.fillMaxWidth().height(400.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = placeholderModifier, contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             },
             error = {
                 Column(
-                    modifier = Modifier.fillMaxWidth().height(400.dp),
+                    modifier = placeholderModifier,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
