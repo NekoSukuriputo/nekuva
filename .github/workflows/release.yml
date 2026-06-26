@@ -13,6 +13,8 @@ name: Release
 # NEKUVA_STORE_PASSWORD, NEKUVA_KEY_ALIAS, NEKUVA_KEY_PASSWORD. Without them the APKs are debug-signed
 # (installable for beta testing, but not upgrade-compatible with a real-key release).
 # Telegram backup: optional secret TG_BACKUP_BOT_TOKEN.
+# Scrobblers (optional): secrets ANILIST_CLIENT_ID, ANILIST_CLIENT_SECRET, MAL_CLIENT_ID — baked into both
+# the Android and Desktop builds. Missing -> that scrobbler stays "unconfigured" (login disabled).
 
 on:
   push:
@@ -116,6 +118,10 @@ jobs:
           NEKUVA_KEY_ALIAS: ${{ secrets.NEKUVA_KEY_ALIAS }}
           NEKUVA_KEY_PASSWORD: ${{ secrets.NEKUVA_KEY_PASSWORD }}
           TG_BACKUP_BOT_TOKEN: ${{ secrets.TG_BACKUP_BOT_TOKEN }}
+          # Scrobbler OAuth creds baked in by generateScrobblerSecrets (empty secret -> unconfigured).
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
         run: |
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
@@ -162,6 +168,12 @@ jobs:
         run: choco install wixtoolset -y --no-progress || echo "WiX already present — continuing."
       - name: Build MSI
         shell: bash
+        env:
+          # Bake the same secrets into the Desktop build (AniList/MAL OAuth + Telegram backup token).
+          TG_BACKUP_BOT_TOKEN: ${{ secrets.TG_BACKUP_BOT_TOKEN }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           NUMERIC="${VERSION%%-*}"
@@ -201,6 +213,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y fakeroot binutils file
       - name: Build .deb + app image
         shell: bash
+        env:
+          # Bake the same secrets into the Desktop build (AniList/MAL OAuth + Telegram backup token).
+          TG_BACKUP_BOT_TOKEN: ${{ secrets.TG_BACKUP_BOT_TOKEN }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
         run: |
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
@@ -268,6 +286,12 @@ jobs:
           cache: gradle
       - name: Build .dmg
         shell: bash
+        env:
+          # Bake the same secrets into the Desktop build (AniList/MAL OAuth + Telegram backup token).
+          TG_BACKUP_BOT_TOKEN: ${{ secrets.TG_BACKUP_BOT_TOKEN }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
         run: |
           chmod +x gradlew
           VERSION="${GITHUB_REF_NAME#v}"
