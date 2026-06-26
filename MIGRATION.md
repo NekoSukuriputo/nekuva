@@ -2011,3 +2011,18 @@ Catatan user (1 batch, tanpa defer). Dikerjakan satu-per-satu, commit terpisah t
 - **Preload (#3):** `PRELOAD_AHEAD` 5 → 8 (lebih banyak halaman dihangatkan ke cache Coil di depan posisi). Gate
   jaringan tetap (Doki `pages_preload`: always/wifi/never; default wifi — jika di data seluler/metered, preload
   mati → bisa diubah ke "Selalu" di setelan). **Perlu run-verify GUI: scroll terasa lebih mulus, kedip berkurang.**
+
+### SESI 2026-06-26 — Audit AndroidManifest vs Doki (cegah bug ala bug-1)
+
+Selain `networkSecurityConfig` (bug-1), atribut `<application>` + meta-data WebView yang penting tapi
+tertinggal dari Doki, ditambahkan (sisanya N/A untuk arsitektur Compose single-activity):
+- **`android:largeHeap="true"`** — pembaca men-decode gambar besar (descramble/AVIF); tanpa largeHeap rawan
+  OOM pada halaman besar. (Doki punya.)
+- **`<meta-data> WebView.EnableSafeBrowsing=false`** + **`WebView.MetricsOptOut=true`** — SafeBrowsing menambah
+  latensi start WebView & bisa salah-blokir halaman sumber (relevan ke CAPTCHA/in-app browser).
+- **`android:enableOnBackInvokedCallback="true"`** — predictive back (logcat sebelumnya memperingatkan ini).
+- **TIDAK ditambah (sengaja):** `backupAgent`/`fullBackupOnly`/`hasFragileUserData`/`restoreAnyVersion` (sistem
+  backup khusus Doki; `backupAgent` menunjuk kelas yang tak ada di Nekuva — backup Nekuva sudah punya jalur
+  sendiri + `backup_rules` meng-exclude DB). Daftar `<activity>`/`<service>` & deep-link `DetailsByLinkActivity`
+  (ratusan host) = Activity View Doki → di Nekuva jadi route Compose, bukan komponen manifest. Permission sudah
+  superset Doki (+ USE_BIOMETRIC). `localeConfig` via `generateLocaleConfig=true`. `assembleDebug` hijau.
