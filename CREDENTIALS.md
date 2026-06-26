@@ -1,82 +1,109 @@
 # Nekuva — Third‑party credentials guide
 
-How to obtain the credentials for the "blocked by credentials" features. **All of these are FREE** — none
-require payment. Where you paste each value is noted.
+How to obtain/configure the credentials for the "blocked by credentials" features. **All of these are FREE.**
 
-| Service | Cost | Where the value goes | Needs the `nekuva://oauth` redirect? |
+**Real secrets are NEVER committed.** AniList / MyAnimeList / Telegram are read at build time from
+`local.properties` (gitignored) — `-D<key>` / env also work (used for GitHub Actions secrets on release) —
+and generated into code (`ScrobblerSecrets` / `TelegramSecrets`). An empty/missing key → that feature stays
+"unconfigured" (its login row shows disabled). **OAuth redirect / callback URL for every app: `nekuva://oauth`.**
+
+| Service | Cost | Where the value goes | In the menu? |
 |---|---|---|---|
-| AniList | Free | `ScrobblerConfig.ANILIST_CLIENT_ID` / `ANILIST_CLIENT_SECRET` | Yes |
-| MyAnimeList (MAL) | Free | `ScrobblerConfig.MAL_CLIENT_ID` (PKCE, no secret) | Yes |
-| Kitsu | Free | already set (shared public client) — **no action** | No (password login) |
-| Shikimori | Free | `ScrobblerConfig.SHIKIMORI_CLIENT_ID` / `SHIKIMORI_CLIENT_SECRET` | Yes |
-| Telegram backup bot | Free | `local.properties` → `tg_backup_bot_token=…` + `TelegramBackupConfig.BOT_NAME` | No |
-| Discord RPC | Free | `ScrobblerConfig.DISCORD_APP_ID` | No (menu hidden) |
+| AniList | Free | `local.properties` → `anilist_client_id`, `anilist_client_secret` | Yes |
+| MyAnimeList (MAL) | Free | `local.properties` → `mal_client_id` (PKCE, no secret) | Yes |
+| Telegram backup bot | Free | `local.properties` → `tg_backup_bot_token` | Yes (when token present) |
+| Shikimori | Free | code only (`ScrobblerConfig`) | **Hidden** (code kept) |
+| Kitsu | Free | code only (`ScrobblerConfig`) | **Hidden** (code kept) |
+| Discord RPC | Free | `ScrobblerConfig.DISCORD_APP_ID` | **Hidden** (menu gate) |
 
-> The values currently in `ScrobblerConfig.kt` are **Doki/Kotatsu's** public dev credentials. For AniList /
-> MAL / Shikimori they are registered against Doki's own redirect URL, so login will fail until you replace
-> them with your own. **Kitsu** is the exception — its values are Kitsu's *shared public* client, so it works
-> as‑is.
-
-File: `composeApp/src/jvmSharedMain/kotlin/org/nekosukuriputo/nekuva/scrobbling/common/ScrobblerConfig.kt`
-(search `TODO(credentials)`). **Redirect / callback URL for every OAuth app below: `nekuva://oauth`.**
+> Shikimori/Kitsu are hidden from Settings → Services (filtered in `ScrobblerConfigViewModel`); their code is
+> still compiled. Discord is hidden via `SHOW_DISCORD_RPC_MENU = false`. To re‑show any of them, undo that gate.
 
 ---
 
-## AniList
-1. Sign in at <https://anilist.co> → **Settings → Developer** (<https://anilist.co/settings/developer>).
-2. **Create New Client**. Name: `Nekuva`. **Redirect URL:** `nekuva://oauth`.
-3. Save, then copy the **Client ID** and **Client Secret**.
-4. Paste into `ANILIST_CLIENT_ID` and `ANILIST_CLIENT_SECRET`.
+## `local.properties` (your machine — gitignored, never commit)
 
-## MyAnimeList (MAL)
-1. Sign in at <https://myanimelist.net> → **Account Settings → API** (<https://myanimelist.net/apiconfig>).
-2. **Create ID**. App Type: `other`. App Name: `Nekuva`. **App Redirect URL:** `nekuva://oauth`.
-   Fill the required fields (homepage/description — anything valid), agree, submit.
-3. Copy the **Client ID**. Paste into `MAL_CLIENT_ID`.
-4. MAL uses **PKCE**, so there is **no client secret** — leave it as is (only the id is needed).
+```
+# Scrobbler OAuth
+anilist_client_id=<AniList numeric Client ID>
+anilist_client_secret=<AniList Client Secret>
+mal_client_id=<MyAnimeList Client ID>      # PKCE app: id only, no secret
 
-## Kitsu
-- **Nothing to do.** Kitsu uses a single shared public OAuth client (already in `KITSU_CLIENT_ID` /
-  `KITSU_CLIENT_SECRET`) and logs in with the user's Kitsu **email + password** (resource‑owner password
-  grant) — there's no per‑app registration and no redirect URL.
+# Telegram backup bot
+tg_backup_bot_token=<botfather token, e.g. 123456789:AAH…>
+```
 
-## Shikimori
-1. Sign in at <https://shikimori.one> → **OAuth applications** (<https://shikimori.one/oauth/applications>).
-2. **New Application.** Name: `Nekuva`. **Redirect URI:** `nekuva://oauth`. Scopes: at least `user_rates`
-   (add `comments`, `topics` etc. only if needed).
-3. Save, then copy the **Client ID** and **Client Secret**.
-4. Paste into `SHIKIMORI_CLIENT_ID` and `SHIKIMORI_CLIENT_SECRET`.
-   - Shikimori requires a descriptive **User‑Agent** = your app name; the app already sends one.
+Rebuild after editing (the values are baked in by the `generateScrobblerSecrets` / `generateTelegramSecrets`
+Gradle tasks). Verify it took: the generated file at
+`composeApp/build/generated/scrobblerSecrets/kotlin/.../ScrobblerSecrets.kt` should show your ids.
 
-## Telegram backup bot
-The default `BOT_NAME` is Kotatsu's public bot (`kotatsu_backup_bot`), but you don't have its **token**
-(it's their secret), so make your **own** bot:
-1. In Telegram, open **@BotFather** → `/newbot` → give it a name and a username ending in `bot`.
-2. BotFather replies with a **token** like `123456789:AAH…`.
-3. Set `TelegramBackupConfig.BOT_NAME` to your bot's username (without `@`).
-4. Put the token in `local.properties` (NOT committed):
-   ```
-   tg_backup_bot_token=123456789:AAH…
-   ```
-   (or pass `-Dtg_backup_bot_token=…` / env `TG_BACKUP_BOT_TOKEN`), then rebuild.
-5. The Telegram backup section is hidden until the token is present; once built with it, open the app, start a
-   chat with your bot, and follow the in‑app flow to link your chat id.
+## How to obtain each
 
-## Discord RPC (currently hidden — personal app)
-The menu is gated off by `SHOW_DISCORD_RPC_MENU = false` in `ServicesSettingsScreen.kt`; the code is intact.
-To re‑enable later: flip that flag to `true`, then:
-1. <https://discord.com/developers/applications> → **New Application** → name `Nekuva`.
-2. Copy the **Application ID** → `ScrobblerConfig.DISCORD_APP_ID`.
-   (Login itself uses your Discord user token captured via the in‑app webview; the app id just names the
-   "playing" activity.)
+### AniList
+1. <https://anilist.co/settings/developer> → **Create New Client**. Name `Nekuva`, **Redirect URL** `nekuva://oauth`.
+2. Copy **Client ID** (numeric) → `anilist_client_id`, **Client Secret** → `anilist_client_secret`.
+
+### MyAnimeList (MAL)
+1. <https://myanimelist.net/apiconfig> → **Create ID**. App Type `other`, **App Redirect URL** `nekuva://oauth`.
+2. Copy **Client ID** → `mal_client_id`. MAL uses **PKCE** → no secret needed.
+
+### Shikimori / Kitsu (hidden)
+Nothing to do — hidden from the menu. If you ever re‑enable them, register at
+<https://shikimori.one/oauth/applications> (redirect `nekuva://oauth`) / Kitsu uses email+password, and move
+their ids to secrets the same way as AniList.
 
 ---
+
+## GitHub Actions secrets (for the release build in CI)
+
+`local.properties` isn't on CI, so add the same values as **repository secrets** and the build picks them up
+from the matching **env var** (the Gradle tasks read `-D` → `local.properties` → env, in that order).
+
+1. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**. Add:
+   - `ANILIST_CLIENT_ID`
+   - `ANILIST_CLIENT_SECRET`
+   - `MAL_CLIENT_ID`
+   - `TG_BACKUP_BOT_TOKEN`
+   - (already there for signing: `EXT_SIGNING_KEY`, `NEKUVA_STORE_FILE`/`…_PASSWORD`/`…_KEY_ALIAS`/`…_KEY_PASSWORD`)
+2. In the release workflow, expose them to the Gradle step as env vars, e.g.:
+   ```yaml
+   - name: Build release
+     env:
+       ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+       ANILIST_CLIENT_SECRET: ${{ secrets.ANILIST_CLIENT_SECRET }}
+       MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+       TG_BACKUP_BOT_TOKEN: ${{ secrets.TG_BACKUP_BOT_TOKEN }}
+     run: ./gradlew :composeApp:assembleRelease
+   ```
+   The env‑var **names** must match exactly (uppercase). No code change needed.
+
+---
+
+## Telegram backup — bot + chat id (for testing)
+
+The bot needs **no code/commands**: Nekuva sends the backup file itself via the bot token + your chat id.
+The bot is just a delivery pipe ("all actions are performed by the application and YOU").
+
+1. **Create the bot:** @BotFather → `/newbot` → get the token → put it in `local.properties` as
+   `tg_backup_bot_token=…`, rebuild. (Optional: `/setdescription` to add the "What can this bot do?" text.)
+2. **Start the bot once:** open your bot in Telegram and tap **Start** — a bot can't message you until you've
+   started it.
+3. **Get your chat id:** open **@userinfobot** → Start → it replies `Id: 123456789`. That number is your chat id.
+   - Manual alternative: after messaging your bot, open
+     `https://api.telegram.org/bot<TOKEN>/getUpdates` and read `"chat":{"id":…}` (don't share that URL — it
+     contains the token).
+4. **Enter it in the app:** Settings → **Backup berkala / Periodic backup → Telegram chat ID** → paste the
+   number → **Test connection**. On success the bot sends a test file to your chat. (Stored as
+   `AppSettings.KEY_BACKUP_TG_CHAT`; the Telegram section only appears once the token is built in.)
+
+---
+
+## Discord RPC (hidden — personal app)
+Gated by `SHOW_DISCORD_RPC_MENU = false` in `ServicesSettingsScreen.kt`; code intact. To re‑enable: flip to
+`true`, then set `ScrobblerConfig.DISCORD_APP_ID` from <https://discord.com/developers/applications> (the app
+id just names the "playing" activity; login uses your Discord user token via the in‑app webview).
 
 ### Notes
-- After editing `ScrobblerConfig.kt`, rebuild. An **empty** client id makes that scrobbler "unconfigured"
-  (its login row shows "coming soon" and is disabled).
-- None of the above cost money, so nothing here is deferred for payment. Discord is hidden only because this
-  is a personal app (no community), not because of cost.
-- **Sync server** (Kotatsu sync) is separate: the code is complete but needs a running Kotatsu‑sync server +
-  an account to run‑verify — no client credential to paste.
-- **Translate this app** stays disabled until a Weblate/Crowdin project exists for Nekuva (no credential).
+- An **empty** client id → that scrobbler is "unconfigured" (login row disabled). Rebuild after editing.
+- Nothing here costs money. Shikimori/Kitsu/Discord are hidden by choice (personal app), not cost.
+- **Sync server** (Kotatsu sync) needs a running sync server + account to verify — no client credential.

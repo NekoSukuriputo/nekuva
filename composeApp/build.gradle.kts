@@ -53,6 +53,45 @@ val generateTelegramSecrets by tasks.registering {
     }
 }
 
+// Scrobbler OAuth credentials (AniList / MyAnimeList): build-time SECRETS, never committed. Provide via
+// local.properties (anilist_client_id / anilist_client_secret / mal_client_id), `-D<key>=...`, or the env
+// vars ANILIST_CLIENT_ID / ANILIST_CLIENT_SECRET / MAL_CLIENT_ID (GitHub Actions secrets for release).
+// Empty value → that scrobbler stays "unconfigured" (login disabled). Mirrors generateTelegramSecrets.
+fun scrobblerSecret(propKey: String, envKey: String): String {
+    val props = Properties()
+    val f = rootProject.file("local.properties")
+    if (f.exists()) FileInputStream(f).use { props.load(it) }
+    return (System.getProperty(propKey) ?: props.getProperty(propKey) ?: System.getenv(envKey) ?: "").trim()
+}
+
+val generateScrobblerSecrets by tasks.registering {
+    val outDir = layout.buildDirectory.dir("generated/scrobblerSecrets/kotlin")
+    val anilistId = scrobblerSecret("anilist_client_id", "ANILIST_CLIENT_ID")
+    val anilistSecret = scrobblerSecret("anilist_client_secret", "ANILIST_CLIENT_SECRET")
+    val malId = scrobblerSecret("mal_client_id", "MAL_CLIENT_ID")
+    inputs.property("anilistId", anilistId)
+    inputs.property("anilistSecret", anilistSecret)
+    inputs.property("malId", malId)
+    outputs.dir(outDir)
+    doLast {
+        val pkgDir = outDir.get().dir("org/nekosukuriputo/nekuva/scrobbling/common").asFile
+        pkgDir.mkdirs()
+        fun esc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+        File(pkgDir, "ScrobblerSecrets.kt").writeText(
+            buildString {
+                appendLine("package org.nekosukuriputo.nekuva.scrobbling.common")
+                appendLine()
+                appendLine("/** Generated at build time from local.properties / -D / env. Never committed. */")
+                appendLine("internal object ScrobblerSecrets {")
+                appendLine("    const val ANILIST_CLIENT_ID: String = \"${esc(anilistId)}\"")
+                appendLine("    const val ANILIST_CLIENT_SECRET: String = \"${esc(anilistSecret)}\"")
+                appendLine("    const val MAL_CLIENT_ID: String = \"${esc(malId)}\"")
+                appendLine("}")
+            },
+        )
+    }
+}
+
 // App version — single source, overridable per release from CI (the tag drives these):
 //   -PappVersionName=1.0.0-beta  -PappVersionCode=<n>  -PdesktopPackageVersion=1.0.0
 // desktopPackageVersion is the INSTALLER version: jpackage/MSI/DMG require MAJOR.MINOR.PATCH with
@@ -104,6 +143,7 @@ kotlin {
         val jvmSharedMain by creating {
             dependsOn(commonMain.get())
             kotlin.srcDir(generateTelegramSecrets)
+            kotlin.srcDir(generateScrobblerSecrets)
             kotlin.srcDir(generateAppInfo)
             dependencies {
                 implementation(libs.ktor.client.okhttp)

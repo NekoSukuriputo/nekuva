@@ -24,8 +24,13 @@ class ScrobblerConfigViewModel(
     private val _items = MutableStateFlow(buildItems())
     val items: StateFlow<List<Item>> = _items.asStateFlow()
 
-    private fun buildItems(): List<Item> = scrobblerManager.scrobblers.map {
-        Item(it.scrobblerService, it.scrobblerService.isConfigured, it.isEnabled)
+    private fun buildItems(): List<Item> = scrobblerManager.scrobblers
+        .filterNot { it.scrobblerService in HIDDEN_SERVICES }
+        .map { Item(it.scrobblerService, it.scrobblerService.isConfigured, it.isEnabled) }
+
+    private companion object {
+        // Doki ships Shikimori + Kitsu; hidden from Nekuva's menu (personal app) — code stays compiled.
+        val HIDDEN_SERVICES = setOf(ScrobblerService.SHIKIMORI, ScrobblerService.KITSU)
     }
 
     fun refresh() {
