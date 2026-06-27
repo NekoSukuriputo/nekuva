@@ -1,0 +1,97 @@
+name: 💥 Crash report
+description: The app closes, freezes, or won't open
+title: "[Crash]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A **stack trace / crash log** is what makes a crash fixable — please include one if you can (see the
+        Logs field for how to capture it).
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I'm on the **latest** Nekuva release (or it still crashes there)
+          required: true
+        - label: I searched [existing issues](https://github.com/NekoSukuriputo/nekuva/issues) and found no duplicate
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Nekuva version
+      description: "Settings → About"
+      placeholder: "e.g. 0.0.9-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - Windows (Desktop)
+        - Linux (Desktop)
+        - macOS (Desktop)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS version & device
+      placeholder: "e.g. Android 14, Xiaomi Redmi Note 12  /  Windows 11 23H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: when
+    attributes:
+      label: When does it crash?
+      options:
+        - On launch (won't open)
+        - Opening / using a source (Explore)
+        - Opening manga details
+        - In the reader
+        - Downloading
+        - Backup / Restore
+        - Updating an extension
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often?
+      options:
+        - Every time (100%)
+        - Sometimes
+        - Happened once
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps right before the crash
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. App closes
+    validations:
+      required: true
+  - type: textarea
+    id: trace
+    attributes:
+      label: Stack trace / crash log
+      description: |
+        - **Android:** with the phone connected via USB, run `adb logcat AndroidRuntime:E *:S` and reproduce the
+          crash, or use an on-device logcat app — copy the red `FATAL EXCEPTION` block.
+        - **Desktop:** launch from a terminal (run the binary from a console, or `./gradlew :composeApp:run`
+          from source) and paste the exception printed when it crashes.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Did it start after an update? Specific source/manga? Low storage / memory?
