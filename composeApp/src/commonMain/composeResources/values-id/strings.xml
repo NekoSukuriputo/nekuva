@@ -933,4 +933,5 @@
     <string name="ok">OK</string>
     <string name="shikimori">Shikimori</string>
     <string name="source_icons">Ikon sumber</string>
+    <string name="set_as_cover">Jadikan sampul</string>
 </resources>

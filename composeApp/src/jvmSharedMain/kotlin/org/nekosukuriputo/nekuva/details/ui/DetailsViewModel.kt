@@ -410,6 +410,24 @@ class DetailsViewModel(
     }
 
     /**
+     * Set this manga's custom cover to one of its page images (Doki picker → OverrideConfig cover). Keeps any
+     * existing title/content-rating override; reloads so the new cover shows. Mirrors picking a page as cover.
+     */
+    fun setCoverFromPage(coverUrl: String) {
+        viewModelScope.launch {
+            val m = loadedManga.value ?: (uiState.value as? DetailsUiState.Success)?.manga ?: return@launch
+            val existing = _override.value
+            val newOverride = MangaOverride(
+                coverUrl = coverUrl.trim().ifEmpty { null },
+                title = existing?.title,
+                contentRating = existing?.contentRating,
+            )
+            runCatching { mangaDataRepository.setOverride(m, newOverride) }
+            loadDetails()
+        }
+    }
+
+    /**
      * Open the online (remote) variant of a saved/local manga (Doki action_online): resolve the remote
      * manga from the local archive's source URL, store it, and hand the new id back for navigation.
      */

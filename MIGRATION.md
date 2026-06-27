@@ -2161,3 +2161,17 @@ atau placeholder (Incognito).
 - **Ditambah:** kini pakai `mangaGridCells(rememberGridSize(settings))` → mengikuti setelan **grid size**
   global (live). Sama seperti Doki yang memakai slider grid-size yang sama untuk pages. Kontrolnya = grid-size
   global (List options). Minor.
+
+### ✅ Picker — "Set as cover" dari halaman manga (Doki PageImagePickActivity → cover override)
+- **Gap:** paket `picker` (pilih halaman manga sbg gambar) tak ada. Cover kustom dulu hanya via URL.
+- **Pendekatan Nekuva (lebih ringkas, hasil setara):** alih-alih Activity picker manga→bab→halaman ala Doki,
+  manfaatkan tab **Pages** yang sudah memuat thumbnail halaman manga ini. Di **FullScreenImageViewer** (dibuka
+  dari long-press halaman) ditambah aksi **"Set as cover"** (ikon Image) — hanya muncul saat melihat HALAMAN
+  (bukan cover). Memanggil `DetailsViewModel.setCoverFromPage(url)` → `MangaOverride(coverUrl=…)` (menjaga
+  title/rating override), reload. String baru `set_as_cover` (en + id/in).
+- **Beda dari Doki (dicatat):** Nekuva memakai **URL halaman** sebagai cover (bukan menyimpan salinan file
+  lokal lewat FileProvider seperti Doki). Untuk sumber yang URL halamannya kedaluwarsa, cover bisa perlu
+  re-fetch — dapat ditingkatkan nanti dengan menyimpan salinan lokal.
+- **TIDAK dimigrasi (Android-spesifik, nilai rendah):** provider sistem `GET_CONTENT`/`PICK` (app lain ambil
+  halaman manga dari Nekuva) — itu Activity Android terpisah; Nekuva single-activity Compose. Dicatat sebagai
+  N/A platform, bukan fitur user-facing utama.

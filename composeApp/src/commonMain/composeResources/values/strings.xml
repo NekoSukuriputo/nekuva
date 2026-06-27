@@ -941,4 +941,5 @@
     <string name="all_sources">All sources</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
+    <string name="set_as_cover">Set as cover</string>
 </resources>

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +36,7 @@ import org.jetbrains.compose.resources.stringResource
 import nekuva.composeapp.generated.resources.Res
 import nekuva.composeapp.generated.resources.cancel
 import nekuva.composeapp.generated.resources.save
+import nekuva.composeapp.generated.resources.set_as_cover
 import nekuva.composeapp.generated.resources.share
 
 /**
@@ -49,6 +51,8 @@ fun FullScreenImageViewer(
     onShare: (String) -> Unit = {},
     onSave: (String) -> Unit = {},
     source: org.nekosukuriputo.nekuva.parsers.model.MangaSource? = null,
+    // When set (viewing a manga page), shows a "Set as cover" action (Doki picker → custom cover).
+    onSetAsCover: ((String) -> Unit)? = null,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -116,6 +120,15 @@ fun FullScreenImageViewer(
                 androidx.compose.foundation.layout.Row(
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
                 ) {
+                    // Set this page as the manga's custom cover (Doki picker → OverrideConfig cover).
+                    if (onSetAsCover != null) {
+                        IconButton(
+                            onClick = { onSetAsCover(imageUrl) },
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                        ) {
+                            Icon(Icons.Filled.Image, contentDescription = stringResource(Res.string.set_as_cover))
+                        }
+                    }
                     IconButton(
                         onClick = { onSave(imageUrl) },
                         colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),

@@ -110,6 +110,8 @@ fun DetailsScreen(
     var showMangaStats by remember { mutableStateOf(false) }
     var showEditOverride by remember { mutableStateOf(false) }
     var fullScreenCover by remember { mutableStateOf<String?>(null) }
+    // True when the fullscreen image is a manga PAGE (offer "Set as cover"), false when it's the cover itself.
+    var fullScreenCanSetCover by remember { mutableStateOf(false) }
     var tagDialogFor by remember { mutableStateOf<MangaTag?>(null) }
     var authorDialogFor by remember { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -229,6 +231,12 @@ fun DetailsScreen(
                     val loc = runCatching { imageSaver.save(url) }.getOrNull()
                     scaffoldState.snackbarHostState.showSnackbar(if (loc != null) savedMsg else saveErrMsg)
                 }
+            },
+            // Only when viewing a page (not the cover itself): set that page as the manga's custom cover.
+            onSetAsCover = if (fullScreenCanSetCover) {
+                { url -> viewModel.setCoverFromPage(url); fullScreenCover = null }
+            } else {
+                null
             },
         )
     }
@@ -431,7 +439,7 @@ fun DetailsScreen(
                     onPageClick = { chapterId, page -> onPageClick(manga.id, chapterId, page) },
                     onDownloadClick = { showDownloadDialog = true },
                     onForget = { viewModel.removeFromHistory() },
-                    onViewPageImage = { url -> fullScreenCover = url },
+                    onViewPageImage = { url -> fullScreenCover = url; fullScreenCanSetCover = true },
                     downloadedIds = downloadedChapterIds,
                     onDownloadChapter = { chapter -> viewModel.downloadChapter(chapter) },
                     source = manga.source,
@@ -490,7 +498,7 @@ fun DetailsScreen(
                         relatedManga = relatedManga,
                         onRelatedClick = onRelatedClick,
                         readingTimeText = readingTime?.let { formatReadingTime(it) },
-                        onCoverClick = { fullScreenCover = it },
+                        onCoverClick = { fullScreenCover = it; fullScreenCanSetCover = false },
                         onTagClick = { tagDialogFor = it },
                         onAuthorClick = { authorDialogFor = it },
                         progressPercent = history?.percent?.takeIf { it >= 0f },
