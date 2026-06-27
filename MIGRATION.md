@@ -2184,3 +2184,18 @@ atau placeholder (Incognito).
   multi-select (Share / Add to favourites / Download — Doki `mode_updates`). Route `UpdatesRoute` + nav.
   Entry point: header **"Updated manga"** di Feed kini punya judul + tombol **"Lebih"** → buka layar Updates.
   (Feed tetap menampilkan strip + log + quick-filter; Updates = tampilan grid penuh.)
+
+### ✅ Feed kosong — Default favourites category tidak melacak (diagnosa + fix)
+- **Gejala user:** tab Feed kosong walau sudah "Update"; di Android cuma loading.
+- **Diagnosa (BUKAN crash):** Feed hanya menampilkan bab baru dari manga yang **dilacak**. Manga dilacak bila
+  ter-favorit di kategori dengan `track=1` (`findIdsWithTrack`). Kategori **"Default" (id 0)** dulu dibuat dengan
+  **`track=0`** (`ensureDefaultCategory`), padahal kategori buatan user default `track=1`. Jadi favorit lewat
+  "Favorite this" → Default **tak pernah diawasi** → Feed kosong. Plus: **update pertama hanya set baseline**
+  (`CheckNewChaptersUseCase`, `isValid=false`) — bab baru baru muncul di update BERIKUTNYA saat sumber rilis
+  bab baru. Default `trackSources` = favourites saja (history tidak dilacak kecuali diaktifkan).
+- **Fix:** `ensureDefaultCategory` kini `track=1` (Default melacak by default, konsisten dgn kategori user).
+  **Catatan:** `INSERT OR IGNORE` → install LAMA yang barisnya sudah ada (track=0) tetap perlu **toggle manual**
+  sekali di Favourites → Kelola kategori (ikon track). Install baru langsung jalan.
+- **Cara user mengecek/menyalakan:** (1) Favourites → ⋮ Kelola kategori → nyalakan ikon track pada kategori
+  manga-mu; (2) "Update" sekali (set baseline — Feed tetap kosong, normal); (3) bab baru muncul di update
+  berikutnya. Opsional: Settings → Pelacak → "Track sources" → tambah History.

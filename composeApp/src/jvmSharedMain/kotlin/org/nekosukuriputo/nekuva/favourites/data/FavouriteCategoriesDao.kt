@@ -37,7 +37,9 @@ abstract class FavouriteCategoriesDao {
 	 * Uses an explicit category_id = 0 because Room's @Insert treats the autoGenerate PK value 0 as
 	 * "unset" and lets SQLite assign a new id instead. INSERT OR IGNORE is a no-op if it already exists.
 	 */
-	@Query("INSERT OR IGNORE INTO favourite_categories (category_id, created_at, sort_key, title, `order`, track, show_in_lib, deleted_at) VALUES (0, :createdAt, 0, :title, :order, 0, 1, 0)")
+	// track = 1: the Default category watches new chapters by default (consistent with user-created
+	// categories, which default to tracking ON), so "Favorite this" → Default actually populates the Feed.
+	@Query("INSERT OR IGNORE INTO favourite_categories (category_id, created_at, sort_key, title, `order`, track, show_in_lib, deleted_at) VALUES (0, :createdAt, 0, :title, :order, 1, 1, 0)")
 	abstract suspend fun ensureDefaultCategory(createdAt: Long, title: String, order: String)
 
 	suspend fun delete(id: Long) = setDeletedAt(id, System.currentTimeMillis())
