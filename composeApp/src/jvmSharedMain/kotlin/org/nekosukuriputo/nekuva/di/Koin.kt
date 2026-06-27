@@ -38,7 +38,7 @@ val exploreModule = module {
 
 val remoteListModule = module {
     single { org.nekosukuriputo.nekuva.filter.data.SavedFiltersRepository(get()) }
-    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get(), get(), get()) }
+    factory { params -> org.nekosukuriputo.nekuva.remotelist.ui.RemoteListViewModel(params.get(), get(), get(), get(), get(), get(), get()) }
 }
 
 val searchModule = module {

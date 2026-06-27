@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import org.nekosukuriputo.nekuva.core.nav.RemoteListRoute
+import kotlinx.coroutines.flow.stateIn
 import org.nekosukuriputo.nekuva.core.parser.MangaDataRepository
 import org.nekosukuriputo.nekuva.core.parser.MangaRepository
 import org.nekosukuriputo.nekuva.explore.domain.ExploreRepository
@@ -36,10 +37,41 @@ class RemoteListViewModel(
     private val mangaDataRepository: MangaDataRepository,
     private val savedFiltersRepository: SavedFiltersRepository,
     private val exploreRepository: ExploreRepository,
+    private val downloadManager: org.nekosukuriputo.nekuva.download.domain.DownloadManager,
+    private val favouritesRepository: org.nekosukuriputo.nekuva.favourites.domain.FavouritesRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<RemoteListRoute>()
     val sourceId = route.sourceId
+
+    // Selection-mode actions on a source browse list (Doki mode_remote): Share / Add to favourites / Download.
+    val favouriteCategories: StateFlow<List<org.nekosukuriputo.nekuva.core.model.FavouriteCategory>> =
+        favouritesRepository.observeCategories()
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Download the whole of each selected manga (Doki mode_remote action_save). */
+    fun downloadManga(mangas: Collection<org.nekosukuriputo.nekuva.parsers.model.Manga>) {
+        if (mangas.isEmpty()) return
+        viewModelScope.launch {
+            runCatching {
+                downloadManager.schedule(
+                    mangas.map {
+                        org.nekosukuriputo.nekuva.download.domain.DownloadTask(
+                            manga = it, chaptersIds = null, destination = null, format = null, startPaused = false,
+                        )
+                    },
+                )
+            }
+        }
+    }
+
+    /** Add several manga to a favourite category (Doki mode_remote action_favourite). */
+    fun addToFavourites(categoryId: Long, mangas: Collection<org.nekosukuriputo.nekuva.parsers.model.Manga>) {
+        if (mangas.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { favouritesRepository.addToCategory(categoryId, mangas.toList()) }
+        }
+    }
 
     private val parserSource: MangaParserSource? = MangaParserSource.entries.find { it.name == sourceId }
     private val repository: MangaRepository? = parserSource?.let { repositoryFactory.create(it) }

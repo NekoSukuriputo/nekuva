@@ -35,6 +35,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
@@ -59,6 +63,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -126,6 +131,11 @@ fun RemoteListScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showListConfig by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
+    // Long-press multi-select on the source list (Doki mode_remote): Share / Add to favourites / Download.
+    val selection = org.nekosukuriputo.nekuva.core.ui.selection.rememberSelectionState<Long>()
+    var showFavDialog by remember { mutableStateOf(false) }
+    val currentMangas = (uiState as? RemoteListUiState.Success)?.mangaList.orEmpty()
+    fun selectedMangas() = currentMangas.filter { selection.isSelected(it.id) }
 
     // "Open random" (dice) resolves a manga off-screen → navigate to its details when ready.
     LaunchedEffect(Unit) {
@@ -134,6 +144,31 @@ fun RemoteListScreen(
 
     Scaffold(
         topBar = {
+            if (selection.isActive) {
+                // Doki mode_remote action bar: Share / Add to favourites / Download + select-all.
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { selection.clear() }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.cancel))
+                        }
+                    },
+                    title = { Text(selection.count.toString()) },
+                    actions = {
+                        IconButton(onClick = { selection.selectAll(currentMangas.map { it.id }) }) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = stringResource(Res.string.select_all))
+                        }
+                        IconButton(onClick = { org.nekosukuriputo.nekuva.core.share.shareMangas(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Filled.Share, contentDescription = stringResource(Res.string.share))
+                        }
+                        IconButton(onClick = { showFavDialog = true }) {
+                            Icon(Icons.Filled.FavoriteBorder, contentDescription = stringResource(Res.string.add_to_favourites))
+                        }
+                        IconButton(onClick = { viewModel.downloadManga(selectedMangas()); selection.clear() }) {
+                            Icon(Icons.Outlined.FileDownload, contentDescription = stringResource(Res.string.save))
+                        }
+                    },
+                )
+            } else {
             TopAppBar(
                 title = {
                     if (searchActive) {
@@ -235,6 +270,7 @@ fun RemoteListScreen(
                     }
                 }
             )
+            }
         }
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
@@ -292,7 +328,9 @@ fun RemoteListScreen(
                                 items(state.mangaList) { manga ->
                                     MangaGridItem(
                                         manga = manga,
-                                        onClick = { onMangaClick(manga.id) },
+                                        onClick = { if (selection.isActive) selection.toggle(manga.id) else onMangaClick(manga.id) },
+                                        onLongClick = { selection.toggle(manga.id) },
+                                        selected = selection.isSelected(manga.id),
                                         progress = deco.progressOf(manga),
                                         badges = deco.badgesOf(manga),
                                     )
@@ -324,7 +362,9 @@ fun RemoteListScreen(
                                 items(state.mangaList) { manga ->
                                     MangaListRow(
                                         manga = manga,
-                                        onClick = { onMangaClick(manga.id) },
+                                        onClick = { if (selection.isActive) selection.toggle(manga.id) else onMangaClick(manga.id) },
+                                        onLongClick = { selection.toggle(manga.id) },
+                                        selected = selection.isSelected(manga.id),
                                         detailed = detailed,
                                         progress = deco.progressOf(manga),
                                         badges = deco.badgesOf(manga),
@@ -367,6 +407,37 @@ fun RemoteListScreen(
             settings = settings,
             listModeKey = AppSettings.KEY_LIST_MODE,
             onDismiss = { showListConfig = false },
+        )
+    }
+
+    // "Add to favourites" picker for the selected manga (Doki mode_remote action_favourite).
+    if (showFavDialog) {
+        val categories by viewModel.favouriteCategories.collectAsState()
+        val toAdd = selectedMangas()
+        AlertDialog(
+            onDismissRequest = { showFavDialog = false },
+            title = { Text(stringResource(Res.string.add_to_favourites)) },
+            text = {
+                Column {
+                    val rows = buildList {
+                        add(0L to stringResource(Res.string.default_category))
+                        categories.forEach { add(it.id to it.title) }
+                    }
+                    rows.forEach { (id, label) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                viewModel.addToFavourites(id, toAdd); showFavDialog = false; selection.clear()
+                            }.padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFavDialog = false }) { Text(stringResource(Res.string.cancel)) }
+            },
         )
     }
 }

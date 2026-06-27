@@ -2146,3 +2146,12 @@ atau placeholder (Incognito).
 - **History ⋮ → Statistics** dan **Feed ⋮ (Update / Show updated / Clear feed)** ternyata **sudah ada** —
   diletakkan di overflow **shell** (`MainScreen.rememberOverflowItems`), bukan di package screen masing-masing,
   sehingga lolos dari grep audit pertama. Tidak ada gap.
+
+### ✅ Source browse list — long-press multi-select (Doki mode_remote)
+- **Gap:** daftar manga di layar sumber (RemoteList) hanya `onClick`; tak ada seleksi.
+- **Ditambah:** `RemoteListViewModel` dapat `downloadManager` + `favouritesRepository` (DI Koin diperbarui),
+  `favouriteCategories: StateFlow`, `downloadManga(mangas)` (DownloadTask), `addToFavourites(categoryId, mangas)`.
+  `RemoteListScreen`: `rememberSelectionState<Long>()` — long-press → mode seleksi; top-bar kontekstual
+  (Close / count / Select all / **Share** / **Add to favourites** / **Download**); item grid+list pakai
+  `onLongClick`+`selected`; dialog pilih kategori favorit (sama pola HistoryScreen). Mirror Doki `mode_remote`
+  (share / add_to_favourites / save). Tanpa seleksi = perilaku lama.
