@@ -2155,3 +2155,9 @@ atau placeholder (Incognito).
   (Close / count / Select all / **Share** / **Add to favourites** / **Download**); item grid+list pakai
   `onLongClick`+`selected`; dialog pilih kategori favorit (sama pola HistoryScreen). Mirror Doki `mode_remote`
   (share / add_to_favourites / save). Tanpa seleksi = perilaku lama.
+
+### ✅ Pages/Bookmarks preview — respect grid size (Doki opt_pages action_grid_size)
+- **Gap:** grid thumbnail Pages/Bookmarks di Details bottom-sheet fixed `Adaptive(100.dp)`.
+- **Ditambah:** kini pakai `mangaGridCells(rememberGridSize(settings))` → mengikuti setelan **grid size**
+  global (live). Sama seperti Doki yang memakai slider grid-size yang sama untuk pages. Kontrolnya = grid-size
+  global (List options). Minor.

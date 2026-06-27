@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.UnfoldMore
 import org.koin.compose.viewmodel.koinViewModel
 import org.nekosukuriputo.nekuva.core.ui.components.ErrorState
 import org.nekosukuriputo.nekuva.core.ui.components.LoadingState
+import org.nekosukuriputo.nekuva.core.ui.components.mangaGridCells
+import org.nekosukuriputo.nekuva.core.ui.components.rememberGridSize
 import org.nekosukuriputo.nekuva.bookmarks.domain.Bookmark
 import org.nekosukuriputo.nekuva.core.model.isLocal
 import org.nekosukuriputo.nekuva.remotelist.ui.mangaStateTitle
@@ -919,6 +921,9 @@ fun ChaptersSheetContent(
 ) {
     val tabSettings = org.koin.compose.koinInject<org.nekosukuriputo.nekuva.core.prefs.AppSettings>()
     val pagesEnabled = tabSettings.isPagesTabEnabled
+    // Pages/bookmarks thumbnail grids follow the global grid-size setting (Doki opt_pages action_grid_size —
+    // the shared grid-size slider), so the preview columns are adjustable instead of fixed.
+    val previewCells = mangaGridCells(rememberGridSize(tabSettings))
     // Doki `details_tab`: default section — 0/last=chapters, 1=pages (if enabled), 2=bookmarks.
     var view by remember {
         mutableStateOf(
@@ -1087,7 +1092,7 @@ fun ChaptersSheetContent(
                 when (val ps = pagesState) {
                     is PagesPreviewState.Success -> {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(minSize = 100.dp),
+                            columns = previewCells,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1127,7 +1132,7 @@ fun ChaptersSheetContent(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 100.dp),
+                        columns = previewCells,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
