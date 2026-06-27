@@ -46,7 +46,6 @@ jobs:
           NEW="${GITHUB_REF_NAME}"
           PREV="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
           cat > release_notes.md <<'INTRO'
-          This is a **beta** build of Nekuva for user testing.
 
           Nekuva is a Kotlin Multiplatform manga reader (Kotatsu/Doki lineage), rewritten in Compose
           Multiplatform and now running on **Android, Windows, Linux, and macOS**.
@@ -59,7 +58,7 @@ jobs:
 
           ## Notes
           - **macOS:** the `.dmg` is unsigned / un-notarized → right-click the app and choose **Open** to bypass Gatekeeper.
-          - This is a **beta** — expect rough edges; please report any bugs you find.
+          - This is a **stable** release — expect a polished experience; please report any bugs you find.
           INTRO
           {
             echo
