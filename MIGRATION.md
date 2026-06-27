@@ -2131,3 +2131,18 @@ atau placeholder (Incognito).
   `enabled=false` → kini aktif (Doki `popup_read` `action_incognito`): membuka bab resume (atau bab pertama)
   via `ReaderRoute(incognito=true)` sehingga tak mencatat history. Di-thread `DetailsScreen.onChapterClickIncognito`
   → `ChaptersSheetContent` → nav `openReader(..., incognito=true)`.
+
+### ✅ Global Search — overflow Type (kind) + "Pinned sources only" (Doki opt_search_kind)
+- **Backend sudah ada:** `GlobalSearchViewModel` sudah memproses `SearchKind` (SIMPLE/TITLE/AUTHOR/TAG) untuk
+  filter per-sumber/DB; cuma `kind` dulu read-only dari route (tak bisa diubah di layar).
+- **Ditambah:** `kind` jadi `StateFlow` mutable + `setKind()` (re-search), `pinnedOnly: StateFlow` +
+  `togglePinnedOnly()` (saat aktif, sumber dibatasi ke `getPinnedSources()`). UI: overflow ⋮ di
+  `GlobalSearchScreen` → **Type**: Simple / Name / Author / Genre (radio + centang) + **Pinned sources only**
+  (checkable). Mengganti Type/Pinned otomatis menjalankan ulang pencarian.
+- **"Hide empty sources"** (Doki): **sudah default** di Nekuva — section sumber yang kosong memang tak
+  ditampilkan (`searchSource` mengembalikan null bila kosong), jadi tak perlu toggle terpisah.
+
+### ℹ️ Audit false-positive (sudah ada, tidak perlu aksi)
+- **History ⋮ → Statistics** dan **Feed ⋮ (Update / Show updated / Clear feed)** ternyata **sudah ada** —
+  diletakkan di overflow **shell** (`MainScreen.rememberOverflowItems`), bukan di package screen masing-masing,
+  sehingga lolos dari grep audit pertama. Tidak ada gap.

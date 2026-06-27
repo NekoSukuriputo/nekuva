@@ -14,8 +14,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +32,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import org.nekosukuriputo.nekuva.search.domain.SearchKind
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -60,6 +69,33 @@ fun GlobalSearchScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                // Doki opt_search_kind: search "Type" (Simple/Name/Author/Genre) + "Pinned sources only".
+                actions = {
+                    val kind by viewModel.kind.collectAsState()
+                    val pinnedOnly by viewModel.pinnedOnly.collectAsState()
+                    var menuOpen by remember { mutableStateOf(false) }
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.type))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        Text(
+                            stringResource(Res.string.type),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        SearchKindItem(stringResource(Res.string.simple), kind == SearchKind.SIMPLE) { viewModel.setKind(SearchKind.SIMPLE); menuOpen = false }
+                        SearchKindItem(stringResource(Res.string.name), kind == SearchKind.TITLE) { viewModel.setKind(SearchKind.TITLE); menuOpen = false }
+                        SearchKindItem(stringResource(Res.string.author), kind == SearchKind.AUTHOR) { viewModel.setKind(SearchKind.AUTHOR); menuOpen = false }
+                        SearchKindItem(stringResource(Res.string.genre), kind == SearchKind.TAG) { viewModel.setKind(SearchKind.TAG); menuOpen = false }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.pinned_sources_only)) },
+                            leadingIcon = { if (pinnedOnly) Icon(Icons.Default.Check, contentDescription = null) },
+                            onClick = { viewModel.togglePinnedOnly(); menuOpen = false },
+                        )
                     }
                 },
             )
@@ -189,4 +225,14 @@ private fun SearchSectionItem(
             }
         }
     }
+}
+
+/** A "Type" choice in the search overflow (Doki opt_search_kind radio item): label + check when selected. */
+@Composable
+private fun SearchKindItem(label: String, selected: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = { if (selected) Icon(Icons.Default.Check, contentDescription = null) },
+        onClick = onClick,
+    )
 }

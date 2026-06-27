@@ -76,10 +76,33 @@ class GlobalSearchViewModel(
 
     private val route = savedStateHandle.toRoute<GlobalSearchRoute>()
     val query: String = route.query
-    /** What the query means (Doki SearchKind): drives the per-source/DB filter (text / author / tag). */
-    val kind: org.nekosukuriputo.nekuva.search.domain.SearchKind =
+    /** What the query means (Doki SearchKind): drives the per-source/DB filter (text / author / tag).
+     *  Mutable so the in-screen "Type" selector (Doki opt_search_kind) can re-run with a different kind. */
+    private val _kind = MutableStateFlow(
         runCatching { org.nekosukuriputo.nekuva.search.domain.SearchKind.valueOf(route.kind) }
-            .getOrDefault(org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE)
+            .getOrDefault(org.nekosukuriputo.nekuva.search.domain.SearchKind.SIMPLE),
+    )
+    val kind: StateFlow<org.nekosukuriputo.nekuva.search.domain.SearchKind> = _kind.asStateFlow()
+    private val currentKind get() = _kind.value
+
+    /** "Pinned sources only" source filter (Doki opt_search_kind action_filter_pinned_only). */
+    private val _pinnedOnly = MutableStateFlow(false)
+    val pinnedOnly: StateFlow<Boolean> = _pinnedOnly.asStateFlow()
+
+    /** Re-run the search with a different kind (Type: Simple / Name / Author / Genre). */
+    fun setKind(value: org.nekosukuriputo.nekuva.search.domain.SearchKind) {
+        if (value == _kind.value) return
+        _kind.value = value
+        includeDisabled = false
+        doSearch()
+    }
+
+    /** Toggle "Pinned sources only" and re-run. */
+    fun togglePinnedOnly() {
+        _pinnedOnly.value = !_pinnedOnly.value
+        includeDisabled = false
+        doSearch()
+    }
 
     private val _uiState = MutableStateFlow(GlobalSearchUiState())
     val uiState: StateFlow<GlobalSearchUiState> = _uiState.asStateFlow()
@@ -112,8 +135,11 @@ class GlobalSearchViewModel(
             appendSection(searchFavourites(skipNsfw))
             appendSection(searchLocal(skipNsfw))
 
-            // Enabled parser sources, in parallel with a concurrency limit; stream as each finishes.
-            val sources = runCatchingCancellable { sourcesRepository.getEnabledSources() }.getOrDefault(emptyList())
+            // Enabled parser sources (or only pinned, if that filter is on), in parallel; stream as each finishes.
+            val sources = runCatchingCancellable {
+                if (_pinnedOnly.value) sourcesRepository.getPinnedSources().toList()
+                else sourcesRepository.getEnabledSources()
+            }.getOrDefault(emptyList())
             searchSources(sources, skipNsfw)
 
             mutex.withLock {
@@ -212,7 +238,7 @@ class GlobalSearchViewModel(
      * the source can't express this kind, so the caller skips it.
      */
     private suspend fun buildSourceFilter(repo: MangaRepository, source: MangaSource): MangaListFilter? =
-        when (kind) {
+        when (currentKind) {
             org.nekosukuriputo.nekuva.search.domain.SearchKind.AUTHOR -> when {
                 repo.filterCapabilities.isAuthorSearchSupported -> MangaListFilter(author = query)
                 repo.filterCapabilities.isSearchSupported -> MangaListFilter(query = query)
@@ -228,14 +254,14 @@ class GlobalSearchViewModel(
         }
 
     private suspend fun searchHistory(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
-        historyRepository.search(query, DB_SECTION_LIMIT, kind)
+        historyRepository.search(query, DB_SECTION_LIMIT, currentKind)
     }.fold(
         onSuccess = { list -> dbSection("history", SearchSectionKind.HISTORY, list, skipNsfw) },
         onFailure = { errorSection("history", SearchSectionKind.HISTORY, it) },
     )
 
     private suspend fun searchFavourites(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
-        favouritesRepository.search(query, DB_SECTION_LIMIT, kind)
+        favouritesRepository.search(query, DB_SECTION_LIMIT, currentKind)
     }.fold(
         onSuccess = { list -> dbSection("favourites", SearchSectionKind.FAVOURITES, list, skipNsfw) },
         onFailure = { errorSection("favourites", SearchSectionKind.FAVOURITES, it) },
@@ -243,7 +269,7 @@ class GlobalSearchViewModel(
 
     private suspend fun searchLocal(skipNsfw: Boolean): SearchSection? = runCatchingCancellable {
         // Local has no author index → AUTHOR degrades to text; TAG matches by tag title (LocalMangaRepository).
-        val filter = when (kind) {
+        val filter = when (currentKind) {
             org.nekosukuriputo.nekuva.search.domain.SearchKind.TAG -> MangaListFilter(
                 tags = setOf(
                     org.nekosukuriputo.nekuva.parsers.model.MangaTag(
