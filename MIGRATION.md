@@ -2086,3 +2086,33 @@ tertinggal dari Doki, ditambahkan (sisanya N/A untuk arsitektur Compose single-a
 **Kesimpulan:** untuk Phase-1 fungsional, gap "fitur hilang" praktis tinggal **picker (pick-manga-page)**,
 **incognito**, dan **layar Updates tracker**. Sisanya = run-verify, ter-blok eksternal/platform, atau
 sengaja disembunyikan. Audit manual §6.2 tetap syarat resmi penutup Phase 1.
+
+### 6. Sub-audit MENU/OVERFLOW/FILTER per-layar (vs Doki `res/menu/*.xml`, 2026-06-26)
+
+> Bandingkan tiap `opt_*` (app-bar/overflow ⋮), `mode_*` (action-mode long-press), `popup_*` Doki dengan UI Nekuva.
+
+**Sudah ada (✓ — tidak perlu aksi):**
+- **Details ⋮**: Share / Download / Delete / Edit override / Tracking / Statistics / Find similar / Alternatives /
+  Online variant / Open in browser / Create shortcut — **lengkap**.
+- **Chapters ⋮**: Search / Downloaded-only / Reverse / Grid view. **Reader ⋮**: Info / Options.
+- **Downloads ⋮**: Pause / Resume / Cancel all / Remove completed. **Local ⋮**: Import / Filter / Directories.
+- **Remote source list ⋮**: Random / Filter / Reset filter / Source settings.
+- **Feed/Updates ⋮** (di **shell**): Update / Show updated / Clear feed + quick-filter chips + "Updated manga" header.
+- **History ⋮** (di shell): Clear history. **Stats ⋮**: Clear. **Suggestions ⋮**: Update / Settings.
+- **Favourites/History action-mode**: Share / Remove / Save / Categories / Edit override / Mark completed / Fix / Select all.
+- **Image viewer**: Save. **Explore ⋮**: Manage sources. **Favourites ⋮**: Manage categories.
+
+**GAP menu/filter (BELUM ada di Nekuva):**
+- [ ] **Global Search — overflow `opt_search_kind`**: pemilih **jenis pencarian** (Simple / Name / Author / Genre)
+      + **filter sumber** (Pinned sources only, Hide empty sources). `GlobalSearchScreen` hanya punya tombol Back.
+      (Cari by-tag/by-author tetap jalan bila dibuka dari tap tag/penulis di Details, tapi tak ada kontrol di layar
+      search itu sendiri. String `pinned_sources_only`/`hide_empty_sources` sudah ada di katalog, tinggal di-wire.)
+- [ ] **Daftar manga sumber (browse / RemoteList) — long-press multi-select** (`mode_remote`: Share /
+      Add to favourites / Download). `RemoteListScreen` belum punya selection mode (item hanya `onClick`).
+- [ ] **History ⋮ → Statistics** (shortcut ke statistik dari History) — minor; Clear history sudah ada.
+- [ ] **Pages tab (Details) → Grid size** (`opt_pages` `action_grid_size`) — minor; grid halaman saat ini fixed.
+- [ ] **Incognito** (main ⋮ + Details + Reader) — menu ADA tapi `enabled=false` (placeholder; sama dgn gap §1).
+
+**Kesimpulan sub-audit:** mayoritas menu/overflow/action-mode SUDAH paritas. Sisa yang nyata: **overflow Global
+Search (kind+filter sumber)** dan **multi-select di daftar sumber**; sisanya minor (History→Stats, Pages grid-size)
+atau placeholder (Incognito).
