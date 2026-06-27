@@ -2175,3 +2175,12 @@ atau placeholder (Incognito).
 - **TIDAK dimigrasi (Android-spesifik, nilai rendah):** provider sistem `GET_CONTENT`/`PICK` (app lain ambil
   halaman manga dari Nekuva) — itu Activity Android terpisah; Nekuva single-activity Compose. Dicatat sebagai
   N/A platform, bukan fitur user-facing utama.
+
+### ✅ Tracker — layar "Updates" khusus + multi-select (Doki UpdatesActivity / mode_updates)
+- **Gap:** Doki punya layar **Updates** terpisah (grid manga ber-bab-baru + multi-select) selain Feed; Nekuva
+  hanya menampilkan manga ter-update sebagai strip header horizontal di Feed.
+- **Ditambah:** `UpdatesViewModel` (`observeUpdatedManga(limit=500)` → grid penuh + `downloadManga` +
+  `addToFavourites` + `favouriteCategories`); `UpdatesScreen` = `MangaListContent` grid + long-press
+  multi-select (Share / Add to favourites / Download — Doki `mode_updates`). Route `UpdatesRoute` + nav.
+  Entry point: header **"Updated manga"** di Feed kini punya judul + tombol **"Lebih"** → buka layar Updates.
+  (Feed tetap menampilkan strip + log + quick-filter; Updates = tampilan grid penuh.)

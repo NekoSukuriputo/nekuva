@@ -66,6 +66,10 @@ data object StatsRoute
 @Serializable
 data object SuggestionsRoute
 
+/** Dedicated "Updates" screen (Doki UpdatesActivity): grid of manga with new chapters. */
+@Serializable
+data object UpdatesRoute
+
 @Serializable
 data object PeriodicBackupRoute
 

@@ -202,6 +202,7 @@ val trackerModule = module {
     // Shared by the Feed screen + the shell "Update" overflow (single check at a time).
     single { org.nekosukuriputo.nekuva.tracker.domain.TrackerUpdateUseCase(get(), get(), get(), get(), get()) }
     factory { org.nekosukuriputo.nekuva.tracker.ui.feed.FeedViewModel(get(), get(), get(), get()) }
+    factory { org.nekosukuriputo.nekuva.tracker.ui.updates.UpdatesViewModel(get(), get(), get()) }
 }
 
 val scrobblingModule = module {

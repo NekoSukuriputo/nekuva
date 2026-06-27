@@ -27,6 +27,7 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -52,6 +53,8 @@ import org.nekosukuriputo.nekuva.parsers.model.Manga
 import org.nekosukuriputo.nekuva.tracker.domain.model.FeedLogItem
 import org.nekosukuriputo.nekuva.tracker.domain.model.MangaTracking
 import nekuva.composeapp.generated.resources.Res
+import nekuva.composeapp.generated.resources.more
+import nekuva.composeapp.generated.resources.updates
 import nekuva.composeapp.generated.resources.new_chapters
 import nekuva.composeapp.generated.resources.text_empty_holder_primary
 import nekuva.composeapp.generated.resources.text_feed_holder
@@ -65,6 +68,7 @@ import nekuva.composeapp.generated.resources.text_feed_holder
 fun FeedScreen(
     viewModel: FeedViewModel = koinViewModel(),
     onMangaClick: (Long) -> Unit,
+    onSeeAllUpdates: () -> Unit = {},
 ) {
     val logItems by viewModel.logItems.collectAsState()
     val updatedManga by viewModel.updatedManga.collectAsState()
@@ -106,7 +110,7 @@ fun FeedScreen(
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
                 if (headerEnabled && updatedManga.isNotEmpty()) {
-                    item(key = "updated_header") { UpdatedMangaHeader(updatedManga, onMangaClick) }
+                    item(key = "updated_header") { UpdatedMangaHeader(updatedManga, onMangaClick, onSeeAllUpdates) }
                 }
                 grouped.forEach { (_, items) ->
                     item(key = "date_${items.first().id}") { DateHeader(items.first().createdAt) }
@@ -148,9 +152,19 @@ private fun QuickFilterRow(
     }
 }
 
-/** Doki's "Updated manga" header: a horizontal row of recently-updated covers (toggle: show_updated). */
+/** Doki's "Updated manga" header: a horizontal row of recently-updated covers (toggle: show_updated),
+ *  with a "See all" link to the full Updates grid (Doki UpdatesActivity). */
 @Composable
-private fun UpdatedMangaHeader(items: List<MangaTracking>, onMangaClick: (Long) -> Unit) {
+private fun UpdatedMangaHeader(items: List<MangaTracking>, onMangaClick: (Long) -> Unit, onSeeAll: () -> Unit) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(Res.string.updates), style = MaterialTheme.typography.titleSmall)
+        TextButton(onClick = onSeeAll) { Text(stringResource(Res.string.more)) }
+    }
     LazyRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         contentPadding = PaddingValues(horizontal = 12.dp),
@@ -177,6 +191,7 @@ private fun UpdatedMangaHeader(items: List<MangaTracking>, onMangaClick: (Long) 
             }
         }
     }
+  }
 }
 
 /** Relative-day group header (Doki ListHeader): "Today" / "Yesterday" / date. */

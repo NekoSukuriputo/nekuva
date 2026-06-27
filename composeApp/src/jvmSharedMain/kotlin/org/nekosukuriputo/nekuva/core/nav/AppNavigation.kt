@@ -100,6 +100,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 composable<FeedTabRoute> {
                     org.nekosukuriputo.nekuva.tracker.ui.feed.FeedScreen(
                         onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onSeeAllUpdates = { navController.navigate(UpdatesRoute) },
+                    )
+                }
+                composable<UpdatesRoute> {
+                    org.nekosukuriputo.nekuva.tracker.ui.updates.UpdatesScreen(
+                        onMangaClick = { id -> navController.navigate(MangaDetailsRoute(id)) },
+                        onBackClick = { navController.popBackStack() },
                     )
                 }
                 composable<ExploreRoute> {
