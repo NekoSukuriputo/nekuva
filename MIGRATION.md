@@ -1595,10 +1595,12 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 > (Tanda `[ ]` di seluruh dokumen sudah disinkronkan ke status nyata.)
 
 ### A. Ter-blok kredensial / pihak ketiga (kode SIAP, butuh aksi pemilik app)
-- [ ] **Scrobbler OAuth client id/secret** — AniList / MAL / Kitsu / Shikimori (redirect `nekuva://oauth`). Tanpa ini, login tampil "Segera hadir".
-- [ ] **Discord RPC** — butuh kredensial/token; alur KizzyRPC + login webview sudah ada.
+- [x] **Scrobbler OAuth client id/secret** — AniList + MAL **diinjeksi build-time** (2026-06-26: `local.properties`
+      / CI secrets → `generateScrobblerSecrets`); Shikimori + Kitsu **disembunyikan** dari menu (kode tetap).
+      Login OAuth-nya sendiri tinggal **run-verify GUI**.
+- [ ] **Discord RPC** — disembunyikan (app pribadi); kredensial/token + alur KizzyRPC + login webview sudah ada (kode tetap).
 - [ ] **Sync server (Kotatsu)** — kode lengkap, **belum run-verify** (butuh akun + server).
-- [ ] **Telegram backup bot token** (build-time).
+- [x] **Telegram backup bot token** — disediakan via `local.properties` + CI secret (2026-06-26); chat-id = setelan runtime; tinggal **run-verify**.
 - [ ] **Translate this app** — belum ada proyek Weblate/Crowdin Nekuva.
 
 ### B. Ter-blok platform / perangkat
@@ -1638,7 +1640,12 @@ Fitur fondasi yang dipakai banyak layar. Mengerjakan ini lebih dulu membuat migr
 ### F. Gate akhir Phase 1
 - [ ] **Audit parity formal Doki (§6.2)** — walkthrough layar-demi-layar / menu-demi-menu / long-press / gesture, hasilkan checklist utk review manusia. **Belum dilakukan** — ini syarat resmi "Phase 1 selesai".
 
-### G. RISET/BESAR — Updatable Extensions (muat parser dinamis tanpa rebuild app)  ⟶ BELUM DIMULAI
+### G. RISET/BESAR — Updatable Extensions (muat parser dinamis tanpa rebuild app)  ⟶ ✅ SELESAI (2026-06-25)
+
+> **STATUS: SELESAI & run-verified** — lihat bagian **"Status fitur Runtime Extensions: LENGKAP"** di atas
+> (loader Android `DexClassLoader` + Desktop `URLClassLoader`, registry runtime by-name, override parser,
+> signing RSA, menu "Update extensions", fix LinkageError `MangaParserSource` 2026-06-25). Desain di bawah
+> dipertahankan sebagai catatan sejarah.
 
 > **Tujuan user:** tiap `nekuva-exts` rilis tag baru (mis. v1.0.7 → v1.0.8) untuk menambah/memperbaiki
 > sumber, app HARUS di-build ulang karena parser di-*bundle* compile-time. Inginnya: menu **"Update
@@ -2026,3 +2033,56 @@ tertinggal dari Doki, ditambahkan (sisanya N/A untuk arsitektur Compose single-a
   sendiri + `backup_rules` meng-exclude DB). Daftar `<activity>`/`<service>` & deep-link `DetailsByLinkActivity`
   (ratusan host) = Activity View Doki → di Nekuva jadi route Compose, bukan komponen manifest. Permission sudah
   superset Doki (+ USE_BIOMETRIC). `localeConfig` via `generateLocaleConfig=true`. `assembleDebug` hijau.
+
+---
+
+## AUDIT PARITY 2026-06-26 — fitur Doki yang belum termigrasi (sweep struktural)
+
+> Metode: diff paket top-level Doki (`app/`) vs Nekuva (`composeApp/`), inventaris komponen per-area
+> (Activity/Worker/Service/Dialog Doki ↔ Screen/VM/route Nekuva), + spot-check kode. **Bukan** baca
+> file-demi-file seluruh Doki (tak praktis) — gate resmi tetap audit manual §6.2 (F di bawah). Hasil:
+> **hampir semua area Doki sudah ada di Nekuva**; sisa di bawah ini yang benar-benar kurang / ter-blok.
+
+### Sudah SELESAI sejak snapshot 2026-06-21 (update tanda dari [ ] → [x])
+- [x] **Updatable Extensions** (dulu "BELUM DIMULAI") — lengkap & run-verified (loader Dex/URLClassLoader,
+      registry by-name, override parser, signing, menu Update extensions). Lihat bagian Runtime Extensions.
+- [x] **Kredensial AniList + MAL** diinjeksi build-time (local.properties / CI secrets); **Telegram bot token**
+      disediakan. Shikimori/Kitsu/Discord disembunyikan (kode tetap).
+- [x] **Hardening AndroidManifest** (largeHeap, networkSecurityConfig/cleartext, WebView SafeBrowsing off,
+      enableOnBackInvokedCallback) — lihat sesi 2026-06-26.
+
+### 1. BELUM termigrasi — gap fungsional nyata
+- [ ] **`picker` — "Pick manga page" (Doki `PageImagePickActivity`)** — pilih gambar dari halaman manga:
+      (a) untuk **cover kustom** di Edit-override (sekarang cover hanya via URL), (b) sebagai provider sistem
+      `GET_CONTENT`/`PICK` (app lain ambil 1 halaman manga dari Nekuva). **Satu-satunya paket top-level Doki yang
+      tak ada di Nekuva.**
+- [ ] **Incognito mode** — menu "Incognito" ADA tapi `enabled = false` (di Details + Reader). Membaca tanpa
+      mencatat History belum diimplementasi (placeholder).
+- [ ] **Tracker "Updates" — layar khusus + `UpdatesListQuickFilter`** — Doki punya layar **Updates** terpisah
+      (daftar manga ber-bab-baru, dikelompokkan + quick-filter) selain **Feed**. Nekuva baru punya **Feed**.
+      (Notifikasi bab baru + per-kategori tracking SUDAH ada — `TrackerWorker.notifyNewChapters`, `track_categories`.)
+- [ ] **Tracker debug screen** (Doki `TrackerDebugActivity`) — alat dev; nilai rendah, belum dimigrasi.
+
+### 2. Termigrasi tapi PENDING RUN-VERIFY (kode jalan; butuh konfirmasi GUI/akun)
+- [ ] **Login scrobbler AniList/MAL** — kredensial sudah masuk; alur OAuth `nekuva://oauth` tinggal diuji login nyata.
+- [ ] **Sync server (Kotatsu)** — kode lengkap; butuh akun + server untuk run-verify.
+- [ ] **Telegram backup** — token + UI siap; uji kirim ke chat-id nyata.
+- [ ] **Download FGS + Pause/Resume/Cancel** — uji di perangkat.
+- [ ] **Sweep toggle reader-advanced + sebagian preference Settings** — banyak sudah verified, sisanya butuh sapuan.
+
+### 3. Ter-blok platform / perangkat (bukan kelalaian migrasi)
+- [ ] **Desktop AVIF decoder** (favicon/ikon AVIF di Desktop — kosmetik).
+- [ ] **Double-foldable reader** (`reader_double_foldable`) — butuh perangkat foldable.
+- [ ] **Shinigami TLS di Linux Desktop** — mitigasi Conscrypt ada; perlu uji di Linux.
+
+### 4. Sengaja disembunyikan/dibatasi (kode tetap — BUKAN gap)
+- Discord RPC, Shikimori, Kitsu (disembunyikan dari menu, app pribadi). iOS = bundled-only (Phase 2).
+- "Translate this app" nonaktif (belum ada proyek Weblate/Crowdin).
+
+### 5. Gate akhir Phase 1 (tetap terbuka)
+- [ ] **Audit parity formal Doki §6.2** — walkthrough manual layar-demi-layar / menu / long-press / gesture →
+      checklist untuk review manusia. Sweep struktural ini **langkah menuju** itu, **bukan** penggantinya.
+
+**Kesimpulan:** untuk Phase-1 fungsional, gap "fitur hilang" praktis tinggal **picker (pick-manga-page)**,
+**incognito**, dan **layar Updates tracker**. Sisanya = run-verify, ter-blok eksternal/platform, atau
+sengaja disembunyikan. Audit manual §6.2 tetap syarat resmi penutup Phase 1.
