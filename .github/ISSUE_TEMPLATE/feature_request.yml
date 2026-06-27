@@ -1,0 +1,67 @@
+name: ✨ Feature request
+description: Suggest a new feature or an improvement to an existing one
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for the idea! Describe the problem first, then what you'd like to happen."
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched [existing issues](https://github.com/NekoSukuriputo/nekuva/issues) and found no duplicate
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you trying to do that's hard or impossible today?
+      placeholder: "I often want to ... but I can't because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What should the app do? Be as concrete as you can.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Reader
+        - Explore / Browse
+        - Manga details
+        - Library (Favourites / History / Bookmarks)
+        - Search / Filter
+        - Downloads
+        - Extensions / Sources
+        - Backup / Restore
+        - Tracking / Scrobbling
+        - Settings
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: parity
+    attributes:
+      label: Does Kotatsu / Doki already have this?
+      description: Nekuva follows the Kotatsu/Doki lineage, so parity features are usually quicker to add.
+      options:
+        - "Yes — it exists in Kotatsu/Doki"
+        - "No / not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context / mockups
+      description: Screenshots from other apps, sketches, or anything that clarifies the idea.

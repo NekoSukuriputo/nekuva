@@ -1,0 +1,13 @@
+# Force reporters through a template so every issue has the info you need to triage it.
+blank_issues_enabled: false
+contact_links:
+  - name: 🧩 Request a NEW source / report a parser-only bug
+    url: https://github.com/NekoSukuriputo/nekuva-exts/issues/new/choose
+    about: >-
+      Sources (parsers) live in the separate nekuva-exts repo. Requests for a new source, or a source that
+      broke because its website changed, belong there — not here.
+  - name: 💬 Questions, help & ideas (Discussions)
+    url: https://github.com/NekoSukuriputo/nekuva/discussions
+    about: >-
+      For "how do I…" questions and general ideas. (If this link 404s, enable Discussions in repo Settings,
+      or delete this entry.)

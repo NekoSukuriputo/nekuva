@@ -1,0 +1,89 @@
+name: 🧩 Source / extension not working
+description: One specific manga source fails (list, details, pages, CAPTCHA, or login)
+title: "[Source]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when **one source** misbehaves but the rest of the app works fine.
+
+        > ⚠️ The source parsers live in the separate **[nekuva-exts](https://github.com/NekoSukuriputo/nekuva-exts)** repo.
+        > If a source broke because its website changed (a parser bug) or you want a **new** source, report that there.
+        > Use this template when it looks app-side — e.g. it works in another Kotatsu/Doki app but not in Nekuva.
+  - type: input
+    id: source
+    attributes:
+      label: Source name
+      placeholder: "e.g. KomikTap, DoujinDesu, Shinigami"
+    validations:
+      required: true
+  - type: input
+    id: extver
+    attributes:
+      label: Extension version
+      description: "Settings → About → \"Update extensions\" (the version after the source count)"
+      placeholder: "e.g. 1.0.14"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Nekuva version
+      placeholder: "e.g. 0.0.9-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - Windows (Desktop)
+        - Linux (Desktop)
+        - macOS (Desktop)
+    validations:
+      required: true
+  - type: dropdown
+    id: broken
+    attributes:
+      label: What fails?
+      options:
+        - "Manga list won't load (Explore)"
+        - "Details page won't load"
+        - "Pages / images won't load in the reader"
+        - "CAPTCHA / CloudFlare loop (keeps asking after solving)"
+        - "Login / account"
+        - "Downloads"
+        - "Other"
+    validations:
+      required: true
+  - type: dropdown
+    id: elsewhere
+    attributes:
+      label: Does this source work in another Kotatsu-based app (Kotatsu / Doki)?
+      description: This tells us whether it's a Nekuva/app-side issue or a parser issue.
+      options:
+        - "Yes — works there, but not in Nekuva"
+        - "No — broken there too"
+        - "Haven't checked"
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Example manga URL that fails
+      placeholder: "https://..."
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What you did, the exact error text, and screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional but very helpful)
+      description: "Android: `adb logcat` while reproducing. Desktop: run from a terminal and paste the output."
+      render: shell

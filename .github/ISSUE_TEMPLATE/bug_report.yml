@@ -1,0 +1,131 @@
+name: 🐞 Bug report
+description: Something in the app crashes or behaves incorrectly
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! A clear, reproducible report gets fixed much faster.
+
+        👉 If **one specific source** fails to load (but the rest of the app works), use the
+        **"Source / extension not working"** template instead.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I'm on the **latest** Nekuva release (or the bug still happens there)
+          required: true
+        - label: I searched [existing issues](https://github.com/NekoSukuriputo/nekuva/issues) and found no duplicate
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Nekuva version
+      description: "Settings → About (the line under the app name)"
+      placeholder: "e.g. 0.0.9-beta"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - Windows (Desktop)
+        - Linux (Desktop)
+        - macOS (Desktop)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS version & device
+      description: Helps reproduce device-specific bugs.
+      placeholder: "e.g. Android 14, Xiaomi Redmi Note 12  /  Windows 11 23H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - GitHub release — Android APK
+        - GitHub release — Windows .msi
+        - GitHub release — Linux .deb / .AppImage
+        - GitHub release — macOS .dmg
+        - Built from source
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      options:
+        - Reader
+        - Explore / Browse sources
+        - Manga details
+        - Library (Favourites / History / Bookmarks)
+        - Search / Filter
+        - Downloads
+        - Local storage
+        - Extensions / Sources management
+        - Backup / Restore
+        - Tracking / Scrobbling (AniList / MAL)
+        - Settings
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Affected source(s)
+      description: "Only if the bug is tied to a manga source — name it + the extension version (About → Update extensions). Leave blank otherwise."
+      placeholder: "e.g. KomikTap (ext 1.0.14)"
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps so we can see it too.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Scroll to ...
+        4. See the error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / screen recording
+      description: Drag & drop here. A short video of the bug happening is the single most helpful thing.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (essential for crashes & loading errors)
+      description: |
+        - **Android:** while reproducing, capture logcat — e.g. `adb logcat > log.txt`, or an on-device logcat app.
+          The useful lines are `AndroidRuntime` crashes and `System.err` stack traces.
+        - **Desktop:** launch from a terminal (run the binary from a console, or `./gradlew :composeApp:run` from
+          source) and paste the console output.
+      render: shell
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Does it happen every time? Did it work in a previous version? Network (Wi-Fi / mobile data / VPN)?
