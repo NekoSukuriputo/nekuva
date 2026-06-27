@@ -68,6 +68,8 @@ import nekuva.composeapp.generated.resources.*
 fun DetailsScreen(
     viewModel: DetailsViewModel = koinViewModel(),
     onChapterClick: (Long, Long) -> Unit,
+    // Read in incognito (Doki popup_read action_incognito): open the reader without recording history.
+    onChapterClickIncognito: (Long, Long) -> Unit = { _, _ -> },
     onBookmarkClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
     onPageClick: (mangaId: Long, chapterId: Long, page: Int) -> Unit,
     onOpenDownloads: () -> Unit,
@@ -422,6 +424,7 @@ fun DetailsScreen(
                     pagesState = pagesState,
                     onLoadPages = { viewModel.loadPagesPreview() },
                     onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) },
+                    onChapterClickIncognito = { chapter -> onChapterClickIncognito(manga.id, chapter.id) },
                     onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) },
                     onPageClick = { chapterId, page -> onPageClick(manga.id, chapterId, page) },
                     onDownloadClick = { showDownloadDialog = true },
@@ -900,6 +903,7 @@ fun ChaptersSheetContent(
     pagesState: PagesPreviewState,
     onLoadPages: () -> Unit,
     onChapterClick: (MangaChapter) -> Unit,
+    onChapterClickIncognito: (MangaChapter) -> Unit = {},
     onBookmarkClick: (Bookmark) -> Unit,
     onPageClick: (chapterId: Long, page: Int) -> Unit,
     onDownloadClick: () -> Unit,
@@ -1031,11 +1035,17 @@ fun ChaptersSheetContent(
                         )
                     }
                     DropdownMenu(expanded = readMenuExpanded, onDismissRequest = { readMenuExpanded = false }) {
-                        // Incognito: deferred (own area) — present but disabled.
+                        // Read in incognito (Doki popup_read action_incognito): resume (or first chapter) without
+                        // recording history. Resolves the same chapter as the main Read/Continue button.
                         DropdownMenuItem(
                             text = { Text(stringResource(Res.string.incognito_mode)) },
-                            enabled = false,
-                            onClick = {},
+                            enabled = chapters.isNotEmpty(),
+                            onClick = {
+                                readMenuExpanded = false
+                                val chapter = history?.let { h -> chapters.find { it.id == h.chapterId } }
+                                    ?: chapters.firstOrNull()
+                                if (chapter != null) onChapterClickIncognito(chapter)
+                            },
                         )
                         if (history != null) {
                             DropdownMenuItem(

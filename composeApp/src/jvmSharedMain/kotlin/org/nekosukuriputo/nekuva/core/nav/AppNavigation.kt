@@ -188,6 +188,10 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                         onChapterClick = { mangaId, chapterId ->
                             openReader(mangaId, chapterId, -1, false)
                         },
+                        onChapterClickIncognito = { mangaId, chapterId ->
+                            // Doki popup_read "Incognito": read this manga without recording history.
+                            openReader(mangaId, chapterId, -1, true)
+                        },
                         onBookmarkClick = { mangaId, chapterId, page ->
                             // From a bookmark -> incognito (Doki parity).
                             openReader(mangaId, chapterId, page, true)

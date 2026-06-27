@@ -2116,3 +2116,18 @@ sengaja disembunyikan. Audit manual §6.2 tetap syarat resmi penutup Phase 1.
 **Kesimpulan sub-audit:** mayoritas menu/overflow/action-mode SUDAH paritas. Sisa yang nyata: **overflow Global
 Search (kind+filter sumber)** dan **multi-select di daftar sumber**; sisanya minor (History→Stats, Pages grid-size)
 atau placeholder (Incognito).
+
+---
+
+## IMPLEMENTASI GAP AUDIT (2026-06-26) — per fitur, tanpa defer
+
+> Mengerjakan semua gap & minor dari audit 2026-06-26. Satu commit per fitur. Perlu run-verify GUI user.
+
+### ✅ Incognito mode — baca tanpa catat history (lengkap)
+- **Sudah ada sebelumnya:** setting global (`KEY_INCOGNITO_MODE` + varian NSFW), gate tulis history
+  (`HistoryRepository.shouldSkip` / `addOrUpdate`), gate di `ReaderViewModel.writeHistory`/scrobble, toggle di
+  **main shell ⋮** (checkable, live), `IncognitoBanner`, dan incognito saat buka dari bookmark.
+- **Yang dilengkapi:** item **"Incognito"** di dropdown tombol Read/Continue (Details bottom-sheet) dulu
+  `enabled=false` → kini aktif (Doki `popup_read` `action_incognito`): membuka bab resume (atau bab pertama)
+  via `ReaderRoute(incognito=true)` sehingga tak mencatat history. Di-thread `DetailsScreen.onChapterClickIncognito`
+  → `ChaptersSheetContent` → nav `openReader(..., incognito=true)`.
