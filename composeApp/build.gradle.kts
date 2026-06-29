@@ -93,7 +93,7 @@ val generateScrobblerSecrets by tasks.registering {
 }
 
 // App version — single source, overridable per release from CI (the tag drives these):
-//   -PappVersionName=1.0.0-beta  -PappVersionCode=<n>  -PdesktopPackageVersion=1.0.0
+//   -PappVersionName=1.0.0  -PappVersionCode=<n>  -PdesktopPackageVersion=1.0.0
 // desktopPackageVersion is the INSTALLER version: jpackage/MSI/DMG require MAJOR.MINOR.PATCH with
 // MAJOR > 0 (so "-beta" / leading-zero majors are rejected). It's just for upgrade ordering — the
 // user-facing version is appVersionName (AppInfo / About / release tag).
