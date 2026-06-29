@@ -352,7 +352,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getEnum(KEY_ZOOM_MODE, ZoomMode.FIT_CENTER)
 
 	val trackSources: Set<String>
-		get() = prefs.getStringSet(KEY_TRACK_SOURCES, emptySet()) ?: setOf(TRACK_FAVOURITES)
+		get() = prefs.getStringSet(KEY_TRACK_SOURCES, setOf(TRACK_FAVOURITES))
 
 	var appPassword: String?
 		get() = prefs.getStringOrNull(KEY_APP_PASSWORD)

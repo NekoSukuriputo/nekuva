@@ -26,6 +26,7 @@ private const val MAX_PARALLELISM = 4
  * tracker_download setting. A singleton so the Feed screen AND the shell's "Update" overflow share the same
  * [isRunning] state and never run two checks at once (Doki's single-worker semantics).
  */
+@OptIn(kotlin.time.ExperimentalTime::class)
 class TrackerUpdateUseCase(
     private val trackingRepository: TrackingRepository,
     private val checkNewChaptersUseCase: CheckNewChaptersUseCase,
@@ -38,13 +39,16 @@ class TrackerUpdateUseCase(
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 
-    /** Start a check now; a no-op if one is already running (Doki: the worker is unique). */
     fun updateNow() {
         if (!_isRunning.compareAndSet(expect = false, update = true)) return
         scope.launch {
             try {
+                val startTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 runCatchingCancellable { trackingRepository.updateTracks() }
                 val tracks = runCatchingCancellable { trackingRepository.getTracks() }.getOrNull().orEmpty()
+                
+                // println("TrackerUpdateUseCase: trackSources = ${settings.trackSources}, tracks.size = ${tracks.size}")
+                
                 val semaphore = Semaphore(MAX_PARALLELISM)
                 tracks.map { track ->
                     launch {
@@ -57,6 +61,12 @@ class TrackerUpdateUseCase(
                         }
                     }
                 }.joinAll()
+                
+                // Ensure the progress indicator is visible for at least 500ms for visual feedback
+                val elapsed = kotlin.time.Clock.System.now().toEpochMilliseconds() - startTime
+                if (elapsed < 500) {
+                    kotlinx.coroutines.delay(500 - elapsed)
+                }
             } finally {
                 _isRunning.value = false
             }
