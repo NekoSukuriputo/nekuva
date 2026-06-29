@@ -658,15 +658,18 @@ fun MangaDetailsContent(
                     }
                 }
                 // Author: blue + clickable -> author search dialog (Doki showAuthorDialog).
-                val author = manga.authors.joinToString().takeIf { it.isNotEmpty() }
-                if (author != null) {
+                if (manga.authors.isNotEmpty()) {
                     DetailRowContent(stringResource(Res.string.author)) {
-                        Text(
-                            text = author,
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.clickable { onAuthorClick(author) },
-                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            manga.authors.forEachIndexed { index, author ->
+                                Text(
+                                    text = author + if (index < manga.authors.size - 1) "," else "",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.clickable { onAuthorClick(author) },
+                                )
+                            }
+                        }
                     }
                 }
                 // Translation: flag + language name (Doki locale row). The flag is drawn (LocaleFlag),
