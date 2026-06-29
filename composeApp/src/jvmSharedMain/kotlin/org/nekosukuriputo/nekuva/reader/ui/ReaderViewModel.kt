@@ -130,6 +130,68 @@ class ReaderViewModel(
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
+    private val _chaptersPreview = MutableStateFlow<ReaderPagesPreviewState>(ReaderPagesPreviewState.Idle)
+    val chaptersPreview: StateFlow<ReaderPagesPreviewState> = _chaptersPreview.asStateFlow()
+
+    fun loadChaptersPreview() {
+        if (_chaptersPreview.value != ReaderPagesPreviewState.Idle) return
+        val m = manga ?: return
+        _chaptersPreview.value = ReaderPagesPreviewState.Loading
+        viewModelScope.launch {
+            try {
+                if (chapters.isEmpty()) {
+                    _chaptersPreview.value = ReaderPagesPreviewState.Empty
+                    return@launch
+                }
+                val chapter = chapters.firstOrNull { it.id == currentChapterId } ?: chapters.first()
+                val pages = fetchPages(m, chapter)
+                _chaptersPreview.value = if (pages.isEmpty()) ReaderPagesPreviewState.Empty
+                    else ReaderPagesPreviewState.Success(listOf(chapter to pages))
+            } catch (e: Exception) {
+                _chaptersPreview.value = ReaderPagesPreviewState.Error(e)
+            }
+        }
+    }
+
+    fun loadAdjacentChaptersPreview(isNext: Boolean) {
+        val currentState = _chaptersPreview.value as? ReaderPagesPreviewState.Success ?: return
+        if (isNext && currentState.isLoadingNext) return
+        if (!isNext && currentState.isLoadingPrev) return
+
+        val m = manga ?: return
+        
+        val targetChapter = if (isNext) {
+            val lastItem = currentState.items.last().first
+            val idx = chapters.indexOfFirst { it.id == lastItem.id }
+            if (idx >= 0) chapters.getOrNull(idx + 1) else null
+        } else {
+            val firstItem = currentState.items.first().first
+            val idx = chapters.indexOfFirst { it.id == firstItem.id }
+            if (idx >= 0) chapters.getOrNull(idx - 1) else null
+        }
+        
+        if (targetChapter == null) return
+        
+        _chaptersPreview.value = currentState.copy(isLoadingNext = isNext, isLoadingPrev = !isNext)
+        viewModelScope.launch {
+            try {
+                val pages = fetchPages(m, targetChapter)
+                if (pages.isNotEmpty()) {
+                    val newPair = targetChapter to pages
+                    _chaptersPreview.value = if (isNext) {
+                        currentState.copy(items = currentState.items + newPair, isLoadingNext = false, isLoadingPrev = false)
+                    } else {
+                        currentState.copy(items = listOf(newPair) + currentState.items, isLoadingNext = false, isLoadingPrev = false)
+                    }
+                } else {
+                    _chaptersPreview.value = currentState.copy(isLoadingNext = false, isLoadingPrev = false)
+                }
+            } catch (e: Exception) {
+                _chaptersPreview.value = currentState.copy(isLoadingNext = false, isLoadingPrev = false)
+            }
+        }
+    }
+
     /** Active reading mode (initialised from the default, switchable from the reader menu). */
     private val _readerMode = MutableStateFlow(settings.defaultReaderMode)
     val readerMode: StateFlow<org.nekosukuriputo.nekuva.core.prefs.ReaderMode> = _readerMode.asStateFlow()
@@ -525,11 +587,21 @@ class ReaderViewModel(
         }
     }
 
+    fun loadAdjacentChapters(isNext: Boolean) {
+        if (isNext) appendNextChapter() else prependPrevChapter()
+    }
+
     private fun writeHistory(lp: LoadedPage) {
         if (_isIncognito.value) return // incognito: don't record reading history
         val m = manga ?: return
         val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
-        val percent = (lp.pageInChapter + 1) / chapterPageCount.toFloat()
+        
+        val chapterPercent = (lp.pageInChapter + 1).toFloat() / chapterPageCount
+        val chaptersCount = chapters.size.coerceAtLeast(1)
+        val currentChapterIndex = chapters.indexOfFirst { it.id == lp.chapterId }.coerceAtLeast(0)
+        // Doki assumes the raw chapters list is always descending (newest first).
+        val chronologicalIndex = chaptersCount - currentChapterIndex - 1
+        val percent = (chronologicalIndex + chapterPercent) / chaptersCount
         historyUpdateUseCase.invokeAsync(
             manga = m,
             chapterId = lp.chapterId,
@@ -543,7 +615,9 @@ class ReaderViewModel(
         val lastId = loadedPages.lastOrNull()?.chapterId ?: return
         val idx = chapters.indexOfFirst { it.id == lastId }
         if (idx < 0) return
-        val next = chapters.getOrNull(idx + 1) ?: return        // last chapter -> nothing to append
+        val isDesc = (chapters.firstOrNull()?.number ?: 0f) > (chapters.lastOrNull()?.number ?: 0f)
+        val nextDelta = if (isDesc) -1 else 1
+        val next = chapters.getOrNull(idx + nextDelta) ?: return        // last chapter -> nothing to append
         if (appendingChapterId == next.id) return               // already in flight
         if (next.id in failedChapterIds) return                 // broken source — don't re-hammer it
         if (loadedPages.any { it.chapterId == next.id }) return  // already appended
@@ -578,8 +652,10 @@ class ReaderViewModel(
     private fun prependPrevChapter() {
         val firstId = loadedPages.firstOrNull()?.chapterId ?: return
         val idx = chapters.indexOfFirst { it.id == firstId }
-        if (idx <= 0) return                                     // already at the first chapter
-        val prev = chapters.getOrNull(idx - 1) ?: return
+        if (idx < 0) return
+        val isDesc = (chapters.firstOrNull()?.number ?: 0f) > (chapters.lastOrNull()?.number ?: 0f)
+        val nextDelta = if (isDesc) -1 else 1
+        val prev = chapters.getOrNull(idx - nextDelta) ?: return
         if (prependingChapterId == prev.id) return               // already in flight
         if (prev.id in failedChapterIds) return                  // broken source — don't re-hammer it
         if (loadedPages.any { it.chapterId == prev.id }) return  // already prepended
@@ -629,7 +705,10 @@ class ReaderViewModel(
     fun goToChapter(delta: Int) {
         val idx = chapters.indexOfFirst { it.id == currentChapterId }
         if (idx < 0) return
-        loadChapterAt(chapters.getOrNull(idx + delta) ?: return, 0)
+        val isDesc = (chapters.firstOrNull()?.number ?: 0f) > (chapters.lastOrNull()?.number ?: 0f)
+        val nextDelta = if (isDesc) -1 else 1
+        val targetIdx = idx + (delta * nextDelta)
+        loadChapterAt(chapters.getOrNull(targetIdx) ?: return, 0)
     }
 
     /** Open a specific chapter (from the reader chapter list) at page 0. */
@@ -788,4 +867,16 @@ sealed interface ReaderUiState {
         val selectedBranch: String? = null,
     ) : ReaderUiState
     data class Error(val exception: Throwable) : ReaderUiState
+}
+
+sealed interface ReaderPagesPreviewState {
+    data object Idle : ReaderPagesPreviewState
+    data object Loading : ReaderPagesPreviewState
+    data object Empty : ReaderPagesPreviewState
+    data class Success(
+        val items: List<Pair<MangaChapter, List<MangaPage>>>,
+        val isLoadingPrev: Boolean = false,
+        val isLoadingNext: Boolean = false,
+    ) : ReaderPagesPreviewState
+    data class Error(val error: Throwable) : ReaderPagesPreviewState
 }

@@ -112,12 +112,12 @@ class AppSettings(private val prefs: ObservableSettings) {
 	fun prefBoolean(key: String, default: Boolean): Boolean = prefs.getBoolean(key, default)
 	fun prefInt(key: String, default: Int): Int = prefs.getInt(key, default)
 	fun prefString(key: String, default: String): String = prefs.getStringOrNull(key) ?: default
-	fun prefStringSet(key: String, default: Set<String>): Set<String> = prefs.getStringSet(key, default)
+	fun prefStringSet(key: String, default: Set<String>): Set<String> = prefs.getSafeStringSet(key, default)
 
 	fun setPref(key: String, value: Boolean) = prefs.putBoolean(key, value)
 	fun setPref(key: String, value: Int) = prefs.putInt(key, value)
 	fun setPref(key: String, value: String) = prefs.putString(key, value)
-	fun setPref(key: String, value: Set<String>) = prefs.putStringSet(key, value)
+	fun setPref(key: String, value: Set<String>) = prefs.putSafeStringSet(key, value)
 
 	var mainNavItems: List<NavItem>
 		get() = parseNavItems(prefs.getStringOrNull(KEY_NAV_MAIN))
@@ -255,7 +255,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		// The settings UI stores controls as ordinal indices ("0".."7"); map by ordinal. Fall back to
 		// Doki's DEFAULT whenever the result is empty (unset, or all unchecked) so the reader always has
 		// its core controls — most importantly the chapters button.
-		get() = prefs.getStringSet(KEY_READER_CONTROLS, emptySet())
+		get() = prefs.getSafeStringSet(KEY_READER_CONTROLS, emptySet())
 			.mapNotNullTo(mutableSetOf<ReaderControl>()) { v -> ReaderControl.entries.getOrNull(v.toIntOrNull() ?: -1) }
 			.ifEmpty { ReaderControl.DEFAULT }
 
@@ -352,7 +352,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getEnum(KEY_ZOOM_MODE, ZoomMode.FIT_CENTER)
 
 	val trackSources: Set<String>
-		get() = prefs.getStringSet(KEY_TRACK_SOURCES, setOf(TRACK_FAVOURITES))
+		get() = prefs.getSafeStringSet(KEY_TRACK_SOURCES, setOf(TRACK_FAVOURITES))
 
 	var appPassword: String?
 		get() = prefs.getStringOrNull(KEY_APP_PASSWORD)
@@ -369,7 +369,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 			if (prefs.getStringOrNull(KEY_SEARCH_SUGGESTION_TYPES) == null) {
 				return SearchSuggestionType.entries.toSet()
 			}
-			return prefs.getStringSet(KEY_SEARCH_SUGGESTION_TYPES, emptySet())
+			return prefs.getSafeStringSet(KEY_SEARCH_SUGGESTION_TYPES, emptySet())
 				.mapNotNullTo(mutableSetOf()) { x ->
 					SearchSuggestionType.entries.find { it.name == x }
 				}
@@ -449,12 +449,12 @@ class AppSettings(private val prefs: ObservableSettings) {
 
 	var userSpecifiedMangaDirectories: Set<String>
 		get() {
-			val set = prefs.getStringSet(KEY_LOCAL_MANGA_DIRS, emptySet()).orEmpty()
+			val set = prefs.getSafeStringSet(KEY_LOCAL_MANGA_DIRS, emptySet()).orEmpty()
 			return set
 		}
 		set(value) {
 			val set = value
-			prefs.putStringSet(KEY_LOCAL_MANGA_DIRS, set)
+			prefs.putSafeStringSet(KEY_LOCAL_MANGA_DIRS, set)
 		}
 
 	var mangaStorageDir: String?
@@ -651,7 +651,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 		get() = prefs.getBoolean(KEY_CHAPTERS_CLEAR_AUTO, false)
 
 	fun isPagesCropEnabled(mode: ReaderMode): Boolean {
-		val rawValue = prefs.getStringSet(KEY_READER_CROP, emptySet())
+		val rawValue = prefs.getSafeStringSet(KEY_READER_CROP, emptySet())
 		if (rawValue.isNullOrEmpty()) {
 			return false
 		}
@@ -662,21 +662,21 @@ class AppSettings(private val prefs: ObservableSettings) {
 	/** Toggle "Crop pages" for the bucket the [mode] belongs to (webtoon vs paged), Doki's multi-set. */
 	fun setPagesCropEnabled(mode: ReaderMode, enabled: Boolean) {
 		val needle = (if (mode == ReaderMode.WEBTOON) READER_CROP_WEBTOON else READER_CROP_PAGED).toString()
-		val current = prefs.getStringSet(KEY_READER_CROP, emptySet()).toMutableSet()
+		val current = prefs.getSafeStringSet(KEY_READER_CROP, emptySet()).toMutableSet()
 		if (enabled) current.add(needle) else current.remove(needle)
-		prefs.putStringSet(KEY_READER_CROP, current)
+		prefs.putSafeStringSet(KEY_READER_CROP, current)
 	}
 
 	fun isTipEnabled(tip: String): Boolean {
-		return !prefs.getStringSet(KEY_TIPS_CLOSED, emptySet()).contains(tip)
+		return !prefs.getSafeStringSet(KEY_TIPS_CLOSED, emptySet()).contains(tip)
 	}
 
 	fun closeTip(tip: String) {
-		val closedTips = prefs.getStringSet(KEY_TIPS_CLOSED, emptySet())
+		val closedTips = prefs.getSafeStringSet(KEY_TIPS_CLOSED, emptySet())
 		if (tip in closedTips) {
 			return
 		}
-		prefs.putStringSet(KEY_TIPS_CLOSED, closedTips + tip)
+		prefs.putSafeStringSet(KEY_TIPS_CLOSED, closedTips + tip)
 	}
 
 	fun isIncognitoModeEnabled(isNsfw: Boolean): Boolean {
@@ -709,7 +709,7 @@ class AppSettings(private val prefs: ObservableSettings) {
 	}
 
 	fun getMangaListBadges(): Int {
-		val raw = prefs.getStringSet(KEY_MANGA_LIST_BADGES, mangaListBadgesDefault)
+		val raw = prefs.getSafeStringSet(KEY_MANGA_LIST_BADGES, mangaListBadgesDefault)
 		var result = 0
 		for (item in raw) {
 			// Defensive: a malformed value (e.g. a cross-app backup that stored this as a JSON array) must

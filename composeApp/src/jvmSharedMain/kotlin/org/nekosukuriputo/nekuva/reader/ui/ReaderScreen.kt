@@ -555,15 +555,16 @@ fun ReaderScreen(
                     viewModel.setIncognito(false, dontAskAgain)
                     showNsfwIncognitoDialog = false
                 }) { Text(stringResource(Res.string.cancel)) }
-            },
+            }
         )
     }
+
     if (showChaptersSheet) {
         val state = uiState
         if (state is ReaderUiState.Success) {
             ReaderChaptersSheet(
                 chapters = state.chapters,
-                pages = state.pages,
+                pagesPreview = viewModel.chaptersPreview.collectAsState().value,
                 bookmarks = bookmarks,
                 branches = state.branches,
                 selectedBranch = state.selectedBranch,
@@ -572,6 +573,8 @@ fun ReaderScreen(
                 onPageClick = { index -> viewModel.jumpToPageIndex(index); showChaptersSheet = false },
                 onBookmarkClick = { chapterId, page -> viewModel.goToChapterAtPage(chapterId, page); showChaptersSheet = false },
                 onDismiss = { showChaptersSheet = false },
+                onLoadPagesPreview = { viewModel.loadChaptersPreview() },
+                onLoadAdjacentPagesPreview = { viewModel.loadAdjacentChaptersPreview(it) },
             )
         }
     }
@@ -1062,7 +1065,7 @@ private fun org.nekosukuriputo.nekuva.core.model.ZoomMode.toContentScale(): Cont
 @Composable
 private fun ReaderChaptersSheet(
     chapters: List<ReaderChapterItem>,
-    pages: List<LoadedPage>,
+    pagesPreview: ReaderPagesPreviewState,
     bookmarks: List<Bookmark>,
     branches: List<ReaderBranch>,
     selectedBranch: String?,
@@ -1071,9 +1074,54 @@ private fun ReaderChaptersSheet(
     onPageClick: (Int) -> Unit,
     onBookmarkClick: (Long, Int) -> Unit,
     onDismiss: () -> Unit,
+    onLoadPagesPreview: () -> Unit,
+    onLoadAdjacentPagesPreview: (Boolean) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var tab by remember { mutableIntStateOf(0) } // 0=list, 1=grid, 2=bookmarks
+    
+    androidx.compose.runtime.LaunchedEffect(tab) {
+        if (tab == 1) onLoadPagesPreview()
+    }
+    
+    val pagesGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    
+    if (pagesPreview is ReaderPagesPreviewState.Success) {
+        androidx.compose.runtime.LaunchedEffect(pagesGridState.firstVisibleItemIndex) {
+            val lastIdx = pagesGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = pagesGridState.layoutInfo.totalItemsCount
+            if (totalItems > 0 && lastIdx >= totalItems - 10) {
+                onLoadAdjacentPagesPreview(true)
+            }
+            
+            // Only fetch previous if we actually scrolled UP to the top (meaning we aren't at index 0 from initial load)
+            // or if we hit the top after prepending.
+            if (pagesGridState.firstVisibleItemIndex < 10) {
+                onLoadAdjacentPagesPreview(false)
+            }
+        }
+        
+        var previousFirstChapterId by remember { mutableStateOf<Long?>(null) }
+        androidx.compose.runtime.LaunchedEffect(pagesPreview.items) {
+            val currentFirst = pagesPreview.items.firstOrNull()?.first?.id
+            if (previousFirstChapterId != null && currentFirst != null && currentFirst != previousFirstChapterId) {
+                // Find how many grid items were inserted BEFORE the old first chapter
+                var insertedCount = 0
+                for ((chap, pages) in pagesPreview.items) {
+                    if (chap.id == previousFirstChapterId) break
+                    insertedCount += 1 + pages.size
+                }
+                if (insertedCount > 0) {
+                    pagesGridState.scrollToItem(
+                        pagesGridState.firstVisibleItemIndex + insertedCount,
+                        pagesGridState.firstVisibleItemScrollOffset
+                    )
+                }
+            }
+            previousFirstChapterId = currentFirst
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
             // Branch / translation selector (Doki) — only when the manga has more than one branch.
@@ -1148,15 +1196,59 @@ private fun ReaderChaptersSheet(
                         }
                     }
                 }
-                1 -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(90.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    gridItemsIndexed(pages, key = { _, p -> "${p.chapterId}_${p.pageInChapter}" }) { index, lp ->
-                        ThumbBox(model = lp.page.preview?.takeIf { it.isNotEmpty() } ?: lp.page.url, badge = "${lp.pageInChapter + 1}") { onPageClick(index) }
+                1 -> {
+                    when (val ps = pagesPreview) {
+                        is ReaderPagesPreviewState.Success -> {
+                            LazyVerticalGrid(
+                                state = pagesGridState,
+                                columns = GridCells.Adaptive(90.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                if (ps.isLoadingPrev) {
+                                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                        Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        }
+                                    }
+                                }
+                                ps.items.forEach { (chapter, chapPages) ->
+                                    val chapName = chapter.name.ifEmpty { "Chapter ${chapter.number}" }
+                                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                        Text(
+                                            text = chapName,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                                        )
+                                    }
+                                    gridItemsIndexed(chapPages, key = { _, p -> "${chapter.id}_${p.url}" }) { idx, page ->
+                                        ThumbBox(model = page.preview?.takeIf { it.isNotEmpty() } ?: page.url, badge = "${idx + 1}") {
+                                            // The jump-to-page in the reader expects an absolute index.
+                                            // In Doki, it jumps to the relative page index in that chapter.
+                                            onBookmarkClick(chapter.id, idx)
+                                        }
+                                    }
+                                }
+                                if (ps.isLoadingNext) {
+                                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                        Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        is ReaderPagesPreviewState.Error -> Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                            Text(stringResource(Res.string.error), color = MaterialTheme.colorScheme.error)
+                        }
+                        ReaderPagesPreviewState.Empty -> Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                            Text(stringResource(Res.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        else -> Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator()
+                        }
                     }
                 }
                 2 -> if (bookmarks.isEmpty()) {

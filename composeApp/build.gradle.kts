@@ -92,14 +92,16 @@ val generateScrobblerSecrets by tasks.registering {
     }
 }
 
-// App version — single source, overridable per release from CI (the tag drives these):
-//   -PappVersionName=1.0.0  -PappVersionCode=<n>  -PdesktopPackageVersion=1.0.0
+// App version – single source, overridable per release from CI (the tag drives these):
+//   -PappVersion=1.0.0  -PappVersionCode=<n>
 // desktopPackageVersion is the INSTALLER version: jpackage/MSI/DMG require MAJOR.MINOR.PATCH with
-// MAJOR > 0 (so "-beta" / leading-zero majors are rejected). It's just for upgrade ordering — the
-// user-facing version is appVersionName (AppInfo / About / release tag).
-val appVersionName: String = (findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() } ?: "1.0.1"
+// MAJOR > 0 (so "-beta" / leading-zero majors are rejected). It's just for upgrade ordering – the
+// user-facing version is appVersion (AppInfo / About / release tag).
+val defaultVersion = "1.0.1"
+val appVersion: String = (findProperty("appVersion") as String?)?.takeIf { it.isNotBlank() } ?: defaultVersion
 val appVersionCodeValue: Int = (findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
-val desktopPackageVersion: String = (findProperty("desktopPackageVersion") as String?)?.takeIf { it.isNotBlank() } ?: "1.0.1"
+val appVersionName: String = appVersion
+val desktopPackageVersion: String = appVersion
 
 // Generate AppInfo.VERSION_NAME from appVersionName so the running version (About / update check) has a
 // SINGLE source: the CI tag (-PappVersionName) for releases, or the appVersionName fallback above for

@@ -495,9 +495,67 @@ class DetailsViewModel(
                     }
                 }
                 _pagesState.value = if (pages.isEmpty()) PagesPreviewState.Empty
-                    else PagesPreviewState.Success(chapter.id, pages)
+                    else PagesPreviewState.Success(listOf(chapter to pages))
             } catch (e: Exception) {
                 _pagesState.value = PagesPreviewState.Error(e)
+            }
+        }
+    }
+
+    fun loadAdjacentChapterPages(isNext: Boolean) {
+        val currentState = _pagesState.value as? PagesPreviewState.Success ?: return
+        if (isNext && currentState.isLoadingNext) return
+        if (!isNext && currentState.isLoadingPrev) return
+
+        val m = loadedManga.value ?: return
+        val chapters = m.chapters ?: emptyList()
+        
+        val targetChapter = if (isNext) {
+            val lastItem = currentState.items.last().first
+            val idx = chapters.indexOfFirst { it.id == lastItem.id }
+            if (idx >= 0) chapters.getOrNull(idx + 1) else null
+        } else {
+            val firstItem = currentState.items.first().first
+            val idx = chapters.indexOfFirst { it.id == firstItem.id }
+            if (idx >= 0) chapters.getOrNull(idx - 1) else null
+        }
+        
+        if (targetChapter == null) return
+        
+        _pagesState.value = currentState.copy(isLoadingNext = isNext, isLoadingPrev = !isNext)
+        viewModelScope.launch {
+            try {
+                val pages = localMangaRepository.getPagesIfDownloaded(m, targetChapter) ?: run {
+                    val source = MangaParserSource.entries.find { it.name == m.source.name }
+                        ?: throw IllegalStateException("Unknown source: ${m.source.name}")
+                    val repo = repositoryFactory.create(source)
+                    val raw = repo.getPages(targetChapter)
+                    coroutineScope {
+                        val sem = Semaphore(4)
+                        raw.map { p ->
+                            async {
+                                if (!p.preview.isNullOrEmpty() || !p.url.startsWith("http", ignoreCase = true)) {
+                                    p
+                                } else {
+                                    sem.withPermit { runCatching { p.copy(url = repo.getPageUrl(p)) }.getOrDefault(p) }
+                                }
+                            }
+                        }.awaitAll()
+                    }
+                }
+                
+                if (pages.isNotEmpty()) {
+                    val newPair = targetChapter to pages
+                    _pagesState.value = if (isNext) {
+                        currentState.copy(items = currentState.items + newPair, isLoadingNext = false, isLoadingPrev = false)
+                    } else {
+                        currentState.copy(items = listOf(newPair) + currentState.items, isLoadingNext = false, isLoadingPrev = false)
+                    }
+                } else {
+                    _pagesState.value = currentState.copy(isLoadingNext = false, isLoadingPrev = false)
+                }
+            } catch (e: Exception) {
+                _pagesState.value = currentState.copy(isLoadingNext = false, isLoadingPrev = false)
             }
         }
     }
@@ -537,8 +595,9 @@ sealed interface PagesPreviewState {
     data object Loading : PagesPreviewState
     data object Empty : PagesPreviewState
     data class Success(
-        val chapterId: Long,
-        val pages: List<org.nekosukuriputo.nekuva.parsers.model.MangaPage>,
+        val items: List<Pair<org.nekosukuriputo.nekuva.parsers.model.MangaChapter, List<org.nekosukuriputo.nekuva.parsers.model.MangaPage>>>,
+        val isLoadingPrev: Boolean = false,
+        val isLoadingNext: Boolean = false,
     ) : PagesPreviewState
     data class Error(val error: Throwable) : PagesPreviewState
 }

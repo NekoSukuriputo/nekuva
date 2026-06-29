@@ -5,5 +5,5 @@ package org.nekosukuriputo.nekuva.search.domain
  * [SIMPLE]/[TITLE] = free text, [AUTHOR] = author filter, [TAG] = resolve the tag and filter by it.
  */
 enum class SearchKind {
-    SIMPLE, TITLE, AUTHOR, TAG
+    SIMPLE, TITLE, ALTERNATIVE_TITLE, AUTHOR, TAG
 }

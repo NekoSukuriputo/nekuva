@@ -433,6 +433,7 @@ fun DetailsScreen(
                     bookmarks = bookmarks,
                     pagesState = pagesState,
                     onLoadPages = { viewModel.loadPagesPreview() },
+                    onLoadAdjacentPages = { isNext -> viewModel.loadAdjacentChapterPages(isNext) },
                     onChapterClick = { chapter -> onChapterClick(manga.id, chapter.id) },
                     onChapterClickIncognito = { chapter -> onChapterClickIncognito(manga.id, chapter.id) },
                     onBookmarkClick = { bm -> onBookmarkClick(bm.manga.id, bm.chapterId, bm.page) },
@@ -501,6 +502,7 @@ fun DetailsScreen(
                         onCoverClick = { fullScreenCover = it; fullScreenCanSetCover = false },
                         onTagClick = { tagDialogFor = it },
                         onAuthorClick = { authorDialogFor = it },
+                        onAltTitleClick = { onGlobalSearch(it, org.nekosukuriputo.nekuva.search.domain.SearchKind.ALTERNATIVE_TITLE) },
                         progressPercent = history?.percent?.takeIf { it >= 0f },
                         currentChapterNumber = history?.let { h ->
                             (uiState as? DetailsUiState.Success)?.manga?.chapters
@@ -529,6 +531,7 @@ fun MangaDetailsContent(
     onCoverClick: (String?) -> Unit = {},
     onTagClick: (MangaTag) -> Unit = {},
     onAuthorClick: (String) -> Unit = {},
+    onAltTitleClick: (String) -> Unit = {},
     progressPercent: Float? = null,
     currentChapterNumber: Int? = null,
     scrobblingInfo: List<org.nekosukuriputo.nekuva.scrobbling.common.domain.model.ScrobblingInfo> = emptyList(),
@@ -599,21 +602,29 @@ fun MangaDetailsContent(
                 modifier = Modifier.weight(0.65f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = manga.title, 
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
-                )
-                val subtitle = manga.authors.joinToString().takeIf { it.isNotEmpty() }
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle, 
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = manga.title, 
+                            style = MaterialTheme.typography.headlineSmall,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val subtitle = manga.altTitles.joinToString(", ").takeIf { it.isNotBlank() }
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle, 
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.clickable {
+                                    onAltTitleClick(subtitle)
+                                }.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
                 
                 OutlinedButton(
@@ -915,6 +926,7 @@ fun ChaptersSheetContent(
     bookmarks: List<Bookmark>,
     pagesState: PagesPreviewState,
     onLoadPages: () -> Unit,
+    onLoadAdjacentPages: (Boolean) -> Unit = {},
     onChapterClick: (MangaChapter) -> Unit,
     onChapterClickIncognito: (MangaChapter) -> Unit = {},
     onBookmarkClick: (Bookmark) -> Unit,
@@ -948,6 +960,41 @@ fun ChaptersSheetContent(
     // Load the page previews lazily the first time the Pages section is shown.
     androidx.compose.runtime.LaunchedEffect(view) { if (view == SheetView.PAGES) onLoadPages() }
     var readMenuExpanded by remember { mutableStateOf(false) }
+    
+    val pagesGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    
+    if (pagesState is PagesPreviewState.Success) {
+        androidx.compose.runtime.LaunchedEffect(pagesGridState.firstVisibleItemIndex) {
+            val lastIdx = pagesGridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val totalItems = pagesGridState.layoutInfo.totalItemsCount
+            if (totalItems > 0 && lastIdx >= totalItems - 10) onLoadAdjacentPages(true)
+            
+            // Only fetch previous if we actually scrolled UP to the top (meaning we aren't at index 0 from initial load)
+            // or if we hit the top after prepending. A simple way is to check if we are at the top and there's previous.
+            // Since we adjust scroll on prepend, reaching index < 10 means the user scrolled up.
+            if (pagesGridState.firstVisibleItemIndex < 10) onLoadAdjacentPages(false)
+        }
+        
+        var previousFirstChapterId by remember { mutableStateOf<Long?>(null) }
+        androidx.compose.runtime.LaunchedEffect(pagesState.items) {
+            val currentFirst = pagesState.items.firstOrNull()?.first?.id
+            if (previousFirstChapterId != null && currentFirst != null && currentFirst != previousFirstChapterId) {
+                // Find how many grid items were inserted BEFORE the old first chapter
+                var insertedCount = 0
+                for ((chap, pages) in pagesState.items) {
+                    if (chap.id == previousFirstChapterId) break
+                    insertedCount += 1 + pages.size
+                }
+                if (insertedCount > 0) {
+                    pagesGridState.scrollToItem(
+                        pagesGridState.firstVisibleItemIndex + insertedCount,
+                        pagesGridState.firstVisibleItemScrollOffset
+                    )
+                }
+            }
+            previousFirstChapterId = currentFirst
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Toolbar (Drag handle is provided by BottomSheetScaffold automatically)
@@ -1103,21 +1150,44 @@ fun ChaptersSheetContent(
                 when (val ps = pagesState) {
                     is PagesPreviewState.Success -> {
                         LazyVerticalGrid(
+                            state = pagesGridState,
                             columns = previewCells,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            gridItemsIndexed(ps.pages) { index, page ->
-                                DetailsPageThumb(
-                                    url = page.preview?.takeIf { it.isNotEmpty() } ?: page.url,
-                                    number = index + 1,
-                                    onClick = { onPageClick(ps.chapterId, index) },
-                                    // Long-press a page -> fullscreen image viewer (zoom + save + share).
-                                    onLongClick = { onViewPageImage(page.url) },
-                                    source = source,
-                                )
+                            if (ps.isLoadingPrev) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                            }
+                            ps.items.forEach { (chapter, pages) ->
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Text(
+                                        text = chapter.name.ifEmpty { "Chapter ${chapter.number}" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp)
+                                    )
+                                }
+                                gridItemsIndexed(pages, key = { _, page: org.nekosukuriputo.nekuva.parsers.model.MangaPage -> "${chapter.id}_${page.url}" }) { index, page ->
+                                    DetailsPageThumb(
+                                        url = page.preview?.takeIf { it.isNotEmpty() } ?: page.url,
+                                        number = index + 1,
+                                        onClick = { onPageClick(chapter.id, index) },
+                                        onLongClick = { onViewPageImage(page.url) },
+                                        source = source,
+                                    )
+                                }
+                            }
+                            if (ps.isLoadingNext) {
+                                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
+                                        androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    }
+                                }
                             }
                         }
                     }

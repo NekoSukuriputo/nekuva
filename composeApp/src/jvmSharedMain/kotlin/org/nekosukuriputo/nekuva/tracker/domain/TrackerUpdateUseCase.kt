@@ -46,8 +46,7 @@ class TrackerUpdateUseCase(
                 val startTime = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 runCatchingCancellable { trackingRepository.updateTracks() }
                 val tracks = runCatchingCancellable { trackingRepository.getTracks() }.getOrNull().orEmpty()
-                
-                // println("TrackerUpdateUseCase: trackSources = ${settings.trackSources}, tracks.size = ${tracks.size}")
+                println("TrackerUpdateUseCase: updateNow started. tracks.size = ${tracks.size}, trackSources = ${settings.trackSources}")
                 
                 val semaphore = Semaphore(MAX_PARALLELISM)
                 tracks.map { track ->

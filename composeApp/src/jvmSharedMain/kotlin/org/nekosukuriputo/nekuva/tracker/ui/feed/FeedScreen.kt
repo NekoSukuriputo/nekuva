@@ -184,10 +184,20 @@ private fun UpdatedMangaHeader(items: List<MangaTracking>, onMangaClick: (Long) 
                 Text(
                     text = tracking.manga.title,
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 4.dp),
                 )
+                val authorText = tracking.manga.authors.joinToString(", ").takeIf { it.isNotEmpty() }
+                if (authorText != null) {
+                    Text(
+                        text = authorText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

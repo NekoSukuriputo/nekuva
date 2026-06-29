@@ -22,6 +22,7 @@ class CheckNewChaptersUseCase(
 ) {
 
     suspend fun check(manga: Manga): MangaUpdates = runCatchingCancellable {
+        println("CheckNewChaptersUseCase: checking manga ${manga.id} - ${manga.title}")
         val track = trackingRepository.getTrackOrNull(manga)
         val details = fetchDetails(manga)
         val chapters = details.chapters.orEmpty()
@@ -37,7 +38,10 @@ class CheckNewChaptersUseCase(
             }
             MangaUpdates.Success(details, newChapters, isValid = true)
         }
-    }.getOrElse { MangaUpdates.Failure(manga, it) }
+    }.getOrElse { 
+        println("CheckNewChaptersUseCase: failed for manga ${manga.id} - ${manga.title}: ${it.message}")
+        MangaUpdates.Failure(manga, it) 
+    }
 
     private suspend fun fetchDetails(manga: Manga): Manga {
         // Use the freshest data we have: parser for remote, local file for downloaded-only manga.
