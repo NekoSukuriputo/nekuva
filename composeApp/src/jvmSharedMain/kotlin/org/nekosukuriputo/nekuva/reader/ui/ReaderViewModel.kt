@@ -596,11 +596,22 @@ class ReaderViewModel(
         val m = manga ?: return
         val chapterPageCount = loadedPages.count { it.chapterId == lp.chapterId }.coerceAtLeast(1)
         
+        val chapterBranch = chapters.find { it.id == lp.chapterId }?.branch
+        val branchChapters = if (chapters.any { it.branch != null }) {
+            chapters.filter { it.branch == chapterBranch }
+        } else {
+            chapters
+        }
         val chapterPercent = (lp.pageInChapter + 1).toFloat() / chapterPageCount
-        val chaptersCount = chapters.size.coerceAtLeast(1)
-        val currentChapterIndex = chapters.indexOfFirst { it.id == lp.chapterId }.coerceAtLeast(0)
-        // Doki assumes the raw chapters list is always descending (newest first).
-        val chronologicalIndex = chaptersCount - currentChapterIndex - 1
+        val chaptersCount = branchChapters.size.coerceAtLeast(1)
+        val currentChapterIndex = branchChapters.indexOfFirst { it.id == lp.chapterId }.coerceAtLeast(0)
+        
+        val isDesc = (branchChapters.firstOrNull()?.number ?: 0f) > (branchChapters.lastOrNull()?.number ?: 0f)
+        val chronologicalIndex = if (isDesc) {
+            chaptersCount - currentChapterIndex - 1
+        } else {
+            currentChapterIndex
+        }
         val percent = (chronologicalIndex + chapterPercent) / chaptersCount
         historyUpdateUseCase.invokeAsync(
             manga = m,

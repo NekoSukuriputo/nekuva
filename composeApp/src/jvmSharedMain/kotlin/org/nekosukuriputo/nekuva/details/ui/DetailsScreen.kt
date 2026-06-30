@@ -704,7 +704,7 @@ fun MangaDetailsContent(
                 }
                 manga.state?.let { DetailRow(stringResource(Res.string.state), mangaStateTitle(it)) }
                 // Chapters: "Bab X dari Y (reading time)" (Doki) — X = current read position from history.
-                val total = manga.chapters?.size ?: 0
+                val total = manga.chapters?.groupBy { it.branch }?.maxOfOrNull { it.value.size } ?: 0
                 val chaptersValue = buildString {
                     if (currentChapterNumber != null && total > 0) {
                         append(stringResource(Res.string.chapter_d_of_d, currentChapterNumber, total))
